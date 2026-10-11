@@ -1,0 +1,24 @@
+# Python
+backend/.venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+
+# Secrets and local settings. Never commit real values.
+.env
+*.pem
+*.p8
+GoogleService-Info.plist
+
+# Xcode. The project and Info.plist are generated from ios/project.yml.
+ios/*.xcodeproj/
+ios/Sublette/Resources/Info.plist
+DerivedData/
+xcuserdata/
+*.xcuserstate
+.build/
+
+# macOS
+.DS_Store

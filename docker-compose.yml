@@ -1,0 +1,28 @@
+# The local database: PostgreSQL 16 with PostGIS.
+#
+#   make db        start it
+#   make db-stop   stop it (data is kept)
+#   make db-reset  delete all local data and start fresh
+services:
+  db:
+    image: postgis/postgis:16-3.4
+    # This image is published for Intel processors. Docker Desktop runs it on
+    # Apple Silicon Macs through emulation, which is fine for development.
+    platform: linux/amd64
+    environment:
+      POSTGRES_USER: sublette
+      POSTGRES_PASSWORD: sublette
+      POSTGRES_DB: sublette
+    ports:
+      - "5432:5432"
+    volumes:
+      - db-data:/var/lib/postgresql/data
+      - ./backend/scripts/create-test-db.sql:/docker-entrypoint-initdb.d/20-create-test-db.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U sublette -d sublette"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+
+volumes:
+  db-data:

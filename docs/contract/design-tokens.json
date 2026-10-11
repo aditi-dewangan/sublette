@@ -1,0 +1,28 @@
+{
+  "about": "Brand colors from the product spec. ios/Sublette/Core/DesignSystem/BrandColors.swift is tested against this file. Contrast ratios are checked against the WCAG 4.5:1 minimum for body text.",
+  "colors": {
+    "yellow": "#FFC629",
+    "magenta": "#D6177A",
+    "orange": "#FF7A1A",
+    "ink": "#2A1422",
+    "cream": "#FFF8EC"
+  },
+  "roles": {
+    "yellow": "Renter mode accent, strong-match pins, highlights",
+    "magenta": "Primary buttons, the like action, the match moment",
+    "orange": "Lister mode accent, notifications, secondary buttons",
+    "ink": "Body text, icons, dark mode background",
+    "cream": "App background, cards"
+  },
+  "text_pairs_allowed": [
+    { "text": "ink", "background": "yellow", "spec_ratio": 10.9 },
+    { "text": "white", "background": "magenta", "spec_ratio": 4.9 },
+    { "text": "ink", "background": "orange", "spec_ratio": 6.6 },
+    { "text": "ink", "background": "cream", "spec_ratio": 16.3 }
+  ],
+  "text_pairs_forbidden": [
+    { "text": "white", "background": "yellow", "why": "1.6:1" },
+    { "text": "white", "background": "orange", "why": "2.6:1" },
+    { "text": "magenta", "background": "ink", "why": "3.5:1, matters for dark mode in phase 9" }
+  ]
+}

@@ -1,0 +1,56 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  server:
+    name: Server (lint, rename log, tests)
+    runs-on: ubuntu-latest
+    services:
+      db:
+        image: postgis/postgis:16-3.4
+        env:
+          POSTGRES_USER: sublette
+          POSTGRES_PASSWORD: sublette
+          POSTGRES_DB: sublette_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U sublette -d sublette_test"
+          --health-interval 2s
+          --health-timeout 3s
+          --health-retries 30
+    env:
+      SUBLETTE_TEST_DATABASE_URL: postgresql+psycopg://sublette:sublette@localhost:5432/sublette_test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: backend/pyproject.toml
+      - name: Install
+        run: make setup PYTHON=python
+      - name: Lint, format and rename log
+        run: make lint
+      - name: Tests
+        run: make test
+
+  ios:
+    name: iPhone app (build and unit tests)
+    # macOS minutes are free for public repositories and count 10x on private
+    # ones. To save minutes on a private repository, change `push:` above to
+    # run only on the main branch.
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install XcodeGen
+        run: brew install xcodegen
+      - name: Build and test
+        run: make ios-test

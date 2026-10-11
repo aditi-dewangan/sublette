@@ -1,0 +1,24 @@
+# Rename log.
+#
+# When a path, endpoint, table, column, JSON field, setting or file is renamed,
+# add an entry here in the same commit. `make check` then searches the whole
+# repository (code, tests, migrations, scripts, docs, fixtures, comments, CI)
+# and fails while the old value still appears anywhere it was not deliberately
+# kept. It also fails until the new value appears in at least one test.
+#
+# Before renaming, list every place the old value lives:
+#     make find-refs VALUE=/v1/deck
+#
+# Entry format:
+#
+# [[rename]]
+# old  = "/v1/deck"
+# new  = "/v1/deck/listings"
+# kind = "endpoint"            # endpoint, table, column, field, setting, file
+# date = "2026-11-02"
+# keep = [                     # optional: places the old value must stay
+#   { path = "backend/alembic/versions/*_rename_deck.py", why = "the migration names the old column" },
+# ]
+# no_test = ""                 # optional: why no test can mention the new value
+#
+# No renames yet.

@@ -1,0 +1,6 @@
+{
+  "about": "Every HTTP endpoint the server exposes. The server's routes and the iPhone app's Endpoint.swift are both tested against this file, so a path renamed in one place and not the others fails the build.",
+  "endpoints": [
+    { "method": "GET", "path": "/health", "auth": false, "phase": 0 }
+  ]
+}

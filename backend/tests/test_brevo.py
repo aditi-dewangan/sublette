@@ -200,3 +200,60 @@ def test_a_free_staging_setup_is_accepted() -> None:
     )
 
     assert settings.email_backend == "brevo"
+
+
+# --- Development inbox: every code to one address -----------------------------
+
+
+def test_with_a_redirect_every_code_goes_to_the_dev_inbox(brevo: FakeBrevo) -> None:
+    settings = brevo_settings(brevo.url).model_copy(
+        update={"email_redirect_to": "subletteofficial+dev@gmail.com"}
+    )
+
+    BrevoEmailSender(settings).send_code("made-up-student@uw.edu", "482913", 10)
+
+    body = brevo.requests[0]["json"]
+    assert body["to"] == [{"email": "subletteofficial+dev@gmail.com"}]
+    assert body["subject"] == "[LOCAL] 482913 is your Sublette code (for made-up-student@uw.edu)"
+    assert "made-up-student@uw.edu" in body["textContent"]
+    assert "482913" in body["textContent"]
+
+
+def test_without_a_redirect_the_code_goes_to_the_student(brevo: FakeBrevo) -> None:
+    BrevoEmailSender(brevo_settings(brevo.url)).send_code("aditi@uw.edu", "482913", 10)
+
+    body = brevo.requests[0]["json"]
+    assert body["to"] == [{"email": "aditi@uw.edu"}]
+    assert body["subject"] == "482913 is your Sublette code"
+
+
+def test_staging_labels_redirected_codes_as_staging(brevo: FakeBrevo) -> None:
+    settings = brevo_settings(brevo.url).model_copy(
+        update={"env": "staging", "email_redirect_to": "subletteofficial+dev@gmail.com"}
+    )
+
+    BrevoEmailSender(settings).send_code("aditi@uw.edu", "482913", 10)
+
+    assert brevo.requests[0]["json"]["subject"].startswith("[STAGING] ")
+
+
+def test_production_refuses_a_redirect() -> None:
+    with pytest.raises(ValueError, match="SUBLETTE_EMAIL_REDIRECT_TO"):
+        Settings(
+            env="production",
+            secret_key="s" * 44,
+            email_backend="brevo",
+            brevo_api_key="k",
+            email_from="Sublette <a@example.com>",
+            storage_backend="s3",
+            s3_bucket="b",
+            s3_access_key_id="k",
+            s3_secret_access_key="s",
+            s3_public_base_url="https://photos.example.test",
+            email_redirect_to="subletteofficial+dev@gmail.com",
+        )
+
+
+def test_a_redirect_must_be_an_address() -> None:
+    with pytest.raises(ValueError, match="must be an email address"):
+        Settings(email_redirect_to="DEV folder")

@@ -25,7 +25,7 @@ class EmailSender(Protocol):
 
 
 class ConsoleEmailSender:
-    """Development: print the code in the server log instead of sending it."""
+    """Development default: print the code in the server log instead of sending it."""
 
     def send_code(self, to: str, code: str, ttl_minutes: int) -> None:
         logger.info("Sign-in code for %s: %s (valid %d minutes)", to, code, ttl_minutes)
@@ -45,6 +45,27 @@ def _subject(code: str) -> str:
     return f"{code} is your Sublette code"
 
 
+def compose(settings: Settings, to: str, code: str, ttl_minutes: int) -> tuple[str, str, str]:
+    """(recipient, subject, body) for a code email.
+
+    With SUBLETTE_EMAIL_REDIRECT_TO set (development and staging only), every
+    code goes to that one inbox instead of the student's, with the student's
+    address in the subject. Made-up test addresses then email nobody.
+    """
+    subject = _subject(code)
+    body = _body_text(code, ttl_minutes)
+    redirect = settings.email_redirect_to
+    if not redirect:
+        return to, subject, body
+    label = settings.env.upper()
+    return (
+        redirect,
+        f"[{label}] {subject} (for {to})",
+        f"Sent to this inbox instead of {to}, because SUBLETTE_EMAIL_REDIRECT_TO is set.\n\n"
+        + body,
+    )
+
+
 class SmtpEmailSender:
     """Any provider that speaks SMTP: Resend, Postmark, Amazon SES and others."""
 
@@ -54,9 +75,10 @@ class SmtpEmailSender:
     def _message(self, to: str, code: str, ttl_minutes: int) -> EmailMessage:
         message = EmailMessage()
         message["From"] = self._settings.email_from
-        message["To"] = to
-        message["Subject"] = _subject(code)
-        message.set_content(_body_text(code, ttl_minutes))
+        recipient, subject, body = compose(self._settings, to, code, ttl_minutes)
+        message["To"] = recipient
+        message["Subject"] = subject
+        message.set_content(body)
         return message
 
     def send_code(self, to: str, code: str, ttl_minutes: int) -> None:
@@ -97,12 +119,13 @@ class BrevoEmailSender:
 
     def _payload(self, to: str, code: str, ttl_minutes: int) -> bytes:
         name, address = parseaddr(self._settings.email_from)
+        recipient, subject, body = compose(self._settings, to, code, ttl_minutes)
         return json.dumps(
             {
                 "sender": {"name": name or "Sublette", "email": address},
-                "to": [{"email": to}],
-                "subject": _subject(code),
-                "textContent": _body_text(code, ttl_minutes),
+                "to": [{"email": recipient}],
+                "subject": subject,
+                "textContent": body,
             }
         ).encode()
 

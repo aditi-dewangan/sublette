@@ -76,6 +76,13 @@ Choices made while building, with the reason. Add to the bottom; do not rewrite 
 | In the app, the first tab is the deck in Renter mode and "My listings" in Lister mode. | The plan puts the full mode switch in phase 3; listers need a home now. |
 | Addresses are confirmed on a map with Apple's geocoder. | Free, built in, and it needs no key. |
 
+### Development inbox (added 2026-10-12)
+
+| Decision | Reason |
+| --- | --- |
+| `SUBLETTE_EMAIL_REDIRECT_TO` sends every code to one address instead of the student's, with the student's address and the environment in the subject. | Aditi wants development codes filed in a DEV label of `subletteofficial@gmail.com`, and testing with made-up `.edu` addresses must not email real people. Gmail's `+dev` addressing plus a filter does the filing. |
+| A redirect is refused in production. | It would send every student's sign-in code to one inbox. |
+
 ## Known gaps after phase 2
 
 - Photos uploaded in the editor and then abandoned (the editor closed without saving) stay in storage. A clean-up job belongs with phase 8's expiry job.

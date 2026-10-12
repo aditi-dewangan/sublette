@@ -62,6 +62,9 @@ class Settings(BaseSettings):
     # blocked, such as Render's free plan.
     email_backend: Literal["console", "smtp", "brevo"] = "console"
     email_from: str = "Sublette <no-reply@localhost>"
+    # Development and staging only: send every code here instead of to the
+    # student, e.g. "subletteofficial+dev@gmail.com". Refused in production.
+    email_redirect_to: str = ""
     brevo_api_key: str = ""
     brevo_api_url: str = "https://api.brevo.com/v3/smtp/email"
     # Seconds to wait for an HTTPS email provider.
@@ -125,6 +128,13 @@ class Settings(BaseSettings):
             problems.append("SUBLETTE_EMAIL_BACKEND=console would log sign-in codes; use smtp")
         if self.env == "production" and self.storage_backend == "local":
             problems.append("SUBLETTE_STORAGE_BACKEND=local loses photos on redeploy; use s3")
+        if self.env == "production" and self.email_redirect_to:
+            problems.append(
+                "SUBLETTE_EMAIL_REDIRECT_TO would send every student's code to one inbox; "
+                "it is for development and staging only"
+            )
+        if self.email_redirect_to and "@" not in self.email_redirect_to:
+            problems.append("SUBLETTE_EMAIL_REDIRECT_TO must be an email address")
         if self.email_backend == "smtp" and not self.smtp_host:
             problems.append("SUBLETTE_SMTP_HOST is required when SUBLETTE_EMAIL_BACKEND=smtp")
         if self.email_backend == "brevo":

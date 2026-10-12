@@ -531,6 +531,29 @@ def test_smtp_sender_delivers_the_code_to_a_real_smtp_conversation(settings) -> 
     assert "10 minutes" in message
 
 
+def test_smtp_sender_also_follows_the_dev_redirect(settings) -> None:
+    from app.services.email_sender import SmtpEmailSender
+
+    server = FakeSmtpServer()
+    try:
+        SmtpEmailSender(
+            settings.model_copy(
+                update={
+                    "email_backend": "smtp",
+                    "smtp_host": "127.0.0.1",
+                    "smtp_port": server.port,
+                    "smtp_security": "none",
+                    "email_redirect_to": "subletteofficial+dev@gmail.com",
+                }
+            )
+        ).send_code("made-up@uw.edu", "482913", 10)
+    finally:
+        server.close()
+
+    assert server.recipients == ["subletteofficial+dev@gmail.com"]
+    assert "Subject: [TEST] 482913 is your Sublette code (for made-up@uw.edu)" in server.messages[0]
+
+
 def test_console_sender_writes_the_code_to_the_log(caplog) -> None:
     import logging
 

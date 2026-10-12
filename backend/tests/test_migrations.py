@@ -54,7 +54,13 @@ def test_models_and_migrations_agree(clean_database: str) -> None:
     finally:
         engine.dispose()
 
-    assert differences == []
+    def describe(difference) -> str:
+        kind, item = difference[0], difference[1]
+        table = getattr(item, "table", item)
+        return f"{kind} {getattr(item, 'name', item)} on {getattr(table, 'schema', None)}.{getattr(table, 'name', '?')}"
+
+    summary = [describe(d) if isinstance(d, tuple) else str(d) for d in differences]
+    assert summary == []
 
 
 def test_postgis_tables_and_their_indexes_are_left_alone() -> None:

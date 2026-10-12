@@ -60,11 +60,11 @@ Choices made while building, with the reason. Add to the bottom; do not rewrite 
 
 ## Known gaps after phase 1
 
-- The phase 1 iPhone code has not been compiled where it was written. Two independent reviews read every file and traced every test; the first `make ios-test` on a Mac is the real check.
+- The phase 1 iPhone code builds and its unit tests pass on GitHub's Mac (2026-10-12). Nobody has used it in the simulator yet.
 - Presigned upload links cannot enforce a size limit on S3-compatible stores (the local store does). The app shrinks photos to 1600 pixels before uploading.
 - If storage is unreachable when an account is deleted, the photo file is left behind and logged. The account is still deleted.
 - No App Store privacy manifest yet (`PrivacyInfo.xcprivacy`). Needed before submission in phase 9.
-- Nothing is deployed to staging and GitHub Actions has not run.
+- Nothing is deployed to staging yet.
 
 ## Known gaps after phase 0
 

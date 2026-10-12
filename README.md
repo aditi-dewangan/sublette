@@ -12,7 +12,7 @@ students who need someone to take over their lease. Any `.edu` email can join.
 | Phase | What it delivers | Status |
 | --- | --- | --- |
 | 0 | Scaffolding: both codebases run and talk to each other | Done |
-| 1 | Accounts and .edu email verification | Built. Server verified. iPhone code reviewed by reading only; first compile is on your Mac. |
+| 1 | Accounts and .edu email verification | Built. All checks pass on GitHub, including the iPhone build. Waiting to be tried in the simulator and merged. |
 | 2 | Lister mode: create and manage a listing | Next |
 | 3 to 10 | Renter mode through the AI recommender | Not started |
 

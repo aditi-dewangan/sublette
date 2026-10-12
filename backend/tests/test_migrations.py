@@ -57,7 +57,8 @@ def test_models_and_migrations_agree(clean_database: str) -> None:
     def describe(difference) -> str:
         kind, item = difference[0], difference[1]
         table = getattr(item, "table", item)
-        return f"{kind} {getattr(item, 'name', item)} on {getattr(table, 'schema', None)}.{getattr(table, 'name', '?')}"
+        where = f"{getattr(table, 'schema', None)}.{getattr(table, 'name', '?')}"
+        return f"{kind} {getattr(item, 'name', item)} on {where}"
 
     summary = [describe(d) if isinstance(d, tuple) else str(d) for d in differences]
     assert summary == []

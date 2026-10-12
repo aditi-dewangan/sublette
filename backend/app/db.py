@@ -31,7 +31,9 @@ class Base(DeclarativeBase):
 
 
 # Tables that PostGIS and its add-ons create for themselves. The postgis/postgis
-# image (local and CI) also installs postgis_topology and the tiger geocoder.
+# image (local and CI) also installs postgis_topology and the tiger geocoder,
+# and puts their schemas on the search path, so their tables can appear to be
+# in the default schema.
 POSTGIS_TABLES = frozenset(
     {"spatial_ref_sys", "geography_columns", "geometry_columns", "topology", "layer"}
 )
@@ -39,12 +41,18 @@ POSTGIS_SCHEMAS = frozenset({"topology", "tiger", "tiger_data"})
 
 
 def include_in_migrations(obj, name, type_, reflected, compare_to) -> bool:
-    """Alembic filter: leave PostGIS's own tables (and their indexes and
-    constraints) alone, compare everything else."""
+    """Alembic filter: compare only Sublette's own tables (and their indexes
+    and constraints). Anything else found in the database belongs to PostGIS.
+
+    Side effect: dropping a model does not make autogenerate drop its table.
+    Write that migration by hand.
+    """
     table = obj if type_ == "table" else getattr(obj, "table", None)
     if table is None:
         return True
-    return table.name not in POSTGIS_TABLES and table.schema not in POSTGIS_SCHEMAS
+    if table.name in POSTGIS_TABLES or table.schema in POSTGIS_SCHEMAS:
+        return False
+    return not (reflected and table.name not in Base.metadata.tables)
 
 
 def make_engine(settings: Settings) -> Engine:

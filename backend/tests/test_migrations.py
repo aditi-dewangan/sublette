@@ -67,11 +67,15 @@ def test_models_and_migrations_agree(clean_database: str) -> None:
 def test_postgis_tables_and_their_indexes_are_left_alone() -> None:
     from sqlalchemy import Column, Index, Integer, MetaData, Table
 
+    import app.models  # noqa: F401  (registers Sublette's own tables)
     from app.db import include_in_migrations
 
     metadata = MetaData()
     topology = Table("topology", metadata, Column("id", Integer))
     tiger = Table("addr", metadata, Column("id", Integer), schema="tiger")
+    # The tiger geocoder's schema is on the search path, so its tables can be
+    # reflected with no schema at all.
+    tiger_unqualified = Table("featnames", metadata, Column("id", Integer))
     ours = Table("users", metadata, Column("id", Integer))
     topology_index = Index("topology_name_key", topology.c.id)
     our_index = Index("ix_users_id", ours.c.id)
@@ -79,5 +83,9 @@ def test_postgis_tables_and_their_indexes_are_left_alone() -> None:
     assert not include_in_migrations(topology, "topology", "table", True, None)
     assert not include_in_migrations(tiger, "addr", "table", True, None)
     assert not include_in_migrations(topology_index, "topology_name_key", "index", True, None)
+    assert not include_in_migrations(tiger_unqualified, "featnames", "table", True, None)
+    assert not include_in_migrations(
+        Index("idx_featnames", tiger_unqualified.c.id), "idx_featnames", "index", True, None
+    )
     assert include_in_migrations(ours, "users", "table", True, None)
     assert include_in_migrations(our_index, "ix_users_id", "index", True, None)

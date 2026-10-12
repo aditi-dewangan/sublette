@@ -275,7 +275,7 @@ final class ListingEditorModel {
         step = previous
     }
 
-    static func step(forField field: String) -> Step {
+    nonisolated static func step(forField field: String) -> Step {
         switch field {
         case "photo_keys": return .photos
         case "address", "latitude", "longitude": return .address

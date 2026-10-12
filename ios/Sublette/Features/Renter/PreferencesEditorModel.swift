@@ -59,7 +59,8 @@ final class PreferencesEditorModel {
     var endDate: Date
     var flexibilityDays = 0
     var budgetText = ""
-    var spaceTypes: Set<SpaceType> = []
+    /// In the order chosen, so a saved search reloads exactly as it was.
+    var spaceTypes: [SpaceType] = []
     /// Must or nice. Ignored when every type is chosen.
     var spaceTypeImportance: Importance = .must
     var flagImportance: [PreferenceField: Importance] = [:]
@@ -122,7 +123,7 @@ final class PreferencesEditorModel {
         for preference in profile.preferences {
             switch preference.value {
             case .spaceTypes(let types):
-                spaceTypes = Set(types)
+                spaceTypes = types
                 spaceTypeImportance = preference.importance == .nice ? .nice : .must
             case .yes:
                 flagImportance[preference.field] = preference.importance
@@ -142,6 +143,15 @@ final class PreferencesEditorModel {
         existing?.updatedAt != nil
     }
 
+    func toggle(_ type: SpaceType) {
+        if let index = spaceTypes.firstIndex(of: type) {
+            spaceTypes.remove(at: index)
+        } else {
+            spaceTypes.append(type)
+        }
+        fieldErrors["space_type"] = nil
+    }
+
     func importance(of field: PreferenceField) -> Importance {
         flagImportance[field] ?? .off
     }
@@ -156,11 +166,10 @@ final class PreferencesEditorModel {
         var list: [Preference] = []
         // Same order as the server's list, so a save and a reload match.
         if !spaceTypes.isEmpty {
-            let ordered = SpaceType.allCases.filter { spaceTypes.contains($0) }
-            let everything = ordered.count == SpaceType.allCases.count
+            let everything = Set(spaceTypes).count == SpaceType.allCases.count
             list.append(Preference(
                 field: .spaceType,
-                value: .spaceTypes(ordered),
+                value: .spaceTypes(spaceTypes),
                 importance: everything ? .off : spaceTypeImportance
             ))
         }

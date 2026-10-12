@@ -91,16 +91,19 @@ final class PreferencesEditorModelTests: XCTestCase {
 
     func testChoosingEverySpaceTypeIsTheSameAsNoPreference() {
         let editor = makeEditor()
-        editor.spaceTypes = Set(SpaceType.allCases)
+        editor.spaceTypes = SpaceType.allCases
 
         XCTAssertEqual(editor.form.preferences.first?.importance, .off)
     }
 
-    func testSpaceTypesAreSentInAFixedOrder() {
+    func testSpaceTypesAreSentInTheOrderChosenAndCanBeToggledOff() {
         let editor = makeEditor()
-        editor.spaceTypes = [.sharedRoom, .entireUnit]
+        editor.toggle(.sharedRoom)
+        editor.toggle(.entireUnit)
+        editor.toggle(.privateRoom)
+        editor.toggle(.privateRoom)
 
-        XCTAssertEqual(editor.form.preferences.first?.value, .spaceTypes([.entireUnit, .sharedRoom]))
+        XCTAssertEqual(editor.form.preferences.first?.value, .spaceTypes([.sharedRoom, .entireUnit]))
     }
 
     func testEachFlagIsSentWithItsImportance() {

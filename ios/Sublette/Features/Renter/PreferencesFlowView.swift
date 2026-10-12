@@ -168,11 +168,7 @@ private struct SpaceTypeStep: View {
         ForEach(SpaceType.allCases) { type in
             let isOn = model.spaceTypes.contains(type)
             Button {
-                if isOn {
-                    model.spaceTypes.remove(type)
-                } else {
-                    model.spaceTypes.insert(type)
-                }
+                model.toggle(type)
             } label: {
                 HStack(alignment: .top, spacing: 12) {
                     Image(systemName: isOn ? "checkmark.square.fill" : "square")

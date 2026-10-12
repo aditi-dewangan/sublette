@@ -128,6 +128,16 @@ struct Preference: Codable, Equatable {
     }
 }
 
+enum Distance {
+    static let metersPerMile = 1_609.344
+
+    /// "3.0 miles", "12 miles"
+    static func miles(_ meters: Int) -> String {
+        let miles = Double(meters) / metersPerMile
+        return String(format: miles < 10 ? "%.1f miles" : "%.0f miles", miles)
+    }
+}
+
 /// The middle of the area a renter wants to live in, and how far around it.
 /// Private: the server returns it only to its owner.
 struct SearchPin: Codable, Equatable {

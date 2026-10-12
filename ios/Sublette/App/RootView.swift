@@ -12,17 +12,9 @@ struct RootView: View {
     var body: some View {
         VStack(spacing: 0) {
             ModeHeader()
-            Group {
-                switch appState.mode {
-                case .renter: RenterTabs()
-                case .lister: ListerTabs()
-                }
-            }
-            // Each mode starts on its own first tab.
-            .id(appState.mode)
-            .toolbarBackground(appState.mode.accent.opacity(0.22), for: .tabBar)
-            .toolbarBackground(.visible, for: .tabBar)
-            .tint(Brand.ink)
+            ModeTabs(mode: appState.mode)
+                // Each mode starts on its own first tab.
+                .id(appState.mode)
         }
         .background(Brand.cream)
     }
@@ -61,26 +53,19 @@ enum ModeTab: String, CaseIterable {
 }
 
 @MainActor
-private struct RenterTabs: View {
-    var body: some View {
-        TabView {
-            ForEach(ModeTab.tabs(for: .renter), id: \.self) { tab in
-                ModeTabContent(tab: tab)
-                    .tabItem { Label(tab.title, systemImage: tab.systemImage) }
-            }
-        }
-    }
-}
+private struct ModeTabs: View {
+    let mode: AppMode
 
-@MainActor
-private struct ListerTabs: View {
     var body: some View {
         TabView {
-            ForEach(ModeTab.tabs(for: .lister), id: \.self) { tab in
+            ForEach(ModeTab.tabs(for: mode), id: \.self) { tab in
                 ModeTabContent(tab: tab)
                     .tabItem { Label(tab.title, systemImage: tab.systemImage) }
+                    .toolbarBackground(mode.accent.opacity(0.22), for: .tabBar)
+                    .toolbarBackground(.visible, for: .tabBar)
             }
         }
+        .tint(Brand.ink)
     }
 }
 

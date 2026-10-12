@@ -146,8 +146,7 @@ enum RenterSummary {
         guard let pin = profile.pin else {
             return "No area yet"
         }
-        let miles = Double(pin.radiusM) / PreferencesEditorModel.metersPerMile
-        return String(format: miles < 10 ? "Within %.1f miles of your pin" : "Within %.0f miles of your pin", miles)
+        return "Within \(Distance.miles(pin.radiusM)) of your pin"
     }
 }
 

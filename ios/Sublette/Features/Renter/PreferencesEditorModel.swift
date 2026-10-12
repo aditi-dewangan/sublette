@@ -52,7 +52,6 @@ final class PreferencesEditorModel {
     }
 
     static let flexibilityChoices = [0, 3, 7, 14, 30]
-    static let metersPerMile = 1_609.344
 
     // MARK: Answers
 
@@ -186,14 +185,9 @@ final class PreferencesEditorModel {
         )
     }
 
-    var radiusMiles: Double {
-        Double(radiusM) / Self.metersPerMile
-    }
-
     /// "3.0 miles"
     var radiusText: String {
-        let miles = radiusMiles
-        return String(format: miles < 10 ? "%.1f miles" : "%.0f miles", miles)
+        Distance.miles(radiusM)
     }
 
     // MARK: - Checking each step before moving on

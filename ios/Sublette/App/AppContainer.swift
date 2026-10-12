@@ -8,11 +8,14 @@ final class AppContainer {
     let configuration: AppConfiguration
     let preferences: Preferences
     let api: AccountAPI
+    let listingsAPI: ListingsAPI
+    let addressLocator: AddressLocating
     let uploader: PhotoUploading
     let appState: AppState
     let session: SessionModel
     let onboarding: OnboardingModel
     let serverStatus: ServerStatusModel
+    let listerHome: ListerHomeModel
 
     private let tokenManager: TokenManager
 
@@ -20,6 +23,8 @@ final class AppContainer {
         configuration: AppConfiguration,
         preferences: Preferences,
         api: AccountAPI,
+        listingsAPI: ListingsAPI,
+        addressLocator: AddressLocating,
         uploader: PhotoUploading,
         tokenManager: TokenManager,
         health: HealthChecking
@@ -27,6 +32,8 @@ final class AppContainer {
         self.configuration = configuration
         self.preferences = preferences
         self.api = api
+        self.listingsAPI = listingsAPI
+        self.addressLocator = addressLocator
         self.uploader = uploader
         self.tokenManager = tokenManager
         self.appState = AppState(preferences: preferences)
@@ -34,6 +41,7 @@ final class AppContainer {
         self.session = session
         self.onboarding = OnboardingModel(api: api, session: session)
         self.serverStatus = ServerStatusModel(health: health, configuration: configuration)
+        self.listerHome = ListerHomeModel(api: listingsAPI)
     }
 
     /// The real thing: talks to the server named in the build settings and
@@ -63,6 +71,8 @@ final class AppContainer {
             configuration: configuration,
             preferences: preferences,
             api: api,
+            listingsAPI: LiveListingsAPI(client: signedInClient),
+            addressLocator: AppleAddressLocator(),
             uploader: PhotoUploader(api: api, session: APIClient.makeSession(timeout: timeout)),
             tokenManager: tokenManager,
             health: openClient
@@ -85,5 +95,20 @@ final class AppContainer {
 
     func makeProfileForm(for user: User) -> ProfileFormModel {
         ProfileFormModel(user: user, api: api, uploader: uploader, session: session)
+    }
+
+    func makeListingEditor(for request: EditorRequest) -> ListingEditorModel {
+        let listing: Listing?
+        switch request {
+        case .new: listing = nil
+        case .edit(let existing): listing = existing
+        }
+        return ListingEditorModel(
+            listing: listing,
+            schoolName: session.user?.school.name ?? "your school",
+            api: listingsAPI,
+            uploader: uploader,
+            locator: addressLocator
+        )
     }
 }

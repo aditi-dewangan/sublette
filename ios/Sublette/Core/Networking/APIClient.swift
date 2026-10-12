@@ -85,7 +85,15 @@ final class APIClient: @unchecked Sendable {
         while base.hasSuffix("/") {
             base.removeLast()
         }
-        return URL(string: base + endpoint.path)
+        guard let url = URL(string: base + endpoint.path) else {
+            return nil
+        }
+        guard !endpoint.query.isEmpty else {
+            return url
+        }
+        var components = URLComponents(url: url, resolvingAgainstBaseURL: false)
+        components?.queryItems = endpoint.query
+        return components?.url
     }
 
     // MARK: - Private

@@ -6,6 +6,7 @@ a color changed in one codebase and forgotten in another.
 
 import json
 import re
+import uuid
 
 import pytest
 from fastapi import FastAPI
@@ -23,6 +24,15 @@ HTTP_METHODS = {"GET", "POST", "PUT", "PATCH", "DELETE"}
 
 def contract_entries() -> list[dict]:
     return json.loads((CONTRACT / "endpoints.json").read_text())["endpoints"]
+
+
+PLACEHOLDER = re.compile(r"\{[^}]*\}|\\\([^)]*\)")
+
+
+def shape(path: str) -> str:
+    """`/v1/listings/{listing_id}` here and `/v1/listings/\\(id)` in Swift both
+    become `/v1/listings/{}`."""
+    return PLACEHOLDER.sub("{}", path)
 
 
 def contract_endpoints() -> set[tuple[str, str]]:
@@ -51,14 +61,16 @@ def test_server_routes_match_the_contract(app: FastAPI) -> None:
 
 def test_every_path_except_health_is_under_v1() -> None:
     for item in contract_entries():
-        if item.get("dev_only"):
+        if item.get("own_storage_only"):
             continue
         assert item["path"] == "/health" or item["path"].startswith("/v1/"), item["path"]
 
 
 def test_only_sign_in_and_health_are_open_to_everyone() -> None:
     open_paths = {
-        item["path"] for item in contract_entries() if not item["auth"] and not item.get("dev_only")
+        item["path"]
+        for item in contract_entries()
+        if not item["auth"] and not item.get("own_storage_only")
     }
 
     assert open_paths == {
@@ -81,18 +93,23 @@ AUTH_ENDPOINTS = [
 )
 def test_endpoints_marked_auth_refuse_a_request_with_no_token(item: dict, client) -> None:
     """Every endpoint except sign-in requires a verified account."""
-    response = client.request(item["method"], item["path"], json={})
+    path = PLACEHOLDER.sub(str(uuid.uuid4()), item["path"])
+    response = client.request(item["method"], path, json={})
 
     assert response.status_code == 401
     assert response.json()["code"] == "not_signed_in"
 
 
-def test_dev_storage_routes_are_not_served_without_local_storage(settings) -> None:
+def test_file_routes_are_served_only_when_this_server_stores_photos(settings) -> None:
     from app.main import create_app
 
-    app = create_app(settings.model_copy(update={"storage_backend": "none"}))
+    def has_file_routes(backend: str) -> bool:
+        app = create_app(settings.model_copy(update={"storage_backend": backend}))
+        return any(path.startswith("/files") for path in app.openapi()["paths"])
 
-    assert not any(path.startswith("/dev-storage") for path in app.openapi()["paths"])
+    assert has_file_routes("local")
+    assert has_file_routes("database")
+    assert not has_file_routes("none")
 
 
 def swift_endpoints() -> set[tuple[str, str]]:
@@ -105,7 +122,8 @@ def test_ios_endpoints_exist_on_the_server() -> None:
     declared = swift_endpoints()
 
     assert declared, "No endpoints found in Endpoint.swift; has its format changed?"
-    assert declared <= contract_endpoints()
+    contract = {(method, shape(path)) for method, path in contract_endpoints()}
+    assert {(method, shape(path)) for method, path in declared} <= contract
 
 
 def test_ios_declares_paths_only_in_endpoint_swift() -> None:

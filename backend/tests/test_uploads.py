@@ -1,6 +1,5 @@
 """Photo uploads: POST /v1/uploads/presign, the local dev storage, and S3 links."""
 
-from pathlib import Path
 from urllib.parse import parse_qs, urlsplit
 
 import pytest
@@ -11,9 +10,10 @@ from app.deps import get_now
 from app.main import create_app
 from app.services.storage import (
     KEY_PATTERN,
-    LocalStorage,
+    FolderStore,
     NoStorage,
     S3Storage,
+    ServerStorage,
     StorageUnavailable,
     make_storage,
     new_key,
@@ -59,8 +59,8 @@ def test_presign_returns_a_link_under_the_callers_own_folder(
     assert body["key"].endswith(".jpg")
     assert body["method"] == "PUT"
     assert body["headers"] == {"Content-Type": "image/jpeg"}
-    assert body["upload_url"].startswith(f"http://testserver/dev-storage/{body['key']}?")
-    assert body["public_url"] == f"http://testserver/dev-storage/{body['key']}"
+    assert body["upload_url"].startswith(f"http://testserver/files/{body['key']}?")
+    assert body["public_url"] == f"http://testserver/files/{body['key']}"
     assert body["max_bytes"] == 10 * 1024 * 1024
     assert body["expires_at"].startswith("2027-01-04T17:10:00")
 
@@ -234,10 +234,10 @@ def test_an_empty_upload_is_refused(client: TestClient, aditi: dict) -> None:
 @pytest.mark.parametrize(
     "path",
     [
-        "/dev-storage/../../etc/passwd",
-        "/dev-storage/profiles/../../secret.jpg",
-        "/dev-storage/profiles/abc/def.jpg",
-        "/dev-storage/nothing",
+        "/files/../../etc/passwd",
+        "/files/profiles/../../secret.jpg",
+        "/files/profiles/abc/def.jpg",
+        "/files/nothing",
     ],
 )
 def test_storage_paths_cannot_escape_the_storage_folder(client: TestClient, path: str) -> None:
@@ -246,10 +246,11 @@ def test_storage_paths_cannot_escape_the_storage_folder(client: TestClient, path
 
 
 def test_local_storage_refuses_keys_outside_its_folder(settings) -> None:
-    storage = LocalStorage(settings)
+    folder = FolderStore(settings.storage_local_dir)
+    storage = ServerStorage(settings, folder)
 
     with pytest.raises(ValueError):
-        storage.path_for("../outside.jpg")
+        folder.path_for("../outside.jpg")
     storage.delete("../outside.jpg")  # logged, not raised
 
 
@@ -336,11 +337,18 @@ def s3_settings(settings):
     )
 
 
-def test_the_backend_follows_the_setting(settings, tmp_path: Path) -> None:
-    assert isinstance(make_storage(settings), LocalStorage)
-    assert isinstance(make_storage(s3_settings(settings)), S3Storage)
+def test_the_backend_follows_the_setting(settings, app) -> None:
+    from app.services.storage import DatabaseStore
+
+    engine = app.state.engine
+    local = make_storage(settings, engine)
+    database = make_storage(settings.model_copy(update={"storage_backend": "database"}), engine)
+
+    assert isinstance(local, ServerStorage) and isinstance(local.store, FolderStore)
+    assert isinstance(database, ServerStorage) and isinstance(database.store, DatabaseStore)
+    assert isinstance(make_storage(s3_settings(settings), engine), S3Storage)
     assert isinstance(
-        make_storage(settings.model_copy(update={"storage_backend": "none"})), NoStorage
+        make_storage(settings.model_copy(update={"storage_backend": "none"}), engine), NoStorage
     )
 
 
@@ -380,4 +388,4 @@ def test_s3_custom_endpoint_is_used_for_other_providers(settings, clock: Clock) 
 def test_with_s3_the_server_serves_no_storage_routes(settings) -> None:
     app = create_app(s3_settings(settings))
 
-    assert not any(path.startswith("/dev-storage") for path in app.openapi()["paths"])
+    assert not any(path.startswith("/files") for path in app.openapi()["paths"])

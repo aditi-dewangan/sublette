@@ -1,14 +1,18 @@
 """Photo storage. The phone uploads straight to storage with a short-lived link.
 
-Three backends, chosen by SUBLETTE_STORAGE_BACKEND:
-  local  a folder on this machine, served by this server (development)
-  s3     any S3-compatible store (staging and production)
-  none   uploads are switched off
+Four backends, chosen by SUBLETTE_STORAGE_BACKEND:
+  local     a folder on this machine, uploaded to and served by this server
+            (development)
+  database  a table in the database, uploaded to and served by this server
+            ($0 staging: Render's free disk is wiped on restart, the database is not)
+  s3        any S3-compatible store (production)
+  none      uploads are switched off
 """
 
 import hashlib
 import hmac
 import logging
+import os
 import re
 import uuid
 from dataclasses import dataclass
@@ -16,6 +20,11 @@ from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Literal, Protocol
 from urllib.parse import quote, urlencode
+
+from sqlalchemy import Engine
+from sqlalchemy import delete as sql_delete
+from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy.orm import Session
 
 from app.config import Settings
 
@@ -85,18 +94,88 @@ class NoStorage:
         return None
 
 
-class LocalStorage:
-    """Development storage: files in a folder, uploaded and read through this server."""
+class FileStore(Protocol):
+    """Where ServerStorage keeps the bytes."""
 
-    ROUTE = "/dev-storage"
+    def put(self, key: str, content_type: str, data: bytes) -> None: ...
 
-    def __init__(self, settings: Settings) -> None:
+    def get(self, key: str) -> tuple[bytes, str] | None: ...
+
+    def delete(self, key: str) -> None: ...
+
+
+class FolderStore:
+    """Files in a folder on this machine."""
+
+    def __init__(self, root: str) -> None:
+        self.root = Path(root).resolve()
+
+    def path_for(self, key: str) -> Path:
+        """The file for a key. Keys are checked against KEY_PATTERN first, so
+        they can never point outside the storage folder."""
+        if not KEY_PATTERN.match(key):
+            raise ValueError("not a storage key")
+        return self.root / key
+
+    def put(self, key: str, content_type: str, data: bytes) -> None:
+        path = self.path_for(key)
+        path.parent.mkdir(parents=True, exist_ok=True)
+        temporary = path.with_suffix(path.suffix + ".part")
+        temporary.write_bytes(data)
+        os.replace(temporary, path)
+
+    def get(self, key: str) -> tuple[bytes, str] | None:
+        path = self.path_for(key)
+        if not path.is_file():
+            return None
+        return path.read_bytes(), CONTENT_TYPES[path.suffix.lstrip(".")]
+
+    def delete(self, key: str) -> None:
+        self.path_for(key).unlink(missing_ok=True)
+
+
+class DatabaseStore:
+    """Files in the `stored_files` table. Slower than a real photo store, but
+    free and it survives restarts, which Render's free disk does not."""
+
+    def __init__(self, engine: Engine) -> None:
+        self._engine = engine
+
+    def put(self, key: str, content_type: str, data: bytes) -> None:
+        from app.models import StoredFile
+
+        with Session(self._engine) as session:
+            session.merge(StoredFile(key=key, content_type=content_type, data=data, size=len(data)))
+            session.commit()
+
+    def get(self, key: str) -> tuple[bytes, str] | None:
+        from app.models import StoredFile
+
+        with Session(self._engine) as session:
+            row = session.get(StoredFile, key)
+            return (row.data, row.content_type) if row else None
+
+    def delete(self, key: str) -> None:
+        from app.models import StoredFile
+
+        with Session(self._engine) as session:
+            session.execute(sql_delete(StoredFile).where(StoredFile.key == key))
+            session.commit()
+
+
+class ServerStorage:
+    """The phone uploads to this server, with a short-lived signed link, and the
+    server keeps the photo in a FileStore and serves it back."""
+
+    ROUTE = "/files"
+
+    def __init__(self, settings: Settings, store: FileStore) -> None:
         self._settings = settings
-        self.root = Path(settings.storage_local_dir).resolve()
+        self.store = store
 
     def _signature(self, key: str, content_type: str, expires: int) -> str:
         secret = hmac.new(
-            self._settings.secret_key.encode(), b"dev-storage", hashlib.sha256
+            self._settings.secret_key.encode(), b"server-storage", hashlib.sha256
         ).digest()
         return hmac.new(secret, f"{key}\n{content_type}\n{expires}".encode(), "sha256").hexdigest()
 
@@ -106,13 +185,6 @@ class LocalStorage:
         if expires <= now.timestamp():
             return False
         return hmac.compare_digest(signature, self._signature(key, content_type, expires))
-
-    def path_for(self, key: str) -> Path:
-        """The file for a key. Keys are checked against KEY_PATTERN first, so
-        they can never point outside the storage folder."""
-        if not KEY_PATTERN.match(key):
-            raise ValueError("not a storage key")
-        return self.root / key
 
     def presign_upload(self, key: str, content_type: str, now: datetime) -> PresignedUpload:
         expires_at = now + timedelta(seconds=self._settings.upload_url_ttl_s)
@@ -135,9 +207,9 @@ class LocalStorage:
 
     def delete(self, key: str) -> None:
         try:
-            self.path_for(key).unlink(missing_ok=True)
-        except (OSError, ValueError) as error:
-            logger.warning("Could not delete local photo: %s", type(error).__name__)
+            self.store.delete(key)
+        except (OSError, ValueError, SQLAlchemyError) as error:
+            logger.warning("Could not delete photo: %s", type(error).__name__)
 
 
 class S3Storage:
@@ -207,9 +279,11 @@ class S3Storage:
             logger.warning("Could not delete photo %s: %s", key, type(error).__name__)
 
 
-def make_storage(settings: Settings) -> PhotoStorage:
+def make_storage(settings: Settings, engine: Engine) -> PhotoStorage:
     if settings.storage_backend == "s3":
         return S3Storage(settings)
     if settings.storage_backend == "local":
-        return LocalStorage(settings)
+        return ServerStorage(settings, FolderStore(settings.storage_local_dir))
+    if settings.storage_backend == "database":
+        return ServerStorage(settings, DatabaseStore(engine))
     return NoStorage()

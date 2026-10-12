@@ -36,7 +36,10 @@ TEST_DATABASE_URL = os.environ.get(
 # for "the database is down".
 UNREACHABLE_DATABASE_URL = "postgresql+psycopg://sublette:sublette@127.0.0.1:1/sublette_test"
 
-DATA_TABLES = "users, email_codes, rate_limit_hits, school_domains, schools"
+DATA_TABLES = (
+    "listing_photos, listings, stored_files, users, email_codes, rate_limit_hits, "
+    "school_domains, schools"
+)
 
 
 def alembic_config(database_url: str) -> Config:

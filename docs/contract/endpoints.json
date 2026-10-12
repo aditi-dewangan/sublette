@@ -1,5 +1,5 @@
 {
-  "about": "Every HTTP endpoint the server exposes. The server's routes and the iPhone app's Endpoint.swift are both tested against this file, so a path renamed in one place and not the others fails the build. `auth: true` endpoints are tested to refuse a request with no token. `dev_only` endpoints exist only when photos are stored in a local folder.",
+  "about": "Every HTTP endpoint the server exposes. The server's routes and the iPhone app's Endpoint.swift are both tested against this file, so a path renamed in one place and not the others fails the build. `auth: true` endpoints are tested to refuse a request with no token. `own_storage_only` endpoints exist only when this server stores photos itself (SUBLETTE_STORAGE_BACKEND local or database). Path placeholders such as {listing_id} match any `\\(...)` in Swift.",
   "endpoints": [
     { "method": "GET", "path": "/health", "auth": false, "phase": 0 },
 
@@ -11,7 +11,13 @@
     { "method": "DELETE", "path": "/v1/me", "auth": true, "phase": 1 },
     { "method": "POST", "path": "/v1/uploads/presign", "auth": true, "phase": 1 },
 
-    { "method": "PUT", "path": "/dev-storage/{key}", "auth": false, "phase": 1, "dev_only": true },
-    { "method": "GET", "path": "/dev-storage/{key}", "auth": false, "phase": 1, "dev_only": true }
+    { "method": "POST", "path": "/v1/listings", "auth": true, "phase": 2 },
+    { "method": "GET", "path": "/v1/me/listings", "auth": true, "phase": 2 },
+    { "method": "GET", "path": "/v1/listings/{listing_id}", "auth": true, "phase": 2 },
+    { "method": "PATCH", "path": "/v1/listings/{listing_id}", "auth": true, "phase": 2 },
+    { "method": "POST", "path": "/v1/listings/{listing_id}/status", "auth": true, "phase": 2 },
+
+    { "method": "PUT", "path": "/files/{key}", "auth": false, "phase": 1, "own_storage_only": true },
+    { "method": "GET", "path": "/files/{key}", "auth": false, "phase": 1, "own_storage_only": true }
   ]
 }

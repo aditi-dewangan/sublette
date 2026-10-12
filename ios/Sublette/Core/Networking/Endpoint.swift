@@ -15,6 +15,8 @@ struct Endpoint: Equatable {
     let path: String
     /// Every endpoint except health and sign-in needs a verified account.
     var requiresAuth: Bool = true
+    /// Added after the path as `?name=value`.
+    var query: [URLQueryItem] = []
 }
 
 extension Endpoint {
@@ -31,4 +33,27 @@ extension Endpoint {
     static let deleteMe = Endpoint(method: .delete, path: "/v1/me")
 
     static let presignUpload = Endpoint(method: .post, path: "/v1/uploads/presign")
+
+    // Lister mode.
+    static let createListing = Endpoint(method: .post, path: "/v1/listings")
+
+    static func myListings(cursor: String?) -> Endpoint {
+        Endpoint(
+            method: .get,
+            path: "/v1/me/listings",
+            query: cursor.map { [URLQueryItem(name: "cursor", value: $0)] } ?? []
+        )
+    }
+
+    static func listing(_ id: String) -> Endpoint {
+        Endpoint(method: .get, path: "/v1/listings/\(id)")
+    }
+
+    static func updateListing(_ id: String) -> Endpoint {
+        Endpoint(method: .patch, path: "/v1/listings/\(id)")
+    }
+
+    static func listingStatus(_ id: String) -> Endpoint {
+        Endpoint(method: .post, path: "/v1/listings/\(id)/status")
+    }
 }

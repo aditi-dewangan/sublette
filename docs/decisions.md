@@ -58,6 +58,29 @@ Choices made while building, with the reason. Add to the bottom; do not rewrite 
 - Which email-sending service and which domain? Until then staging prints codes in its log.
 - Which photo store for staging and production (any S3-compatible one works)?
 
+## Phase 2
+
+| Decision | Reason |
+| --- | --- |
+| Profile photos stay optional; "quiet hours" is dropped. | Aditi's answers, 2026-10-12. |
+| A listing is created as a draft holding any subset of answers; publishing (`POST /v1/listings/{id}/status`) checks every required answer and lists each missing one. | The app's flow has eight screens; saving a draft must never fail for being unfinished. |
+| Rules that are never allowed (end before start, a gender preference on a whole unit, a minimum stay longer than the dates) are refused on every save, not only at publish. | The plan says a gender preference is "refused" for a whole unit. |
+| A live or paused listing must stay complete when edited. Filled is final. | Renters must never see a half-finished listing; a filled sublet is history. |
+| Someone else's listing that is not live answers 404, the same as one that does not exist. | Nobody can probe which listings exist. |
+| Locations are stored as plain latitude and longitude for now. The public point is 120 to 180 meters away in a random direction, fixed once, and moved only when the address moves. | Phase 4 adds the PostGIS column and index for distance queries. A fixed offset can't be averaged away by asking repeatedly. |
+| The migration turns PostGIS on (`CREATE EXTENSION IF NOT EXISTS postgis`). | A database without it now fails at deploy, not in phase 4. |
+| Listing photos must be the lister's own listing uploads, unique across listings, 4 to 12, in display order. Removed photos are deleted from storage. | The same ownership rule as profile photos. |
+| A fourth photo backend, `database`, keeps photos in a table and serves them from this server. `/dev-storage` became `/files`. | Listings need 4 photos, and staging is $0: Render's free disk is wiped on restart. The route is no longer development-only, so its name changed (logged in `docs/renames.toml`). |
+| On Render, the server's public address comes from `RENDER_EXTERNAL_URL` unless `SUBLETTE_PUBLIC_BASE_URL` is set. | One fewer value to paste. |
+| A short "about the housemates" line (`housemates_note`, 140 characters) was added. | The spec asks for "a line on the housemates who are staying"; the build plan's table has only a count. |
+| In the app, the first tab is the deck in Renter mode and "My listings" in Lister mode. | The plan puts the full mode switch in phase 3; listers need a home now. |
+| Addresses are confirmed on a map with Apple's geocoder. | Free, built in, and it needs no key. |
+
+## Known gaps after phase 2
+
+- Photos uploaded in the editor and then abandoned (the editor closed without saving) stay in storage. A clean-up job belongs with phase 8's expiry job.
+- Listings do not expire yet (phase 8).
+
 ## Known gaps after phase 1
 
 - The phase 1 iPhone code builds and its unit tests pass on GitHub's Mac (2026-10-12). Nobody has used it in the simulator yet.

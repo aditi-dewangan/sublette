@@ -29,7 +29,8 @@ services:
       # The sender you verified in Brevo, such as: Sublette <sublette.app@gmail.com>
       - key: SUBLETTE_EMAIL_FROM
         sync: false
-      # Free instances lose files on every restart, so photo uploads stay off
-      # until a photo store is chosen. The app handles this already.
+      # Free instances lose files on every restart, so photos are kept in the
+      # database instead (Neon's free 1 GB holds a few thousand photos).
+      # SUBLETTE_PUBLIC_BASE_URL is filled from Render's RENDER_EXTERNAL_URL.
       - key: SUBLETTE_STORAGE_BACKEND
-        value: none
+        value: database

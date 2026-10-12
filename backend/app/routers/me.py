@@ -1,11 +1,11 @@
 """The signed-in user's own account."""
 
 from fastapi import APIRouter, Response
-from sqlalchemy import delete
+from sqlalchemy import delete, select
 
 from app.deps import CurrentUser, DbSession, Storage
 from app.errors import ApiError
-from app.models import EmailCode, User
+from app.models import EmailCode, Listing, ListingPhoto, User
 from app.schemas.errors import FieldError
 from app.schemas.user import SchoolOut, UserOut, UserPatch
 from app.services.storage import KEY_PATTERN, PhotoStorage, owner_prefix
@@ -83,10 +83,14 @@ def update_me(patch: UserPatch, user: CurrentUser, session: DbSession, storage: 
 @router.delete("/me", status_code=204, response_class=Response)
 def delete_me(user: CurrentUser, session: DbSession, storage: Storage) -> Response:
     """Delete the account and everything that belongs to it. Cannot be undone."""
-    photo = user.photo_key
+    photos = [user.photo_key] if user.photo_key else []
+    photos += session.scalars(
+        select(ListingPhoto.key).join(Listing).where(Listing.owner_id == user.id)
+    ).all()
     session.execute(delete(EmailCode).where(EmailCode.email == user.email))
+    # Listings and their photo rows go with the user (ON DELETE CASCADE).
     session.delete(user)
     session.commit()
-    if photo:
-        storage.delete(photo)
+    for key in photos:
+        storage.delete(key)
     return Response(status_code=204)

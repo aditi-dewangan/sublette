@@ -107,6 +107,7 @@ protocol AccountAPI: Sendable {
     func setPhoto(key: String?) async throws -> User
     func deleteAccount() async throws
     func presignProfilePhoto(contentType: String) async throws -> PresignedUpload
+    func presignListingPhoto(contentType: String) async throws -> PresignedUpload
 }
 
 /// Trades a refresh token for new tokens.
@@ -152,6 +153,13 @@ struct LiveAccountAPI: AccountAPI, TokenRefreshing {
         try await signedInClient.send(
             .presignUpload,
             body: PresignBody(purpose: "profile_photo", contentType: contentType)
+        )
+    }
+
+    func presignListingPhoto(contentType: String) async throws -> PresignedUpload {
+        try await signedInClient.send(
+            .presignUpload,
+            body: PresignBody(purpose: "listing_photo", contentType: contentType)
         )
     }
 }

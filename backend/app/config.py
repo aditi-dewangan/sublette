@@ -11,7 +11,7 @@ from email.utils import parseaddr
 from functools import lru_cache
 from typing import Literal, Self
 
-from pydantic import field_validator, model_validator
+from pydantic import AliasChoices, Field, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 Environment = Literal["local", "test", "staging", "production"]
@@ -26,6 +26,7 @@ class Settings(BaseSettings):
         env_prefix="SUBLETTE_",
         env_file=".env",
         extra="ignore",
+        populate_by_name=True,
     )
 
     env: Environment = "local"
@@ -74,11 +75,17 @@ class Settings(BaseSettings):
 
     # --- Photo storage ---
     # "local" keeps photos in a folder and serves them from this server.
-    # "s3" is any S3-compatible store. "none" turns uploads off.
-    storage_backend: Literal["local", "s3", "none"] = "local"
+    # "database" keeps them in a database table and serves them from this
+    # server (free; survives restarts). "s3" is any S3-compatible store.
+    # "none" turns uploads off.
+    storage_backend: Literal["local", "database", "s3", "none"] = "local"
     storage_local_dir: str = ".dev-storage"
-    # Where phones reach this server. Used to build local photo addresses.
-    public_base_url: str = "http://localhost:8000"
+    # Where phones reach this server; used to build photo addresses when this
+    # server stores the photos. On Render it is filled in automatically.
+    public_base_url: str = Field(
+        default="http://localhost:8000",
+        validation_alias=AliasChoices("SUBLETTE_PUBLIC_BASE_URL", "RENDER_EXTERNAL_URL"),
+    )
     s3_bucket: str = ""
     s3_region: str = "auto"
     s3_endpoint_url: str = ""

@@ -10,7 +10,7 @@
   "year": "junior",
   "program": "Informatics",
   "bio": "Winter internship in Austin. Tidy, quiet, plant person.",
-  "photo_url": "http://testserver/dev-storage/profiles/11111111-2222-4333-8444-555555555555/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.jpg",
+  "photo_url": "http://testserver/files/profiles/11111111-2222-4333-8444-555555555555/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.jpg",
   "gender": "woman",
   "smokes": false,
   "has_pets": false,

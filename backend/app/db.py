@@ -30,6 +30,22 @@ class Base(DeclarativeBase):
     metadata = MetaData(naming_convention=NAMING_CONVENTION)
 
 
+# Tables that PostGIS and its add-ons create for themselves. The postgis/postgis
+# image (local and CI) also installs postgis_topology and the tiger geocoder.
+POSTGIS_TABLES = frozenset(
+    {"spatial_ref_sys", "geography_columns", "geometry_columns", "topology", "layer"}
+)
+POSTGIS_SCHEMAS = frozenset({"topology", "tiger", "tiger_data"})
+
+
+def include_in_migrations(obj, name, type_, reflected, compare_to) -> bool:
+    """Alembic filter: leave PostGIS's own tables alone, compare everything else."""
+    if type_ != "table":
+        return True
+    schema = getattr(obj, "schema", None)
+    return name not in POSTGIS_TABLES and schema not in POSTGIS_SCHEMAS
+
+
 def make_engine(settings: Settings) -> Engine:
     """Create the engine. This does not connect, so the app can start while
     the database is down and report that through /health."""

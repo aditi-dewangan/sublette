@@ -7,7 +7,7 @@ from sqlalchemy import create_engine
 import app.models  # noqa: F401  (registers every table on Base.metadata)
 from alembic import context
 from app.config import get_settings
-from app.db import Base
+from app.db import Base, include_in_migrations
 
 config = context.config
 
@@ -19,19 +19,12 @@ if config.config_file_name is not None and config.attributes.get("configure_logg
 
 target_metadata = Base.metadata
 
-# Tables that PostGIS creates for itself. Migrations must leave them alone.
-POSTGIS_TABLES = {"spatial_ref_sys", "geography_columns", "geometry_columns"}
-
-
-def include_object(obj, name, type_, reflected, compare_to) -> bool:
-    return not (type_ == "table" and name in POSTGIS_TABLES)
-
 
 def run_migrations_offline() -> None:
     context.configure(
         url=database_url,
         target_metadata=target_metadata,
-        include_object=include_object,
+        include_object=include_in_migrations,
         literal_binds=True,
         dialect_opts={"paramstyle": "named"},
     )
@@ -45,7 +38,7 @@ def run_migrations_online() -> None:
         context.configure(
             connection=connection,
             target_metadata=target_metadata,
-            include_object=include_object,
+            include_object=include_in_migrations,
         )
         with context.begin_transaction():
             context.run_migrations()

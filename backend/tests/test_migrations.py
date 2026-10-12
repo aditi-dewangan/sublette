@@ -42,18 +42,13 @@ def test_models_and_migrations_agree(clean_database: str) -> None:
     from alembic.autogenerate import compare_metadata
     from alembic.migration import MigrationContext
 
-    from app.db import Base
+    from app.db import Base, include_in_migrations
 
     engine = create_engine(clean_database)
     try:
         with engine.connect() as connection:
             context = MigrationContext.configure(
-                connection,
-                opts={
-                    "include_object": lambda obj, name, type_, reflected, compare_to: (
-                        not (type_ == "table" and name == "spatial_ref_sys")
-                    )
-                },
+                connection, opts={"include_object": include_in_migrations}
             )
             differences = compare_metadata(context, Base.metadata)
     finally:

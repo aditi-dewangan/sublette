@@ -35,6 +35,9 @@ old  = "/dev-storage"
 new  = "/files"
 kind = "endpoint"
 date = "2026-10-12"
+keep = [
+  { path = "docs/decisions.md", why = "the decisions log records the rename itself" },
+]
 # Photos stored by this server are now also used on $0 staging, not only in development.
 
 [[rename]]

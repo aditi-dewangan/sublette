@@ -39,11 +39,12 @@ POSTGIS_SCHEMAS = frozenset({"topology", "tiger", "tiger_data"})
 
 
 def include_in_migrations(obj, name, type_, reflected, compare_to) -> bool:
-    """Alembic filter: leave PostGIS's own tables alone, compare everything else."""
-    if type_ != "table":
+    """Alembic filter: leave PostGIS's own tables (and their indexes and
+    constraints) alone, compare everything else."""
+    table = obj if type_ == "table" else getattr(obj, "table", None)
+    if table is None:
         return True
-    schema = getattr(obj, "schema", None)
-    return name not in POSTGIS_TABLES and schema not in POSTGIS_SCHEMAS
+    return table.name not in POSTGIS_TABLES and table.schema not in POSTGIS_SCHEMAS
 
 
 def make_engine(settings: Settings) -> Engine:

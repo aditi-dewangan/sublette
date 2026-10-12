@@ -1,0 +1,18 @@
+{
+  "in_area": 2,
+  "eligible": 1,
+  "top_must_have": {
+    "field": "parking",
+    "kind": "must_have",
+    "removed": 1,
+    "message": "1 listing doesn't have parking. Make it nice-to-have to see it."
+  },
+  "blockers": [
+    {
+      "field": "parking",
+      "kind": "must_have",
+      "removed": 1,
+      "message": "1 listing doesn't have parking. Make it nice-to-have to see it."
+    }
+  ]
+}

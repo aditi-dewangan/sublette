@@ -60,4 +60,11 @@ extension Endpoint {
     // Renter mode.
     static let renterProfile = Endpoint(method: .get, path: "/v1/me/renter-profile")
     static let saveRenterProfile = Endpoint(method: .put, path: "/v1/me/renter-profile")
+
+    // The deck (phase 4 on the server; the screens are phase 5).
+    static func deckListings(limit: Int) -> Endpoint {
+        Endpoint(method: .get, path: "/v1/deck/listings", query: [URLQueryItem(name: "limit", value: String(limit))])
+    }
+
+    static let deckDiagnostics = Endpoint(method: .get, path: "/v1/deck/diagnostics")
 }

@@ -444,6 +444,21 @@ private struct HouseholdStepView: View {
                     .foregroundStyle(Brand.ink)
             }
         }
+        if model.housematesStaying > 0 {
+            FormField(
+                "Who they are",
+                hint: "Renters can ask to live with women or with men.",
+                error: model.fieldErrors["household_gender"]
+            ) {
+                Picker("Who they are", selection: $model.householdGender) {
+                    Text("Choose").tag(HouseholdGender?.none)
+                    ForEach(HouseholdGender.allCases) { gender in
+                        Text(gender.title).tag(HouseholdGender?.some(gender))
+                    }
+                }
+                .pickerStyle(.segmented)
+            }
+        }
         FormField(
             "About them",
             hint: "Optional. One line. \(ListingEditorModel.noteLimit - model.housematesNote.count) characters left.",
@@ -481,7 +496,7 @@ private struct WhoStepView: View {
         if model.spaceType?.isShared == true {
             FormField(
                 "Gender preference",
-                hint: "Only for a shared home, where the renter lives with housemates who are staying.",
+                hint: "Only for a shared home. Non-binary renters can take a place for women or for men.",
                 error: model.fieldErrors["gender_preference"]
             ) {
                 Picker("Gender preference", selection: $model.genderPreference) {

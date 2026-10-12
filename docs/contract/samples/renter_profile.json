@@ -1,0 +1,63 @@
+{
+  "start_date": "2027-06-15",
+  "end_date": "2027-09-01",
+  "flexibility_days": 7,
+  "max_rent_cents": 110000,
+  "preferences": [
+    {
+      "field": "space_type",
+      "value": [
+        "private_room",
+        "entire_unit"
+      ],
+      "importance": "must"
+    },
+    {
+      "field": "private_bathroom",
+      "value": true,
+      "importance": "nice"
+    },
+    {
+      "field": "furnished",
+      "value": true,
+      "importance": "must"
+    },
+    {
+      "field": "laundry",
+      "value": true,
+      "importance": "nice"
+    },
+    {
+      "field": "parking",
+      "value": true,
+      "importance": "off"
+    },
+    {
+      "field": "pet_free",
+      "value": true,
+      "importance": "off"
+    },
+    {
+      "field": "smoke_free",
+      "value": true,
+      "importance": "must"
+    },
+    {
+      "field": "housemate_count",
+      "value": 2,
+      "importance": "nice"
+    },
+    {
+      "field": "housemate_gender",
+      "value": "women",
+      "importance": "must"
+    }
+  ],
+  "pin": {
+    "latitude": 47.6553117,
+    "longitude": -122.3035993,
+    "radius_m": 3217
+  },
+  "complete": true,
+  "updated_at": "2027-01-04T17:00:00Z"
+}

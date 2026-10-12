@@ -71,9 +71,35 @@ enum GenderPreference: String, Codable, CaseIterable, Identifiable {
 
     var title: String {
         switch self {
-        case .anyone: return "Anyone"
+        case .anyone: return "No preference"
         case .women: return "Women"
         case .men: return "Men"
+        }
+    }
+}
+
+/// Who the renter would live with: the housemates who are staying.
+enum HouseholdGender: String, Codable, CaseIterable, Identifiable {
+    case women
+    case men
+    case mixed
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .women: return "Women"
+        case .men: return "Men"
+        case .mixed: return "Mixed"
+        }
+    }
+
+    /// "Lives with women", for a listing card.
+    var livesWith: String {
+        switch self {
+        case .women: return "Lives with women"
+        case .men: return "Lives with men"
+        case .mixed: return "Lives with a mixed household"
         }
     }
 }
@@ -121,6 +147,8 @@ struct Listing: Codable, Equatable, Identifiable {
     var housematesNote: String?
     var petsAllowed: Bool?
     var smokingAllowed: Bool?
+    /// Null when nobody is staying.
+    var householdGender: HouseholdGender?
     var genderPreference: GenderPreference
     var sameSchoolOnly: Bool
     var minStayDays: Int
@@ -155,6 +183,7 @@ struct ListingForm: Encodable, Equatable {
     var housematesNote: String?
     var petsAllowed: Bool?
     var smokingAllowed: Bool?
+    var householdGender: HouseholdGender?
     var genderPreference: GenderPreference = .anyone
     var sameSchoolOnly = false
     var minStayDays = 0
@@ -164,7 +193,7 @@ struct ListingForm: Encodable, Equatable {
     private enum CodingKeys: String, CodingKey {
         case address, latitude, longitude, rentCents, depositCents, utilitiesIncluded
         case startDate, endDate, spaceType, bedrooms, bathroom, furnished, laundry, parking
-        case housematesStaying, housematesNote, petsAllowed, smokingAllowed
+        case housematesStaying, housematesNote, petsAllowed, smokingAllowed, householdGender
         case genderPreference, sameSchoolOnly, minStayDays, landlordConsent, photoKeys
     }
 
@@ -190,6 +219,7 @@ struct ListingForm: Encodable, Equatable {
         try container.encode(housematesNote, forKey: .housematesNote)
         try container.encode(petsAllowed, forKey: .petsAllowed)
         try container.encode(smokingAllowed, forKey: .smokingAllowed)
+        try container.encode(householdGender, forKey: .householdGender)
         try container.encode(genderPreference, forKey: .genderPreference)
         try container.encode(sameSchoolOnly, forKey: .sameSchoolOnly)
         try container.encode(minStayDays, forKey: .minStayDays)
@@ -220,6 +250,7 @@ extension ListingForm {
             housematesNote: listing.housematesNote,
             petsAllowed: listing.petsAllowed,
             smokingAllowed: listing.smokingAllowed,
+            householdGender: listing.householdGender,
             genderPreference: listing.genderPreference,
             sameSchoolOnly: listing.sameSchoolOnly,
             minStayDays: listing.minStayDays,

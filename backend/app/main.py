@@ -10,7 +10,16 @@ from app import __version__
 from app.config import Settings, get_settings
 from app.db import make_engine
 from app.errors import install_error_handlers
-from app.routers import API_V1_PREFIX, auth, files, health, listings, me, uploads
+from app.routers import (
+    API_V1_PREFIX,
+    auth,
+    files,
+    health,
+    listings,
+    me,
+    renter_profile,
+    uploads,
+)
 from app.services.email_sender import make_email_sender
 from app.services.storage import ServerStorage, make_storage
 
@@ -47,6 +56,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     v1.include_router(me.router)
     v1.include_router(uploads.router)
     v1.include_router(listings.router)
+    v1.include_router(renter_profile.router)
     app.include_router(v1)
 
     if isinstance(app.state.storage, ServerStorage):

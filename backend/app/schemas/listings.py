@@ -9,6 +9,8 @@ from app.schemas.common import UtcDateTime
 SpaceType = Literal["entire_unit", "private_room", "shared_room"]
 Bathroom = Literal["private", "shared"]
 GenderPreference = Literal["any", "women", "men"]
+# Who lives in the home now: the housemates who are staying.
+HouseholdGender = Literal["women", "men", "mixed"]
 Status = Literal["draft", "active", "paused", "filled", "expired"]
 
 Address = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=300)]
@@ -43,6 +45,7 @@ class ListingFields(BaseModel):
     housemates_note: Note | None = None
     pets_allowed: bool | None = None
     smoking_allowed: bool | None = None
+    household_gender: HouseholdGender | None = None
     gender_preference: GenderPreference | None = None
     same_school_only: bool | None = None
     min_stay_days: int | None = Field(default=None, ge=0, le=730)
@@ -96,6 +99,8 @@ class ListingOut(BaseModel):
     housemates_note: str | None
     pets_allowed: bool | None
     smoking_allowed: bool | None
+    # Women, men or mixed. Null when no housemates are staying.
+    household_gender: HouseholdGender | None
     gender_preference: GenderPreference
     same_school_only: bool
     min_stay_days: int

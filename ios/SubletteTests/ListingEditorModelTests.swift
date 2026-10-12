@@ -539,4 +539,36 @@ final class ListerHomeModelTests: XCTestCase {
         XCTAssertEqual(model.listings.map(\.id), ["b", "a"])
         XCTAssertEqual(model.listings.last?.rentCents, 99_900)
     }
+
+    // MARK: - Who lives there
+
+    func testWhoLivesThereIsAskedOnlyWhenSomeoneStays() {
+        let editor = makeEditor()
+        editor.petsAllowed = false
+        editor.smokingAllowed = false
+
+        editor.housematesStaying = 0
+        XCTAssertNil(editor.problems(on: .household)["household_gender"])
+        XCTAssertNil(editor.form.householdGender)
+
+        editor.housematesStaying = 2
+        XCTAssertEqual(editor.problems(on: .household)["household_gender"], "Say who the housemates staying are.")
+
+        editor.householdGender = .women
+        XCTAssertNil(editor.problems(on: .household)["household_gender"])
+        XCTAssertEqual(editor.form.householdGender, .women)
+    }
+
+    func testWhoLivesThereIsClearedWhenNobodyStays() {
+        let editor = makeEditor(listing: Fixture.listing())
+        XCTAssertEqual(editor.householdGender, .women)
+
+        editor.housematesStaying = 0
+
+        XCTAssertNil(editor.form.householdGender)
+    }
+
+    func testTheServersHouseholdErrorOpensTheHouseholdStep() {
+        XCTAssertEqual(ListingEditorModel.step(forField: "household_gender"), .household)
+    }
 }

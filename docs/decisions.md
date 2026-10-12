@@ -83,6 +83,19 @@ Choices made while building, with the reason. Add to the bottom; do not rewrite 
 | `SUBLETTE_EMAIL_REDIRECT_TO` sends every code to one address instead of the student's, with the student's address and the environment in the subject. | Aditi wants development codes filed in a DEV label of `subletteofficial@gmail.com`, and testing with made-up `.edu` addresses must not email real people. Gmail's `+dev` addressing plus a filter does the filing. |
 | A redirect is refused in production. | It would send every student's sign-in code to one inbox. |
 
+### Phase 3: renter mode (added 2026-10-12)
+
+| Decision | Reason |
+| --- | --- |
+| Renters state their own gender as woman, man or non-binary (optional, from phase 1). Listers choose who can take a shared home: women, men, or no preference. A non-binary renter fits a place for women and a place for men. | Aditi's decision, 2026-10-12. Phase 4 enforces it on the server. A renter who hasn't stated a gender still can't see places with a preference, and the app will tell them why. |
+| Renters also choose who they'd live with: women, men, or no preference, as must-have or nice-to-have (`housemate_gender`). Listers say who the housemates staying are: women, men or mixed (`household_gender`), needed to publish whenever anyone stays. | Aditi asked for the renter-side filter. The lister's gender preference is about who may move in, not who lives there, so the listing needed its own answer. A whole place, or a room with nobody staying, fits any choice. |
+| Preferences are a list of `{field, value, importance}`. A yes-or-no preference is always sent as `true`; "don't care" is importance `off`. Every value's type is fixed by its field, and checked on the server. | One way to say "off". `true` can never be confused with `1`. |
+| `PUT /v1/me/renter-profile` replaces the whole profile and accepts a partial one; `complete` is true once dates, budget and pin are set. `GET` answers an empty profile (not 404) before the first save. | The flow saves once at the end, and the deck (phase 4) needs only `complete`. |
+| The pin lives only in `renter_profiles` and only `GET /v1/me/renter-profile` returns it. A test calls every GET endpoint in `endpoints.json` as another user and looks for the pin. | "No endpoint returns one user's pin to another" has to stay true as endpoints are added. |
+| The map pin stays in the middle and the map moves under it; a tap moves it too. "My campus" searches Apple Maps for the school's own name. | iOS 17's SwiftUI map has no draggable annotation. Nothing about any one school is built in. |
+| Renter mode has Deck, Map, Matches and Profile. Lister mode has Listings, Matches and Profile. The tab bar takes the mode's accent; icons and text stay ink. | Yellow icons on white fail contrast. |
+| The /health status card moved from the Deck tab to the bottom of Profile. | The Deck tab now shows the renter's search. |
+
 ## Known gaps after phase 2
 
 - Photos uploaded in the editor and then abandoned (the editor closed without saving) stay in storage. A clean-up job belongs with phase 8's expiry job.

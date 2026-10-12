@@ -166,3 +166,13 @@ def test_every_time_in_the_samples_is_utc_to_the_second() -> None:
 def test_no_sample_contains_a_real_token() -> None:
     for path in sorted(SAMPLES.glob("*.json")):
         assert "eyJ" not in path.read_text(encoding="utf-8"), path.name
+
+
+def test_renter_profile_samples(client: TestClient, aditi: dict) -> None:
+    from tests.test_renter_profile import FULL_PROFILE
+
+    check("renter_profile_empty", client.get("/v1/me/renter-profile", headers=bearer(aditi)).json())
+    check(
+        "renter_profile",
+        client.put("/v1/me/renter-profile", headers=bearer(aditi), json=FULL_PROFILE).json(),
+    )

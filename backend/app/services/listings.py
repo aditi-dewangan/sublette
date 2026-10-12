@@ -78,6 +78,9 @@ def apply_fields(
         changes["housemates_note"] = None
     for name, value in changes.items():
         setattr(listing, name, value)
+    if listing.housemates_staying == 0:
+        # Nobody stays, so there is nobody to describe.
+        listing.household_gender = None
 
     if moved or (listing.latitude is not None and listing.public_latitude is None):
         if listing.latitude is None or listing.longitude is None:
@@ -176,6 +179,12 @@ def publish_problems(listing: Listing, today: date) -> list[FieldError]:
         "housemates_staying",
         "Say how many housemates are staying.",
     )
+    if listing.housemates_staying:
+        need(
+            listing.household_gender is not None,
+            "household_gender",
+            "Say who the housemates staying are.",
+        )
     need(listing.pets_allowed is not None, "pets_allowed", "Say whether pets are welcome.")
     need(listing.smoking_allowed is not None, "smoking_allowed", "Say whether smokers are welcome.")
     need(
@@ -232,6 +241,7 @@ def listing_out(listing: Listing, viewer: User, storage: PhotoStorage) -> Listin
         housemates_note=listing.housemates_note,
         pets_allowed=listing.pets_allowed,
         smoking_allowed=listing.smoking_allowed,
+        household_gender=listing.household_gender,
         gender_preference=listing.gender_preference,
         same_school_only=listing.same_school_only,
         min_stay_days=listing.min_stay_days,

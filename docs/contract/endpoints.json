@@ -17,6 +17,9 @@
     { "method": "PATCH", "path": "/v1/listings/{listing_id}", "auth": true, "phase": 2 },
     { "method": "POST", "path": "/v1/listings/{listing_id}/status", "auth": true, "phase": 2 },
 
+    { "method": "GET", "path": "/v1/me/renter-profile", "auth": true, "phase": 3 },
+    { "method": "PUT", "path": "/v1/me/renter-profile", "auth": true, "phase": 3 },
+
     { "method": "PUT", "path": "/files/{key}", "auth": false, "phase": 1, "own_storage_only": true },
     { "method": "GET", "path": "/files/{key}", "auth": false, "phase": 1, "own_storage_only": true }
   ]

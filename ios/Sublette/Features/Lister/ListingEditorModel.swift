@@ -70,6 +70,8 @@ final class ListingEditorModel {
     var housematesNote = ""
     var petsAllowed: Bool?
     var smokingAllowed: Bool?
+    /// Only sent while someone is staying (see `form`).
+    var householdGender: HouseholdGender?
     var sameSchoolOnly = false
     var minStayWeeks = 0
     var genderPreference: GenderPreference = .anyone
@@ -136,6 +138,7 @@ final class ListingEditorModel {
         housematesNote = listing.housematesNote ?? ""
         petsAllowed = listing.petsAllowed
         smokingAllowed = listing.smokingAllowed
+        householdGender = listing.householdGender
         sameSchoolOnly = listing.sameSchoolOnly
         minStayWeeks = listing.minStayDays / 7
         genderPreference = listing.genderPreference
@@ -179,6 +182,7 @@ final class ListingEditorModel {
             housematesNote: note.isEmpty ? nil : note,
             petsAllowed: petsAllowed,
             smokingAllowed: smokingAllowed,
+            householdGender: housematesStaying > 0 ? householdGender : nil,
             genderPreference: spaceType?.isShared == true ? genderPreference : .anyone,
             sameSchoolOnly: sameSchoolOnly,
             minStayDays: minStayWeeks * 7,
@@ -231,6 +235,9 @@ final class ListingEditorModel {
                 found["bathroom"] = "Choose a private or shared bathroom."
             }
         case .household:
+            if housematesStaying > 0, householdGender == nil {
+                found["household_gender"] = "Say who the housemates staying are."
+            }
             if petsAllowed == nil {
                 found["pets_allowed"] = "Say whether pets are welcome."
             }
@@ -283,7 +290,7 @@ final class ListingEditorModel {
             return .rentAndDates
         case "space_type", "bedrooms", "bathroom", "furnished", "laundry", "parking":
             return .space
-        case "housemates_staying", "housemates_note", "pets_allowed", "smoking_allowed":
+        case "housemates_staying", "housemates_note", "household_gender", "pets_allowed", "smoking_allowed":
             return .household
         case "gender_preference", "same_school_only", "min_stay_days":
             return .whoCanTakeIt
@@ -465,6 +472,7 @@ final class ListingEditorModel {
             housematesNote: answers.housematesNote,
             petsAllowed: answers.petsAllowed,
             smokingAllowed: answers.smokingAllowed,
+            householdGender: answers.householdGender,
             genderPreference: answers.genderPreference,
             sameSchoolOnly: answers.sameSchoolOnly,
             minStayDays: answers.minStayDays,

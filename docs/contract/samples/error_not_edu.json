@@ -1,0 +1,10 @@
+{
+  "code": "not_edu_email",
+  "message": "Sublette is for students. Use your school email ending in .edu.",
+  "fields": [
+    {
+      "field": "email",
+      "message": "Use an email address ending in .edu."
+    }
+  ]
+}

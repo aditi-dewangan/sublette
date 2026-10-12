@@ -43,7 +43,7 @@ struct ServerStatusCard: View {
         .accessibilityIdentifier("server-status-card")
         .task {
             // Unit tests launch the whole app as their host. It must not call a real server then.
-            guard ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] == nil else {
+            guard !Runtime.isRunningUnitTests else {
                 return
             }
             await model.refresh()

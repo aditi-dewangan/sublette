@@ -3,6 +3,8 @@ name: CI
 on:
   push:
   pull_request:
+  # Lets you run the checks by hand from the Actions tab.
+  workflow_dispatch:
 
 concurrency:
   group: ci-${{ github.ref }}
@@ -44,10 +46,12 @@ jobs:
 
   ios:
     name: iPhone app (build and unit tests)
-    # macOS minutes are free for public repositories and count 10x on private
-    # ones. To save minutes on a private repository, change `push:` above to
-    # run only on the main branch.
+    # macOS minutes count ten times against a private repository's free
+    # allowance, so this job runs only for the main branch or when started by
+    # hand. The server job runs on every push.
+    if: github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch'
     runs-on: macos-latest
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
       - name: Install XcodeGen

@@ -1,0 +1,14 @@
+{
+  "code": "validation_error",
+  "message": "Some fields are missing or invalid.",
+  "fields": [
+    {
+      "field": "first_name",
+      "message": "This can't be empty."
+    },
+    {
+      "field": "year",
+      "message": "Choose one of the options."
+    }
+  ]
+}

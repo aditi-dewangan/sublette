@@ -21,4 +21,11 @@
 # ]
 # no_test = ""                 # optional: why no test can mention the new value
 #
-# No renames yet.
+# Renames, oldest first:
+
+[[rename]]
+old  = "ProfilePlaceholderView"
+new  = "ProfileView"
+kind = "file"
+date = "2026-10-10"
+no_test = "A SwiftUI screen. It has previews; its logic is tested through ProfileFormModel and SessionModel."

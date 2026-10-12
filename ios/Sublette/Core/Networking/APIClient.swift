@@ -13,30 +13,39 @@ final class APIClient: @unchecked Sendable {
 
     init(
         baseURL: URL,
-        session: URLSession = APIClient.makeSession(),
+        session: URLSession = APIClient.makeSession(timeout: AppConfiguration.defaultRequestTimeout),
         tokens: AccessTokenProviding = NoAccessToken()
     ) {
         self.baseURL = baseURL
         self.session = session
         self.tokens = tokens
 
+        self.decoder = APIClient.makeDecoder()
+        self.encoder = APIClient.makeEncoder()
+    }
+
+    /// Reads the server's JSON: snake_case keys, times as `2027-01-04T17:00:00Z`.
+    static func makeDecoder() -> JSONDecoder {
         let decoder = JSONDecoder()
         decoder.keyDecodingStrategy = .convertFromSnakeCase
         decoder.dateDecodingStrategy = .iso8601
-        self.decoder = decoder
+        return decoder
+    }
 
+    /// Writes JSON the way the server expects it.
+    static func makeEncoder() -> JSONEncoder {
         let encoder = JSONEncoder()
         encoder.keyEncodingStrategy = .convertToSnakeCase
         encoder.dateEncodingStrategy = .iso8601
-        self.encoder = encoder
+        return encoder
     }
 
-    /// A session that gives up after 10 seconds, so a server that is down
-    /// shows an error instead of a spinner that never ends.
-    static func makeSession() -> URLSession {
+    /// A session that gives up after `timeout` seconds, so a server that is
+    /// down shows an error instead of a spinner that never ends.
+    static func makeSession(timeout: TimeInterval) -> URLSession {
         let configuration = URLSessionConfiguration.default
-        configuration.timeoutIntervalForRequest = 10
-        configuration.timeoutIntervalForResource = 30
+        configuration.timeoutIntervalForRequest = timeout
+        configuration.timeoutIntervalForResource = max(30, timeout * 2)
         configuration.waitsForConnectivity = false
         return URLSession(configuration: configuration)
     }
@@ -64,6 +73,11 @@ final class APIClient: @unchecked Sendable {
         }
         let data = try await perform(endpoint, body: encoded)
         return try decode(data)
+    }
+
+    /// Sends a request whose answer has no body worth reading, such as a 204.
+    func sendNoContent(_ endpoint: Endpoint) async throws {
+        _ = try await perform(endpoint, body: nil)
     }
 
     func url(for endpoint: Endpoint) -> URL? {
@@ -95,7 +109,31 @@ final class APIClient: @unchecked Sendable {
             request.httpBody = body
             request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         }
-        if endpoint.requiresAuth, let token = await tokens.accessToken() {
+
+        var token: String?
+        if endpoint.requiresAuth {
+            token = await tokens.accessToken()
+        }
+        var answer = try await transport(request, token: token)
+
+        // The server rejected the token. Ask once for a newer one and try again.
+        if answer.response.statusCode == 401, endpoint.requiresAuth, let rejected = token,
+           let fresh = await tokens.refreshedAccessToken(afterRejecting: rejected) {
+            answer = try await transport(request, token: fresh)
+        }
+
+        guard (200..<300).contains(answer.response.statusCode) else {
+            throw serverError(status: answer.response.statusCode, data: answer.data)
+        }
+        return answer.data
+    }
+
+    private func transport(
+        _ request: URLRequest,
+        token: String?
+    ) async throws -> (data: Data, response: HTTPURLResponse) {
+        var request = request
+        if let token {
             request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
         }
 
@@ -115,10 +153,7 @@ final class APIClient: @unchecked Sendable {
         guard let http = result.1 as? HTTPURLResponse else {
             throw APIError.unreachable
         }
-        guard (200..<300).contains(http.statusCode) else {
-            throw serverError(status: http.statusCode, data: result.0)
-        }
-        return result.0
+        return (result.0, http)
     }
 
     private func serverError(status: Int, data: Data) -> APIError {

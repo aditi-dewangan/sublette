@@ -21,9 +21,12 @@ WCAG_BODY_TEXT = 4.5
 HTTP_METHODS = {"GET", "POST", "PUT", "PATCH", "DELETE"}
 
 
+def contract_entries() -> list[dict]:
+    return json.loads((CONTRACT / "endpoints.json").read_text())["endpoints"]
+
+
 def contract_endpoints() -> set[tuple[str, str]]:
-    data = json.loads((CONTRACT / "endpoints.json").read_text())
-    return {(item["method"], item["path"]) for item in data["endpoints"]}
+    return {(item["method"], item["path"]) for item in contract_entries()}
 
 
 def design_tokens() -> dict:
@@ -47,8 +50,49 @@ def test_server_routes_match_the_contract(app: FastAPI) -> None:
 
 
 def test_every_path_except_health_is_under_v1() -> None:
-    for _, path in contract_endpoints():
-        assert path == "/health" or path.startswith("/v1/"), path
+    for item in contract_entries():
+        if item.get("dev_only"):
+            continue
+        assert item["path"] == "/health" or item["path"].startswith("/v1/"), item["path"]
+
+
+def test_only_sign_in_and_health_are_open_to_everyone() -> None:
+    open_paths = {
+        item["path"] for item in contract_entries() if not item["auth"] and not item.get("dev_only")
+    }
+
+    assert open_paths == {
+        "/health",
+        "/v1/auth/request-code",
+        "/v1/auth/verify",
+        "/v1/auth/refresh",
+    }
+
+
+AUTH_ENDPOINTS = [
+    item
+    for item in json.loads((CONTRACT / "endpoints.json").read_text())["endpoints"]
+    if item["auth"]
+]
+
+
+@pytest.mark.parametrize(
+    "item", AUTH_ENDPOINTS, ids=lambda item: f"{item['method']} {item['path']}"
+)
+def test_endpoints_marked_auth_refuse_a_request_with_no_token(item: dict, client) -> None:
+    """Every endpoint except sign-in requires a verified account."""
+    response = client.request(item["method"], item["path"], json={})
+
+    assert response.status_code == 401
+    assert response.json()["code"] == "not_signed_in"
+
+
+def test_dev_storage_routes_are_not_served_without_local_storage(settings) -> None:
+    from app.main import create_app
+
+    app = create_app(settings.model_copy(update={"storage_backend": "none"}))
+
+    assert not any(path.startswith("/dev-storage") for path in app.openapi()["paths"])
 
 
 def swift_endpoints() -> set[tuple[str, str]]:

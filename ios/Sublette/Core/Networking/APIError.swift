@@ -33,6 +33,32 @@ enum APIError: Error, Equatable {
     }
 }
 
+extension APIError {
+    /// The server's own error code, such as `code_expired`. Nil for other failures.
+    var serverCode: String? {
+        if case .server(_, let code, _, _) = self {
+            return code
+        }
+        return nil
+    }
+
+    /// The HTTP status, when the server answered.
+    var status: Int? {
+        if case .server(let status, _, _, _) = self {
+            return status
+        }
+        return nil
+    }
+
+    /// Messages keyed by the server's field name, such as `first_name`.
+    var fieldMessages: [String: String] {
+        guard case .server(_, _, _, let fields) = self else {
+            return [:]
+        }
+        return Dictionary(fields.map { ($0.field, $0.message) }, uniquingKeysWith: { first, _ in first })
+    }
+}
+
 /// The server's error body: `{"code": "...", "message": "...", "fields": [...]}`.
 struct APIErrorBody: Decodable {
     let code: String

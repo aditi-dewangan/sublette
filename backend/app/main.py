@@ -4,13 +4,15 @@ import logging
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+from fastapi import APIRouter, FastAPI
 
 from app import __version__
 from app.config import Settings, get_settings
 from app.db import make_engine
 from app.errors import install_error_handlers
-from app.routers import api_v1, health
+from app.routers import API_V1_PREFIX, auth, dev_storage, health, me, uploads
+from app.services.email_sender import make_email_sender
+from app.services.storage import LocalStorage, make_storage
 
 
 def create_app(settings: Settings | None = None) -> FastAPI:
@@ -34,10 +36,20 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     )
     app.state.settings = settings
     app.state.engine = make_engine(settings)
+    app.state.email_sender = make_email_sender(settings)
+    app.state.storage = make_storage(settings)
 
     install_error_handlers(app)
     app.include_router(health.router)
-    app.include_router(api_v1)
+
+    v1 = APIRouter(prefix=API_V1_PREFIX)
+    v1.include_router(auth.router)
+    v1.include_router(me.router)
+    v1.include_router(uploads.router)
+    app.include_router(v1)
+
+    if isinstance(app.state.storage, LocalStorage):
+        app.include_router(dev_storage.router)
     return app
 
 

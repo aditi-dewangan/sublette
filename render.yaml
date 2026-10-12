@@ -1,0 +1,35 @@
+# Render Blueprint: the staging server on Render's free plan.
+#
+# In Render: New > Blueprint > pick this repository. Render reads this file,
+# then asks for the values marked `sync: false`. See README.md, "Staging".
+services:
+  - type: web
+    name: sublette-staging
+    runtime: docker
+    plan: free
+    region: oregon
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: ./backend
+    healthCheckPath: /health
+    autoDeployTrigger: commit
+    envVars:
+      - key: SUBLETTE_ENV
+        value: staging
+      # A random 256-bit value made by Render. Signs sign-in tokens.
+      - key: SUBLETTE_SECRET_KEY
+        generateValue: true
+      # From Neon: the connection string of the free database.
+      - key: SUBLETTE_DATABASE_URL
+        sync: false
+      # Render's free plan blocks outgoing SMTP, so email goes over HTTPS.
+      - key: SUBLETTE_EMAIL_BACKEND
+        value: brevo
+      - key: SUBLETTE_BREVO_API_KEY
+        sync: false
+      # The sender you verified in Brevo, such as: Sublette <sublette.app@gmail.com>
+      - key: SUBLETTE_EMAIL_FROM
+        sync: false
+      # Free instances lose files on every restart, so photo uploads stay off
+      # until a photo store is chosen. The app handles this already.
+      - key: SUBLETTE_STORAGE_BACKEND
+        value: none

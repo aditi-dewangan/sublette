@@ -65,3 +65,47 @@ def test_unexpected_error_is_hidden_behind_a_generic_message(app: FastAPI) -> No
         "message": "Something went wrong on our side.",
     }
     assert "secret" not in response.text
+
+
+def test_validation_messages_are_written_for_students(app: FastAPI) -> None:
+    from typing import Literal
+
+    class Body(BaseModel):
+        model_config = {"extra": "forbid"}
+
+        name: str = Field(min_length=1, max_length=5)
+        nickname: str = Field(max_length=5)
+        year: Literal["junior", "senior"]
+        code: str = Field(pattern=r"^\d{6}$")
+        rent_cents: int = Field(gt=0)
+        smokes: bool
+        required: str
+
+    @app.post("/messages")
+    def messages(body: Body) -> Body:
+        return body
+
+    with TestClient(app) as client:
+        response = client.post(
+            "/messages",
+            json={
+                "name": "",
+                "nickname": "far too long",
+                "year": "sixth",
+                "code": "12",
+                "rent_cents": 0,
+                "smokes": "sometimes",
+                "surprise": 1,
+            },
+        )
+
+    assert {item["field"]: item["message"] for item in response.json()["fields"]} == {
+        "name": "This can't be empty.",
+        "nickname": "Keep this to 5 characters or fewer.",
+        "year": "Choose one of the options.",
+        "code": "That isn't in the right format.",
+        "rent_cents": "This must be more than 0.",
+        "smokes": "That isn't a valid value.",
+        "required": "This is required.",
+        "surprise": "This can't be changed.",
+    }

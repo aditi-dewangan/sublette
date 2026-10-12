@@ -6,16 +6,23 @@ Tests run against a real PostgreSQL database named sublette_test. Start it with
 
 import os
 from collections.abc import Iterator
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 import pytest
+from alembic.command import upgrade
+from alembic.config import Config
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine, text
 from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy.orm import Session
 
 from app.config import Settings
+from app.deps import get_now
 from app.main import create_app
+from app.services.email_sender import EmailUnavailable
+from app.services.schools import seed_schools
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 BACKEND_ROOT = REPO_ROOT / "backend"
@@ -28,6 +35,23 @@ TEST_DATABASE_URL = os.environ.get(
 # Nothing listens on port 1, so connections are refused at once. This stands in
 # for "the database is down".
 UNREACHABLE_DATABASE_URL = "postgresql+psycopg://sublette:sublette@127.0.0.1:1/sublette_test"
+
+DATA_TABLES = "users, email_codes, rate_limit_hits, school_domains, schools"
+
+
+def alembic_config(database_url: str) -> Config:
+    config = Config(str(BACKEND_ROOT / "alembic.ini"))
+    config.attributes["database_url"] = database_url
+    config.attributes["configure_logging"] = False
+    return config
+
+
+@pytest.fixture(autouse=True)
+def _no_ambient_settings(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Tests must not depend on the developer's own SUBLETTE_* variables."""
+    for name in list(os.environ):
+        if name.startswith("SUBLETTE_") and name != "SUBLETTE_TEST_DATABASE_URL":
+            monkeypatch.delenv(name)
 
 
 @pytest.fixture(scope="session")
@@ -57,20 +81,111 @@ def database_url() -> str:
     return settings.database_url
 
 
-@pytest.fixture
-def settings(database_url: str) -> Settings:
-    return Settings(env="test", database_url=database_url)
+@pytest.fixture(scope="session")
+def migrated_database(database_url: str) -> str:
+    """The test database with every migration applied. Done once per run;
+    tests/test_migrations.py always leaves it back at head."""
+    upgrade(alembic_config(database_url), "head")
+    return database_url
 
 
 @pytest.fixture
-def app(settings: Settings) -> FastAPI:
-    return create_app(settings)
+def clean_database(migrated_database: str) -> str:
+    """The migrated test database with only the seed data in it."""
+    database_url = migrated_database
+    engine = create_engine(database_url)
+    with Session(engine) as session:
+        session.execute(text(f"TRUNCATE {DATA_TABLES} RESTART IDENTITY CASCADE"))
+        seed_schools(session)
+        session.commit()
+    engine.dispose()
+    return database_url
+
+
+@pytest.fixture
+def settings(clean_database: str, tmp_path: Path) -> Settings:
+    return Settings(
+        env="test",
+        database_url=clean_database,
+        storage_local_dir=str(tmp_path / "storage"),
+        public_base_url="http://testserver",
+    )
+
+
+class Clock:
+    """A clock the test controls."""
+
+    def __init__(self) -> None:
+        self.now = datetime(2027, 1, 4, 17, 0, tzinfo=UTC)
+
+    def advance(self, **delta: float) -> None:
+        self.now += timedelta(**delta)
+
+
+class RecordingMailer:
+    """Stands in for the email provider. Remembers codes; can be switched off."""
+
+    def __init__(self) -> None:
+        self.sent: list[tuple[str, str]] = []
+        self.down = False
+
+    def send_code(self, to: str, code: str, ttl_minutes: int) -> None:
+        if self.down:
+            raise EmailUnavailable("provider is down")
+        self.sent.append((to, code))
+
+    def code_for(self, email: str) -> str:
+        return next(code for to, code in reversed(self.sent) if to == email.lower())
+
+
+@pytest.fixture
+def clock() -> Clock:
+    return Clock()
+
+
+@pytest.fixture
+def mailer() -> RecordingMailer:
+    return RecordingMailer()
+
+
+@pytest.fixture
+def app(settings: Settings, clock: Clock, mailer: RecordingMailer) -> FastAPI:
+    application = create_app(settings)
+    application.state.email_sender = mailer
+    application.dependency_overrides[get_now] = lambda: clock.now
+    return application
 
 
 @pytest.fixture
 def client(app: FastAPI) -> Iterator[TestClient]:
     with TestClient(app) as test_client:
         yield test_client
+
+
+@pytest.fixture
+def db(app: FastAPI) -> Iterator[Session]:
+    """A session for looking at what the server wrote."""
+    with Session(app.state.engine) as session:
+        yield session
+
+
+def sign_in(client: TestClient, mailer: RecordingMailer, email: str) -> dict:
+    """Request a code, verify it, and return the response body (tokens and user)."""
+    response = client.post("/v1/auth/request-code", json={"email": email})
+    assert response.status_code == 200, response.text
+    response = client.post("/v1/auth/verify", json={"email": email, "code": mailer.code_for(email)})
+    assert response.status_code == 200, response.text
+    return response.json()
+
+
+def bearer(session_body: dict) -> dict[str, str]:
+    return {"Authorization": f"Bearer {session_body['access_token']}"}
+
+
+@pytest.fixture
+def aditi(client: TestClient, mailer: RecordingMailer) -> dict:
+    """A signed-in UW student: tokens and user."""
+    return sign_in(client, mailer, "aditi@uw.edu")
 
 
 @pytest.fixture

@@ -1,0 +1,19 @@
+{
+  "id": "11111111-2222-4333-8444-555555555555",
+  "email": "aditi@uw.edu",
+  "school": {
+    "id": "11111111-2222-4333-8444-555555555555",
+    "name": "University of Washington"
+  },
+  "verified": true,
+  "first_name": "Aditi",
+  "year": "junior",
+  "program": "Informatics",
+  "bio": "Winter internship in Austin. Tidy, quiet, plant person.",
+  "photo_url": "http://testserver/dev-storage/profiles/11111111-2222-4333-8444-555555555555/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.jpg",
+  "gender": "woman",
+  "smokes": false,
+  "has_pets": false,
+  "profile_complete": true,
+  "created_at": "2027-01-04T17:00:00Z"
+}

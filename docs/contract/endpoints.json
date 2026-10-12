@@ -1,6 +1,17 @@
 {
-  "about": "Every HTTP endpoint the server exposes. The server's routes and the iPhone app's Endpoint.swift are both tested against this file, so a path renamed in one place and not the others fails the build.",
+  "about": "Every HTTP endpoint the server exposes. The server's routes and the iPhone app's Endpoint.swift are both tested against this file, so a path renamed in one place and not the others fails the build. `auth: true` endpoints are tested to refuse a request with no token. `dev_only` endpoints exist only when photos are stored in a local folder.",
   "endpoints": [
-    { "method": "GET", "path": "/health", "auth": false, "phase": 0 }
+    { "method": "GET", "path": "/health", "auth": false, "phase": 0 },
+
+    { "method": "POST", "path": "/v1/auth/request-code", "auth": false, "phase": 1 },
+    { "method": "POST", "path": "/v1/auth/verify", "auth": false, "phase": 1 },
+    { "method": "POST", "path": "/v1/auth/refresh", "auth": false, "phase": 1 },
+    { "method": "GET", "path": "/v1/me", "auth": true, "phase": 1 },
+    { "method": "PATCH", "path": "/v1/me", "auth": true, "phase": 1 },
+    { "method": "DELETE", "path": "/v1/me", "auth": true, "phase": 1 },
+    { "method": "POST", "path": "/v1/uploads/presign", "auth": true, "phase": 1 },
+
+    { "method": "PUT", "path": "/dev-storage/{key}", "auth": false, "phase": 1, "dev_only": true },
+    { "method": "GET", "path": "/dev-storage/{key}", "auth": false, "phase": 1, "dev_only": true }
   ]
 }

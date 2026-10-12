@@ -1,4 +1,8 @@
-"""SQLAlchemy table models. Import each model here so Alembic can see it.
+"""SQLAlchemy table models. Import each model here so Alembic can see it."""
 
-Empty in phase 0. The first tables (users, email_codes) arrive in phase 1.
-"""
+from app.models.email_code import EmailCode
+from app.models.rate_limit import RateLimitHit
+from app.models.school import School, SchoolDomain
+from app.models.user import User
+
+__all__ = ["EmailCode", "RateLimitHit", "School", "SchoolDomain", "User"]

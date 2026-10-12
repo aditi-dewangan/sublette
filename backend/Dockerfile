@@ -19,5 +19,7 @@ USER sublette
 
 EXPOSE 8000
 
-# Apply any new migrations, then serve. Hosting platforms set PORT.
-CMD ["sh", "-c", "alembic upgrade head && exec uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000}"]
+# Apply any new migrations, load the list of schools, then serve.
+# Hosting platforms set PORT and sit in front as a proxy; --proxy-headers makes
+# the server see each student's own address, which the rate limits rely on.
+CMD ["sh", "-c", "alembic upgrade head && python -m app.seed && exec uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000} --proxy-headers --forwarded-allow-ips='*'"]

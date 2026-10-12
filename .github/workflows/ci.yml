@@ -31,8 +31,8 @@ jobs:
     env:
       SUBLETTE_TEST_DATABASE_URL: postgresql+psycopg://sublette:sublette@localhost:5432/sublette_test
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.12"
           cache: pip
@@ -42,7 +42,14 @@ jobs:
       - name: Lint, format and rename log
         run: make lint
       - name: Tests
-        run: make test
+        # Failed test names are also posted as annotations, so they show on the
+        # pull request without opening the log.
+        run: |
+          set +e
+          make test 2>&1 | tee test-output.txt
+          status=${PIPESTATUS[0]}
+          grep -E "^(FAILED|ERROR) " test-output.txt | head -30 | sed 's/^/::error title=Test::/'
+          exit $status
 
   ios:
     name: iPhone app (build and unit tests)
@@ -53,7 +60,7 @@ jobs:
     runs-on: macos-latest
     timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Install XcodeGen
         run: brew install xcodegen
       - name: Build and test

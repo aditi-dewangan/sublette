@@ -19,6 +19,53 @@ Choices made while building, with the reason. Add to the bottom; do not rewrite 
 | `docker-compose.yml` pins the database image to `linux/amd64`. | Works on Intel and, through Docker Desktop's emulation, on Apple Silicon. |
 | Lint settings are in a root `ruff.toml`. | One configuration for `backend/` and `scripts/`. |
 
+## Phase 1
+
+| Decision | Reason |
+| --- | --- |
+| A `schools` table plus a `school_domains` table. | One school can own several email domains (`uw.edu`, `washington.edu`). A department address such as `cs.washington.edu` finds its school by its parent domain. |
+| The school list lives in `backend/app/data/schools.json` and is loaded by `python -m app.seed`, which `make migrate` and the container run. | Adding a school is a one-line data change, not a migration. An unknown `.edu` domain is still accepted and shown by its domain until named. |
+| Codes are stored as a keyed hash (HMAC with the server secret), not a plain hash. | A six-digit code has a million values; a plain hash could be reversed by anyone who read the table. |
+| Rate limits are counted in a database table. | No extra service to run, pay for, or lose. Revisit if sign-in traffic ever makes it slow. |
+| Per-email limits are 5 codes an hour and one every 30 seconds; per-address limits are deliberately loose (100 an hour). | A whole campus can share one network address, so a tight per-address limit would lock out a dorm on launch day. |
+| Tokens are stateless JWTs: access 15 minutes, refresh 60 days, rotated on refresh. The user row is loaded on every request. | Deleting or suspending an account takes effect on the next request. There is no server-side "sign out everywhere" yet; add a session table if that is needed. |
+| Email goes out over plain SMTP, chosen by settings. | Every provider (Resend, Postmark, Amazon SES) speaks SMTP, so switching provider is a settings change and needs no provider library. |
+| Photos are uploaded straight to storage with a short-lived link. Three backends: a local folder, any S3-compatible store, or off. | The server never handles photo bytes in production. The local folder makes `make dev` work with nothing to configure. |
+| The database stores a photo's storage key (`photo_key`), not its address. The API still returns `photo_url`. | The plan's `photo_url` column would have to be rewritten if the photo host ever changed. |
+| A profile photo is optional on the server. | The spec lists one photo, but making it required would block sign-up whenever storage is down. See open questions. |
+| Every time in the API is UTC to the second, ending in `Z`. | The iPhone's standard date decoder rejects fractional seconds. |
+| Validation messages are rewritten for students ("This can't be empty."). | The validator's own wording is shown beside form fields. |
+| Real server responses are kept in `docs/contract/samples/` and decoded by the app's tests. | With two codebases and one of them uncompiled here, this is what proves the Swift models match the server. |
+| The app saves the last loaded profile and shows it at launch. | Opening the app offline shows your profile instead of a spinner or a sign-in screen. |
+| The starting mode is remembered on the phone, not on the server. | It is a display preference. The plan asked for this in phase 3; it was small enough to do now. |
+| The gender answer offers woman, man and non-binary, or no answer. | The plan's listing preference is any, women or men. Phase 4 defines how each answer matches. |
+
+### $0 staging (added 2026-10-12)
+
+| Decision | Reason |
+| --- | --- |
+| Staging runs on Render's free web service, with the database on Neon's free plan. | Render's free database is deleted 30 days after creation; Neon's free plan does not expire and includes PostGIS. Neither needs a card. |
+| A third email backend, `brevo`, sends over HTTPS with Python's standard library. | Render's free plan blocks outgoing SMTP ports 25, 465 and 587. Brevo's free plan sends 300 emails a day from a single verified sender, so no domain is needed yet. |
+| Photo uploads are off on staging. | Render's free disk is wiped on restart, and Backblaze B2 needs a payment for public buckets. The app already handles uploads being unavailable. |
+| The app's request timeout is a build setting: 10 s for Debug, 75 s for Staging, 15 s for Release. | A sleeping free server takes about a minute to answer its first request. |
+| The iPhone CI job runs only on `main` or by hand. | macOS minutes count ten times against a private repository's free allowance. |
+| Staging is described in `render.yaml` (a Render Blueprint). | One click creates the service with the right settings; secrets are entered once and never committed. |
+
+## Open questions after phase 1
+
+- Should a profile photo be required before a student can swipe? It is optional now.
+- Year is one of freshman, sophomore, junior, senior, graduate, other. Is that the right list for co-op schools with five-year programs?
+- Which email-sending service and which domain? Until then staging prints codes in its log.
+- Which photo store for staging and production (any S3-compatible one works)?
+
+## Known gaps after phase 1
+
+- The phase 1 iPhone code builds and its unit tests pass on GitHub's Mac (2026-10-12). Nobody has used it in the simulator yet.
+- Presigned upload links cannot enforce a size limit on S3-compatible stores (the local store does). The app shrinks photos to 1600 pixels before uploading.
+- If storage is unreachable when an account is deleted, the photo file is left behind and logged. The account is still deleted.
+- No App Store privacy manifest yet (`PrivacyInfo.xcprivacy`). Needed before submission in phase 9.
+- Nothing is deployed to staging yet.
+
 ## Known gaps after phase 0
 
 - The iPhone app has not been compiled. It was written without a Swift toolchain and reviewed by reading. The first `make ios-test` on a Mac is the real check.

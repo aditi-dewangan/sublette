@@ -3,8 +3,13 @@ backend/.venv/
 __pycache__/
 *.py[cod]
 *.egg-info/
+backend/build/
+backend/dist/
 .pytest_cache/
 .ruff_cache/
+
+# Photos uploaded during local development
+backend/.dev-storage/
 
 # Secrets and local settings. Never commit real values.
 .env

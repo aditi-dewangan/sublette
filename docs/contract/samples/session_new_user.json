@@ -1,0 +1,25 @@
+{
+  "access_token": "sample.access_token",
+  "refresh_token": "sample.refresh_token",
+  "token_type": "bearer",
+  "expires_in": 900,
+  "user": {
+    "id": "11111111-2222-4333-8444-555555555555",
+    "email": "aditi@uw.edu",
+    "school": {
+      "id": "11111111-2222-4333-8444-555555555555",
+      "name": "University of Washington"
+    },
+    "verified": true,
+    "first_name": null,
+    "year": null,
+    "program": null,
+    "bio": null,
+    "photo_url": null,
+    "gender": null,
+    "smokes": null,
+    "has_pets": null,
+    "profile_complete": false,
+    "created_at": "2027-01-04T17:00:00Z"
+  }
+}

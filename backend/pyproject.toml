@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "sublette-backend"
-version = "0.1.0"
+version = "0.2.0"
 description = "Server for Sublette: accounts, listings, matching and chat."
 requires-python = ">=3.12"
 dependencies = [
@@ -15,6 +15,8 @@ dependencies = [
     "sqlalchemy>=2.0.30,<2.1",
     "psycopg[binary]>=3.2,<4",
     "alembic>=1.13,<2",
+    "pyjwt>=2.9,<3",
+    "boto3>=1.35,<2",
 ]
 
 [project.optional-dependencies]
@@ -26,6 +28,9 @@ dev = [
 
 [tool.setuptools.packages.find]
 include = ["app*"]
+
+[tool.setuptools.package-data]
+app = ["data/*.json"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

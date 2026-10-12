@@ -5,7 +5,7 @@ from collections.abc import Iterator
 from dataclasses import dataclass
 
 from fastapi import Request
-from sqlalchemy import Engine, create_engine, text
+from sqlalchemy import Engine, MetaData, create_engine, text
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import DeclarativeBase, Session
 
@@ -14,8 +14,45 @@ from app.config import Settings
 logger = logging.getLogger(__name__)
 
 
+# Fixed names for indexes and constraints, so migrations can refer to them.
+NAMING_CONVENTION = {
+    "ix": "ix_%(table_name)s_%(column_0_N_name)s",
+    "uq": "uq_%(table_name)s_%(column_0_N_name)s",
+    "ck": "ck_%(table_name)s_%(constraint_name)s",
+    "fk": "fk_%(table_name)s_%(column_0_name)s_%(referred_table_name)s",
+    "pk": "pk_%(table_name)s",
+}
+
+
 class Base(DeclarativeBase):
     """Parent of every table model. Alembic reads Base.metadata."""
+
+    metadata = MetaData(naming_convention=NAMING_CONVENTION)
+
+
+# Tables that PostGIS and its add-ons create for themselves. The postgis/postgis
+# image (local and CI) also installs postgis_topology and the tiger geocoder,
+# and puts their schemas on the search path, so their tables can appear to be
+# in the default schema.
+POSTGIS_TABLES = frozenset(
+    {"spatial_ref_sys", "geography_columns", "geometry_columns", "topology", "layer"}
+)
+POSTGIS_SCHEMAS = frozenset({"topology", "tiger", "tiger_data"})
+
+
+def include_in_migrations(obj, name, type_, reflected, compare_to) -> bool:
+    """Alembic filter: compare only Sublette's own tables (and their indexes
+    and constraints). Anything else found in the database belongs to PostGIS.
+
+    Side effect: dropping a model does not make autogenerate drop its table.
+    Write that migration by hand.
+    """
+    table = obj if type_ == "table" else getattr(obj, "table", None)
+    if table is None:
+        return True
+    if table.name in POSTGIS_TABLES or table.schema in POSTGIS_SCHEMAS:
+        return False
+    return not (reflected and table.name not in Base.metadata.tables)
 
 
 def make_engine(settings: Settings) -> Engine:

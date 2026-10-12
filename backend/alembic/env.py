@@ -7,7 +7,7 @@ from sqlalchemy import create_engine
 import app.models  # noqa: F401  (registers every table on Base.metadata)
 from alembic import context
 from app.config import get_settings
-from app.db import Base
+from app.db import Base, include_in_migrations
 
 config = context.config
 
@@ -24,6 +24,7 @@ def run_migrations_offline() -> None:
     context.configure(
         url=database_url,
         target_metadata=target_metadata,
+        include_object=include_in_migrations,
         literal_binds=True,
         dialect_opts={"paramstyle": "named"},
     )
@@ -34,7 +35,11 @@ def run_migrations_offline() -> None:
 def run_migrations_online() -> None:
     engine = create_engine(database_url)
     with engine.connect() as connection:
-        context.configure(connection=connection, target_metadata=target_metadata)
+        context.configure(
+            connection=connection,
+            target_metadata=target_metadata,
+            include_object=include_in_migrations,
+        )
         with context.begin_transaction():
             context.run_migrations()
     engine.dispose()

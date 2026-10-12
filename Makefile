@@ -30,8 +30,8 @@ db-reset: ## Delete all local data and start a fresh database
 	docker compose down --volumes
 	$(MAKE) db
 
-migrate: ## Apply database migrations
-	cd backend && .venv/bin/alembic upgrade head
+migrate: ## Apply database migrations and load the list of schools
+	cd backend && .venv/bin/alembic upgrade head && .venv/bin/python -m app.seed
 
 run: ## Start the server at http://localhost:8000 (HOST=0.0.0.0 to reach it from a real iPhone)
 	cd backend && .venv/bin/uvicorn app.main:app --reload --host $(HOST) --port $(PORT)

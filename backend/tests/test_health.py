@@ -2,6 +2,7 @@
 
 import time
 
+import pytest
 from fastapi.testclient import TestClient
 
 from app import __version__
@@ -81,6 +82,42 @@ def test_other_routes_still_answer_when_the_database_is_down(
 
     assert response.status_code == 404
     assert response.json()["code"] == "not_found"
+
+
+@pytest.mark.parametrize(
+    ("method", "path", "body"),
+    [
+        ("POST", "/v1/auth/request-code", {"email": "aditi@uw.edu"}),
+        ("POST", "/v1/auth/verify", {"email": "aditi@uw.edu", "code": "123456"}),
+    ],
+)
+def test_sign_in_says_try_again_when_the_database_is_down(
+    client_without_database: TestClient, method: str, path: str, body: dict
+) -> None:
+    response = client_without_database.request(method, path, json=body)
+
+    assert response.status_code == 503
+    assert response.json() == {
+        "code": "service_unavailable",
+        "message": "Sublette is having trouble right now. Try again in a minute.",
+    }
+    assert response.headers["Retry-After"] == "30"
+    assert "127.0.0.1" not in response.text
+
+
+def test_a_signed_in_request_says_try_again_when_the_database_is_down(app, aditi, settings) -> None:
+    from tests.conftest import bearer
+
+    app.state.engine = make_engine(
+        settings.model_copy(
+            update={"database_url": UNREACHABLE_DATABASE_URL, "db_connect_timeout_s": 1}
+        )
+    )
+    with TestClient(app) as client:
+        response = client.get("/v1/me", headers=bearer(aditi))
+
+    assert response.status_code == 503
+    assert response.json()["code"] == "service_unavailable"
 
 
 def test_health_recovers_after_the_database_goes_down_and_comes_back(app, settings) -> None:

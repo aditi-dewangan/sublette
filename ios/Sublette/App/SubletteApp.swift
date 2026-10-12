@@ -2,25 +2,24 @@ import SwiftUI
 
 @main
 struct SubletteApp: App {
-    @State private var appState: AppState
-    @State private var serverStatus: ServerStatusModel
+    @State private var container: AppContainer
 
     init() {
-        let configuration = AppConfiguration.load()
-        let client = APIClient(baseURL: configuration.apiBaseURL)
-        _appState = State(initialValue: AppState())
-        _serverStatus = State(
-            initialValue: ServerStatusModel(health: client, configuration: configuration)
-        )
+        _container = State(initialValue: AppContainer.live())
     }
 
     var body: some Scene {
         WindowGroup {
-            RootView()
-                .environment(appState)
-                .environment(serverStatus)
+            AppRootView()
+                .environment(container)
+                .environment(container.appState)
+                .environment(container.session)
+                .environment(container.serverStatus)
                 // The palette is designed for a light background. Dark mode arrives in phase 9.
                 .preferredColorScheme(.light)
+                .task {
+                    await container.start()
+                }
         }
     }
 }

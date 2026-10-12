@@ -12,7 +12,7 @@ struct RootView: View {
                     .tabItem { Label("Map", systemImage: "map") }
                 MatchesPlaceholderView()
                     .tabItem { Label("Matches", systemImage: "bubble.left.and.bubble.right") }
-                ProfilePlaceholderView()
+                ProfileView()
                     .tabItem { Label("Profile", systemImage: "person.crop.circle") }
             }
         }
@@ -22,6 +22,5 @@ struct RootView: View {
 
 #Preview {
     RootView()
-        .environment(AppState())
-        .environment(ServerStatusModel.preview(.unreachable))
+        .previewEnvironment(signedInAs: PreviewData.aditi)
 }

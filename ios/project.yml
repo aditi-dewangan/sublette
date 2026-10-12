@@ -24,20 +24,25 @@ configs:
 settings:
   base:
     SWIFT_VERSION: "5.0"
-    MARKETING_VERSION: "0.1.0"
+    MARKETING_VERSION: "0.2.0"
     CURRENT_PROJECT_VERSION: "1"
   configs:
     Debug:
       SUBLETTE_ENVIRONMENT: local
       SUBLETTE_API_BASE_URL: "http://localhost:8000"
+      SUBLETTE_REQUEST_TIMEOUT: "10"
     Staging:
       SUBLETTE_ENVIRONMENT: staging
       # Replace with the staging server's address once it is deployed.
       SUBLETTE_API_BASE_URL: "https://staging.sublette.invalid"
+      # Render's free server sleeps after 15 idle minutes and takes about a
+      # minute to wake, so the first request after a pause needs longer.
+      SUBLETTE_REQUEST_TIMEOUT: "75"
     Release:
       SUBLETTE_ENVIRONMENT: production
       # Replace with the production server's address before release.
       SUBLETTE_API_BASE_URL: "https://api.sublette.invalid"
+      SUBLETTE_REQUEST_TIMEOUT: "15"
 
 targets:
   Sublette:
@@ -59,6 +64,7 @@ targets:
           - UIInterfaceOrientationPortrait
         SubletteEnvironment: $(SUBLETTE_ENVIRONMENT)
         SubletteAPIBaseURL: $(SUBLETTE_API_BASE_URL)
+        SubletteRequestTimeout: $(SUBLETTE_REQUEST_TIMEOUT)
         # Lets the Debug build reach http://localhost:8000. Hosted servers use https.
         NSAppTransportSecurity:
           NSAllowsLocalNetworking: true
@@ -76,6 +82,11 @@ targets:
     platform: iOS
     sources:
       - path: SubletteTests
+      # Real server responses, also checked by the server's own tests. The Swift
+      # models must decode every one of them.
+      - path: ../docs/contract/samples
+        name: ContractSamples
+        buildPhase: resources
     dependencies:
       - target: Sublette
     settings:

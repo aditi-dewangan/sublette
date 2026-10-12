@@ -2,17 +2,23 @@
 
 Example: SUBLETTE_DATABASE_URL, SUBLETTE_ENV. A local `.env` file in backend/
 is also read. Nothing here is specific to one school or one city.
+
+The defaults make `make dev` work with no configuration. Staging and
+production refuse to start on those defaults where that would be unsafe.
 """
 
+from email.utils import parseaddr
 from functools import lru_cache
-from typing import Literal
+from typing import Literal, Self
 
-from pydantic import field_validator
+from pydantic import field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 Environment = Literal["local", "test", "staging", "production"]
 
 LOCAL_DATABASE_URL = "postgresql+psycopg://sublette:sublette@localhost:5432/sublette"
+# Signs tokens and hashes codes on a developer's machine only.
+LOCAL_SECRET_KEY = "local-development-secret-not-for-real-users"
 
 
 class Settings(BaseSettings):
@@ -23,10 +29,65 @@ class Settings(BaseSettings):
     )
 
     env: Environment = "local"
+
+    # --- Database ---
     database_url: str = LOCAL_DATABASE_URL
     # How long a request waits for the database before giving up. Kept short so
     # that /health answers quickly when the database is down.
     db_connect_timeout_s: int = 3
+
+    # --- Sign-in ---
+    # Signs access and refresh tokens and keys the hash of emailed codes.
+    # Generate one with: python -c "import secrets; print(secrets.token_urlsafe(48))"
+    secret_key: str = LOCAL_SECRET_KEY
+    access_token_minutes: int = 15
+    refresh_token_days: int = 60
+    code_ttl_minutes: int = 10
+    code_max_attempts: int = 5
+    # Comma-separated email domains that may not sign up, e.g. "alumni.example.edu".
+    blocked_email_domains: str = ""
+
+    # --- Rate limits ---
+    code_resend_wait_s: int = 30
+    code_requests_per_email_per_hour: int = 5
+    # Generous, because a whole campus can share one address.
+    code_requests_per_ip_per_hour: int = 100
+    verify_attempts_per_ip_per_hour: int = 200
+
+    # --- Email ---
+    # "console" prints the code in the server log instead of sending it.
+    # "smtp" sends through any SMTP provider.
+    # "brevo" sends through Brevo's HTTPS API. Use it where SMTP ports are
+    # blocked, such as Render's free plan.
+    email_backend: Literal["console", "smtp", "brevo"] = "console"
+    email_from: str = "Sublette <no-reply@localhost>"
+    brevo_api_key: str = ""
+    brevo_api_url: str = "https://api.brevo.com/v3/smtp/email"
+    # Seconds to wait for an HTTPS email provider.
+    email_timeout_s: int = 10
+    smtp_host: str = ""
+    smtp_port: int = 587
+    smtp_username: str = ""
+    smtp_password: str = ""
+    smtp_security: Literal["starttls", "ssl", "none"] = "starttls"
+    smtp_timeout_s: int = 10
+
+    # --- Photo storage ---
+    # "local" keeps photos in a folder and serves them from this server.
+    # "s3" is any S3-compatible store. "none" turns uploads off.
+    storage_backend: Literal["local", "s3", "none"] = "local"
+    storage_local_dir: str = ".dev-storage"
+    # Where phones reach this server. Used to build local photo addresses.
+    public_base_url: str = "http://localhost:8000"
+    s3_bucket: str = ""
+    s3_region: str = "auto"
+    s3_endpoint_url: str = ""
+    s3_access_key_id: str = ""
+    s3_secret_access_key: str = ""
+    # Public address the bucket's files are served from, with no trailing slash.
+    s3_public_base_url: str = ""
+    upload_max_bytes: int = 10 * 1024 * 1024
+    upload_url_ttl_s: int = 600
 
     @field_validator("database_url")
     @classmethod
@@ -40,6 +101,60 @@ class Settings(BaseSettings):
             if value.startswith(prefix):
                 return "postgresql+psycopg://" + value[len(prefix) :]
         return value
+
+    @field_validator("public_base_url", "s3_public_base_url")
+    @classmethod
+    def _no_trailing_slash(cls, value: str) -> str:
+        return value.rstrip("/")
+
+    @model_validator(mode="after")
+    def _refuse_unsafe_settings(self) -> Self:
+        """Stop a hosted server from starting on developer defaults."""
+        problems = []
+        hosted = self.env in ("staging", "production")
+        if hosted and (self.secret_key == LOCAL_SECRET_KEY or len(self.secret_key) < 32):
+            problems.append("SUBLETTE_SECRET_KEY must be set to a random value of 32+ characters")
+        if self.env == "production" and self.email_backend == "console":
+            problems.append("SUBLETTE_EMAIL_BACKEND=console would log sign-in codes; use smtp")
+        if self.env == "production" and self.storage_backend == "local":
+            problems.append("SUBLETTE_STORAGE_BACKEND=local loses photos on redeploy; use s3")
+        if self.email_backend == "smtp" and not self.smtp_host:
+            problems.append("SUBLETTE_SMTP_HOST is required when SUBLETTE_EMAIL_BACKEND=smtp")
+        if self.email_backend == "brevo":
+            if not self.brevo_api_key:
+                problems.append(
+                    "SUBLETTE_BREVO_API_KEY is required when SUBLETTE_EMAIL_BACKEND=brevo"
+                )
+            if "@" not in parseaddr(self.email_from)[1]:
+                problems.append(
+                    "SUBLETTE_EMAIL_FROM must be a sender Brevo has verified, "
+                    'such as "Sublette <you@example.com>"'
+                )
+        if self.storage_backend == "s3":
+            missing = [
+                name
+                for name in (
+                    "s3_bucket",
+                    "s3_access_key_id",
+                    "s3_secret_access_key",
+                    "s3_public_base_url",
+                )
+                if not getattr(self, name)
+            ]
+            if missing:
+                names = ", ".join(f"SUBLETTE_{name.upper()}" for name in missing)
+                problems.append(f"{names} required when SUBLETTE_STORAGE_BACKEND=s3")
+        if problems:
+            raise ValueError("; ".join(problems))
+        return self
+
+    @property
+    def blocked_domains(self) -> frozenset[str]:
+        return frozenset(
+            part.strip().lower().lstrip("@")
+            for part in self.blocked_email_domains.split(",")
+            if part.strip()
+        )
 
 
 @lru_cache

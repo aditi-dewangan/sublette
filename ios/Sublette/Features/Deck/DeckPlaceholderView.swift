@@ -22,6 +22,5 @@ struct DeckPlaceholderView: View {
 
 #Preview {
     DeckPlaceholderView()
-        .environment(AppState())
-        .environment(ServerStatusModel.preview(.healthy(ServerStatusModel.previewHealthy)))
+        .previewEnvironment()
 }

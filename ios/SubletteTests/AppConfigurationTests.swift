@@ -41,4 +41,40 @@ final class AppConfigurationTests: XCTestCase {
         XCTAssertFalse(raw.contains("$("), "The build setting was not substituted: \(raw)")
         XCTAssertEqual(AppConfiguration(infoDictionary: info).apiBaseURL.absoluteString, raw)
     }
+
+    // MARK: - Request timeout
+
+    func testTimeoutIsReadFromInfoPlist() {
+        let configuration = AppConfiguration(infoDictionary: [
+            "SubletteAPIBaseURL": "https://staging.example.test",
+            "SubletteRequestTimeout": "75",
+        ])
+
+        XCTAssertEqual(configuration.requestTimeout, 75)
+    }
+
+    func testMissingOrUnusableTimeoutFallsBackToTenSeconds() {
+        for bad: Any in ["", "soon", "0", "-5", "100000", "$(SUBLETTE_REQUEST_TIMEOUT)"] {
+            let configuration = AppConfiguration(infoDictionary: [
+                "SubletteAPIBaseURL": "https://staging.example.test",
+                "SubletteRequestTimeout": bad,
+            ])
+            XCTAssertEqual(configuration.requestTimeout, 10, "for \(bad)")
+        }
+        XCTAssertEqual(AppConfiguration.fallback.requestTimeout, 10)
+    }
+
+    func testTheDebugBuildUsesTheShortTimeout() {
+        let configuration = AppConfiguration.load(from: Bundle(for: APIClient.self))
+
+        XCTAssertEqual(configuration.requestTimeout, 10)
+    }
+
+    func testTheSessionUsesTheTimeout() {
+        let session = APIClient.makeSession(timeout: 75)
+
+        XCTAssertEqual(session.configuration.timeoutIntervalForRequest, 75)
+        XCTAssertEqual(session.configuration.timeoutIntervalForResource, 150)
+        XCTAssertFalse(session.configuration.waitsForConnectivity)
+    }
 }

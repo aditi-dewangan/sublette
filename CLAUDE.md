@@ -17,7 +17,9 @@ stop for sign-off when its "Done when" list is true.
    and add a test that uses the new name.
 3. **New endpoint:** add it to `docs/contract/endpoints.json`, to the server,
    and to `ios/Sublette/Core/Networking/Endpoint.swift`. No path strings
-   anywhere else in the app.
+   anywhere else in the app. Add a real response to `docs/contract/samples/`
+   (see `backend/tests/test_contract_samples.py`) and decode it in
+   `ios/SubletteTests/ContractSampleTests.swift`.
 4. **Server rules live on the server.** Filters, eligibility and privacy rules
    (exact address, renter pin) are enforced and tested in `backend/`, never
    only in the app.
@@ -26,7 +28,11 @@ stop for sign-off when its "Done when" list is true.
 ## Conventions
 
 - REST under `/v1`; snake_case JSON; errors as `{code, message}` (+ `fields` on 422).
-- UTC ISO 8601 times, integer cents, meters.
+- Times as `2027-01-04T17:00:00Z` (use `UtcDateTime` in schemas), integer cents, meters.
+- Errors raised with `ApiError(status, code, message)`; the app shows `message` as is.
+- The server's clock comes from the `Now` dependency, so tests can move time.
+- A student who is offline is never signed out. Only a 401 or 403 from the
+  refresh endpoint ends a session.
 - Server: FastAPI, sync SQLAlchemy 2 with psycopg 3, Alembic, pytest, ruff.
 - App: SwiftUI, iOS 17+, `@Observable` view models, async/await, a `#Preview` per screen.
 - Colors come from `Brand`. Ink text on yellow and orange, never white.

@@ -1,11 +1,11 @@
 {
   "key": "profiles/11111111-2222-4333-8444-555555555555/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.jpg",
-  "upload_url": "http://testserver/dev-storage/profiles/11111111-2222-4333-8444-555555555555/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.jpg?expires=1799082600&signature=ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+  "upload_url": "http://testserver/files/profiles/11111111-2222-4333-8444-555555555555/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.jpg?expires=1799082600&signature=ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
   "method": "PUT",
   "headers": {
     "Content-Type": "image/jpeg"
   },
-  "public_url": "http://testserver/dev-storage/profiles/11111111-2222-4333-8444-555555555555/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.jpg",
+  "public_url": "http://testserver/files/profiles/11111111-2222-4333-8444-555555555555/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.jpg",
   "expires_at": "2027-01-04T17:00:00Z",
   "max_bytes": 10485760
 }

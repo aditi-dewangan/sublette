@@ -68,6 +68,10 @@ struct PreviewAccountAPI: AccountAPI {
 
     func deleteAccount() async throws {}
 
+    func presignListingPhoto(contentType: String) async throws -> PresignedUpload {
+        try await presignProfilePhoto(contentType: contentType)
+    }
+
     func presignProfilePhoto(contentType: String) async throws -> PresignedUpload {
         throw APIError.server(
             status: 503,
@@ -87,6 +91,91 @@ private struct PreviewRefresher: TokenRefreshing {
 private struct PreviewUploader: PhotoUploading {
     func uploadProfilePhoto(_ jpeg: Data) async throws -> String {
         throw APIError.unreachable
+    }
+
+    func uploadListingPhoto(_ jpeg: Data) async throws -> String {
+        throw APIError.unreachable
+    }
+}
+
+extension PreviewData {
+    static let listing = Listing(
+        id: "listing-1",
+        status: .active,
+        isOwner: true,
+        address: "4500 University Way NE, Apt 3, Seattle, WA",
+        latitude: 47.6588,
+        longitude: -122.3130,
+        publicLatitude: 47.6601,
+        publicLongitude: -122.3119,
+        rentCents: 120_000,
+        depositCents: 50_000,
+        utilitiesIncluded: true,
+        startDate: "2027-01-04",
+        endDate: "2027-03-28",
+        spaceType: .privateRoom,
+        bedrooms: 3,
+        bathroom: .shared,
+        furnished: true,
+        laundry: true,
+        parking: false,
+        housematesStaying: 2,
+        housematesNote: "Two grad students, quiet, both cook.",
+        petsAllowed: false,
+        smokingAllowed: false,
+        genderPreference: .anyone,
+        sameSchoolOnly: false,
+        minStayDays: 56,
+        landlordConsent: true,
+        photos: [],
+        lister: Lister(firstName: "Aditi", photoUrl: nil, schoolName: "University of Washington", verified: true)
+    )
+
+    static var draft: Listing {
+        Listing(
+            id: "listing-2", status: .draft, isOwner: true, address: nil, latitude: nil, longitude: nil,
+            publicLatitude: nil, publicLongitude: nil, rentCents: 95_000, depositCents: 0,
+            utilitiesIncluded: false, startDate: nil, endDate: nil, spaceType: .entireUnit,
+            bedrooms: 0, bathroom: .own, furnished: false, laundry: false, parking: false,
+            housematesStaying: nil, housematesNote: nil, petsAllowed: nil, smokingAllowed: nil,
+            genderPreference: .anyone, sameSchoolOnly: false, minStayDays: 0, landlordConsent: nil,
+            photos: [], lister: listing.lister
+        )
+    }
+}
+
+/// Answers from memory: two listings, and every change is accepted.
+struct PreviewListingsAPI: ListingsAPI {
+    func myListings(cursor: String?) async throws -> ListingPage {
+        ListingPage(items: [PreviewData.listing, PreviewData.draft], nextCursor: nil)
+    }
+
+    func listing(id: String) async throws -> Listing {
+        PreviewData.listing
+    }
+
+    func create(_ form: ListingForm) async throws -> Listing {
+        PreviewData.draft
+    }
+
+    func update(id: String, _ form: ListingForm) async throws -> Listing {
+        PreviewData.listing
+    }
+
+    func setStatus(id: String, _ status: ListingStatus) async throws -> Listing {
+        var listing = PreviewData.listing
+        listing.status = status
+        return listing
+    }
+}
+
+/// Finds every address at the same spot, near the University of Washington.
+struct PreviewAddressLocator: AddressLocating {
+    func locate(_ address: String) async throws -> LocatedAddress {
+        LocatedAddress(
+            coordinate: Coordinate(latitude: 47.6588, longitude: -122.3130),
+            formatted: "4500 University Way NE, Seattle, WA, 98105"
+        )
     }
 }
 
@@ -112,6 +201,8 @@ extension AppContainer {
             configuration: .fallback,
             preferences: preferences,
             api: PreviewAccountAPI(user: user ?? PreviewData.newUser),
+            listingsAPI: PreviewListingsAPI(),
+            addressLocator: PreviewAddressLocator(),
             uploader: PreviewUploader(),
             tokenManager: TokenManager(store: InMemoryTokenStore(), refresher: PreviewRefresher()),
             health: PreviewHealthCheck()

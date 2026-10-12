@@ -13,8 +13,9 @@ students who need someone to take over their lease. Any `.edu` email can join.
 | --- | --- | --- |
 | 0 | Scaffolding: both codebases run and talk to each other | Done |
 | 1 | Accounts and .edu email verification | Built. All checks pass on GitHub, including the iPhone build. Waiting to be tried in the simulator and merged. |
-| 2 | Lister mode: create and manage a listing | Next |
-| 3 to 10 | Renter mode through the AI recommender | Not started |
+| 2 | Lister mode: create and manage a listing | Built on `phase-2`; see its pull request |
+| 3 | Renter mode: preferences, map pin, and the mode toggle | Next |
+| 4 to 10 | Matching engine through the AI recommender | Not started |
 
 ## Set up (once)
 
@@ -95,7 +96,8 @@ Each dependency has tests for the day it is down. So far:
 | Info.plist settings (iPhone app) | A missing or malformed server address falls back to the local server. | `ios/SubletteTests/AppConfigurationTests.swift` |
 | Database (any `/v1` request) | 503 `service_unavailable` with "try again in a minute", never a bare 500. | `backend/tests/test_health.py` |
 | Email provider (server, SMTP or Brevo) | Requesting a code answers 503 `email_unavailable`. A wrong key, an unverified sender, Brevo's daily limit or a slow answer (over 10 seconds) all count as unavailable, and the reason goes to the server log without the key. No code is stored and the failed try does not count against the student's limit. Signed-in students are unaffected. Sign-up works again as soon as the provider is back. | `backend/tests/test_auth.py`, `test_brevo.py` |
-| Photo storage (server) | Asking for an upload link answers 503 `uploads_unavailable`. Sign-up, the profile and account deletion all still work without a photo. | `backend/tests/test_uploads.py` |
+| Photo storage (server) | Asking for an upload link answers 503 `uploads_unavailable`. Sign-up, the profile, listing drafts and account deletion all still work without photos. With photos in the database, a database outage answers 503 instead of a broken image. | `backend/tests/test_uploads.py`, `test_storage_database.py`, `test_listings.py` |
+| Apple's address lookup (iPhone app) | "Couldn't look up the address" with a retry; the rest of the listing is kept. | `ios/SubletteTests/ListingEditorModelTests.swift` |
 | Server (iPhone app, signed in) | Reopening the app offline shows the saved profile and keeps the student signed in. Tokens are never thrown away because a request failed. | `ios/SubletteTests/SessionModelTests.swift`, `TokenManagerTests.swift` |
 | Server or email provider (iPhone app, signing up) | The screen shows the reason and the student can try again. | `ios/SubletteTests/OnboardingModelTests.swift` |
 | Photo storage (iPhone app) | "Couldn't upload the photo. You can add one later." The rest of the profile still saves. | `ios/SubletteTests/ProfileFormModelTests.swift`, `AuthorizedRequestTests.swift` |
@@ -130,11 +132,12 @@ Four free accounts, no credit card for any of them. Staging uses them like this:
 | Database | Neon, PostgreSQL with PostGIS | 1 GB; sleeps after 5 idle minutes and wakes on the next query |
 | Server | Render web service, set up from `render.yaml` | Sleeps after 15 idle minutes; the first request after that takes about a minute; outgoing SMTP is blocked |
 | Email | Brevo, sending over HTTPS | 300 emails a day; a "Sent with Brevo" footer |
-| Photos | Off (`SUBLETTE_STORAGE_BACKEND=none`) | The app says uploads aren't available; everything else works |
+| Photos | Kept in the database (`SUBLETTE_STORAGE_BACKEND=database`) | Uses Neon's 1 GB; photos are shrunk to about 300 KB, so a few thousand fit |
 
 Why not Render's own free database: it is deleted 30 days after creation.
-Why not photos yet: Render's free disk is wiped on every restart, and the free
-S3-style stores checked so far need a payment method for public files.
+Why photos in the database: Render's free disk is wiped on every restart, and
+the free S3-style stores checked so far need a payment method for public files.
+Moving to a real photo store later is a settings change (`s3`).
 
 ### Steps
 

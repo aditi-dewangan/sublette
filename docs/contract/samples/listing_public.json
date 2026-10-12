@@ -1,0 +1,55 @@
+{
+  "id": "11111111-2222-4333-8444-555555555555",
+  "status": "active",
+  "is_owner": false,
+  "address": null,
+  "latitude": null,
+  "longitude": null,
+  "public_latitude": 47.6601,
+  "public_longitude": -122.3119,
+  "rent_cents": 120000,
+  "deposit_cents": 50000,
+  "utilities_included": true,
+  "start_date": "2027-01-14",
+  "end_date": "2027-04-08",
+  "space_type": "private_room",
+  "bedrooms": 3,
+  "bathroom": "shared",
+  "furnished": true,
+  "laundry": true,
+  "parking": false,
+  "housemates_staying": 2,
+  "housemates_note": "Two grad students, quiet, both cook.",
+  "pets_allowed": false,
+  "smoking_allowed": false,
+  "gender_preference": "any",
+  "same_school_only": false,
+  "min_stay_days": 60,
+  "landlord_consent": true,
+  "photos": [
+    {
+      "key": "listings/11111111-2222-4333-8444-555555555555/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.jpg",
+      "url": "http://testserver/files/listings/11111111-2222-4333-8444-555555555555/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.jpg"
+    },
+    {
+      "key": "listings/11111111-2222-4333-8444-555555555555/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.jpg",
+      "url": "http://testserver/files/listings/11111111-2222-4333-8444-555555555555/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.jpg"
+    },
+    {
+      "key": "listings/11111111-2222-4333-8444-555555555555/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.jpg",
+      "url": "http://testserver/files/listings/11111111-2222-4333-8444-555555555555/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.jpg"
+    },
+    {
+      "key": "listings/11111111-2222-4333-8444-555555555555/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.jpg",
+      "url": "http://testserver/files/listings/11111111-2222-4333-8444-555555555555/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.jpg"
+    }
+  ],
+  "lister": {
+    "first_name": "Aditi",
+    "photo_url": null,
+    "school_name": "University of Washington",
+    "verified": true
+  },
+  "created_at": "2027-01-04T17:00:00Z",
+  "published_at": "2027-01-04T17:00:00Z"
+}

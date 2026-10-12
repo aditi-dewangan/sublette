@@ -1,0 +1,54 @@
+{
+  "code": "listing_incomplete",
+  "message": "Finish the listing before publishing it.",
+  "fields": [
+    {
+      "field": "photo_keys",
+      "message": "Add at least 4 photos."
+    },
+    {
+      "field": "address",
+      "message": "Enter the address."
+    },
+    {
+      "field": "latitude",
+      "message": "Confirm the address on the map."
+    },
+    {
+      "field": "start_date",
+      "message": "Choose the move-in date."
+    },
+    {
+      "field": "end_date",
+      "message": "Choose the move-out date."
+    },
+    {
+      "field": "space_type",
+      "message": "Choose the type of space."
+    },
+    {
+      "field": "bedrooms",
+      "message": "Enter the number of bedrooms."
+    },
+    {
+      "field": "bathroom",
+      "message": "Choose a private or shared bathroom."
+    },
+    {
+      "field": "housemates_staying",
+      "message": "Say how many housemates are staying."
+    },
+    {
+      "field": "pets_allowed",
+      "message": "Say whether pets are welcome."
+    },
+    {
+      "field": "smoking_allowed",
+      "message": "Say whether smokers are welcome."
+    },
+    {
+      "field": "landlord_consent",
+      "message": "Say whether your landlord has approved subletting."
+    }
+  ]
+}

@@ -29,3 +29,29 @@ new  = "ProfileView"
 kind = "file"
 date = "2026-10-10"
 no_test = "A SwiftUI screen. It has previews; its logic is tested through ProfileFormModel and SessionModel."
+
+[[rename]]
+old  = "/dev-storage"
+new  = "/files"
+kind = "endpoint"
+date = "2026-10-12"
+# Photos stored by this server are now also used on $0 staging, not only in development.
+
+[[rename]]
+old  = "dev_storage"
+new  = "files"
+kind = "file"
+date = "2026-10-12"
+no_test = "Module name of backend/app/routers/files.py; its routes are tested through /files."
+
+[[rename]]
+old  = "LocalStorage"
+new  = "ServerStorage"
+kind = "file"
+date = "2026-10-12"
+
+[[rename]]
+old  = "dev_only"
+new  = "own_storage_only"
+kind = "field"
+date = "2026-10-12"

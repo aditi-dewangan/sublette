@@ -30,7 +30,17 @@ if not found:
 print(max(found)[1])
 ')
 
+set +e
 xcodebuild test \
   -project Sublette.xcodeproj \
   -scheme Sublette \
-  -destination "id=${DEVICE_ID}"
+  -destination "id=${DEVICE_ID}" 2>&1 | tee xcodebuild.log
+status=${PIPESTATUS[0]}
+set -e
+
+if [ "$status" -ne 0 ] && [ "${GITHUB_ACTIONS:-}" = "true" ]; then
+  # Show compile errors and failing tests on the pull request itself.
+  grep -E "error: |: error:|Test Case .* failed|XCTAssert.* failed" xcodebuild.log \
+    | sort -u | head -40 | sed 's/^/::error title=iPhone::/'
+fi
+exit "$status"

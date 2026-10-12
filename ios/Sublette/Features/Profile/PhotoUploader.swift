@@ -1,9 +1,10 @@
 import Foundation
 import UIKit
 
-/// Sends a profile photo to storage and returns its key.
+/// Sends a photo to storage and returns its key.
 protocol PhotoUploading: Sendable {
     func uploadProfilePhoto(_ jpeg: Data) async throws -> String
+    func uploadListingPhoto(_ jpeg: Data) async throws -> String
 }
 
 /// Asks the server for a short-lived upload link, then PUTs the photo straight
@@ -15,7 +16,14 @@ struct PhotoUploader: PhotoUploading {
     static let failureMessage = "Couldn't upload the photo. You can add one later."
 
     func uploadProfilePhoto(_ jpeg: Data) async throws -> String {
-        let link = try await api.presignProfilePhoto(contentType: "image/jpeg")
+        try await upload(jpeg, to: api.presignProfilePhoto(contentType: "image/jpeg"))
+    }
+
+    func uploadListingPhoto(_ jpeg: Data) async throws -> String {
+        try await upload(jpeg, to: api.presignListingPhoto(contentType: "image/jpeg"))
+    }
+
+    private func upload(_ jpeg: Data, to link: PresignedUpload) async throws -> String {
         guard jpeg.count <= link.maxBytes, let url = URL(string: link.uploadUrl) else {
             throw APIError.invalidRequest
         }

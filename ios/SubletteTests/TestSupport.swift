@@ -54,6 +54,40 @@ enum Fixture {
 
     static let now = Date(timeIntervalSince1970: 1_800_000_000)
 
+    static func listing(id: String = "listing-1", status: ListingStatus = .active) -> Listing {
+        Listing(
+            id: id,
+            status: status,
+            isOwner: true,
+            address: "4500 University Way NE, Apt 3, Seattle, WA",
+            latitude: 47.6588,
+            longitude: -122.3130,
+            publicLatitude: 47.6601,
+            publicLongitude: -122.3119,
+            rentCents: 120_000,
+            depositCents: 50_000,
+            utilitiesIncluded: true,
+            startDate: "2027-01-14",
+            endDate: "2027-04-08",
+            spaceType: .privateRoom,
+            bedrooms: 3,
+            bathroom: .shared,
+            furnished: true,
+            laundry: true,
+            parking: false,
+            housematesStaying: 2,
+            housematesNote: "Two grad students.",
+            petsAllowed: false,
+            smokingAllowed: false,
+            genderPreference: .women,
+            sameSchoolOnly: true,
+            minStayDays: 56,
+            landlordConsent: true,
+            photos: (1...4).map { ListingPhoto(key: "listings/user-1/p\($0).jpg", url: "https://photos.example.test/p\($0).jpg") },
+            lister: Lister(firstName: "Aditi", photoUrl: nil, schoolName: "University of Washington", verified: true)
+        )
+    }
+
     static func tokens(expiresIn seconds: TimeInterval, access: String = "access-1") -> AuthTokens {
         AuthTokens(
             accessToken: access,
@@ -134,6 +168,10 @@ final class StubAccountAPI: AccountAPI, @unchecked Sendable {
     func presignProfilePhoto(contentType: String) async throws -> PresignedUpload {
         try presignResult.get()
     }
+
+    func presignListingPhoto(contentType: String) async throws -> PresignedUpload {
+        try presignResult.get()
+    }
 }
 
 final class StubRefresher: TokenRefreshing, @unchecked Sendable {
@@ -169,10 +207,75 @@ final class StubRefresher: TokenRefreshing, @unchecked Sendable {
 
 final class StubUploader: PhotoUploading, @unchecked Sendable {
     var result: Result<String, Error> = .success("profiles/user-1/abc.jpg")
+    /// Listing photo uploads answer from this list in turn; when it runs out, `result`.
+    var listingResults: [Result<String, Error>] = []
     private(set) var uploads: [Data] = []
+    private(set) var listingUploads: [Data] = []
 
     func uploadProfilePhoto(_ jpeg: Data) async throws -> String {
         uploads.append(jpeg)
+        return try result.get()
+    }
+
+    func uploadListingPhoto(_ jpeg: Data) async throws -> String {
+        listingUploads.append(jpeg)
+        if !listingResults.isEmpty {
+            return try listingResults.removeFirst().get()
+        }
+        return "listings/user-1/photo-\(listingUploads.count).jpg"
+    }
+}
+
+final class StubListingsAPI: ListingsAPI, @unchecked Sendable {
+    var pages: [Result<ListingPage, Error>] = []
+    var createResult: Result<Listing, Error>?
+    var updateResult: Result<Listing, Error>?
+    var statusResult: Result<Listing, Error>?
+
+    private(set) var requestedCursors: [String?] = []
+    private(set) var created: [ListingForm] = []
+    private(set) var updated: [(id: String, form: ListingForm)] = []
+    private(set) var statusChanges: [(id: String, status: ListingStatus)] = []
+
+    func myListings(cursor: String?) async throws -> ListingPage {
+        requestedCursors.append(cursor)
+        guard !pages.isEmpty else {
+            return ListingPage(items: [], nextCursor: nil)
+        }
+        return try pages.removeFirst().get()
+    }
+
+    func listing(id: String) async throws -> Listing {
+        Fixture.listing(id: id)
+    }
+
+    func create(_ form: ListingForm) async throws -> Listing {
+        created.append(form)
+        return try (createResult ?? .success(Fixture.listing(id: "new-1", status: .draft))).get()
+    }
+
+    func update(id: String, _ form: ListingForm) async throws -> Listing {
+        updated.append((id, form))
+        return try (updateResult ?? .success(Fixture.listing(id: id, status: .draft))).get()
+    }
+
+    func setStatus(id: String, _ status: ListingStatus) async throws -> Listing {
+        statusChanges.append((id, status))
+        return try (statusResult ?? .success(Fixture.listing(id: id, status: status))).get()
+    }
+}
+
+final class StubLocator: AddressLocating, @unchecked Sendable {
+    var result: Result<LocatedAddress, Error> = .success(
+        LocatedAddress(
+            coordinate: Coordinate(latitude: 47.6588, longitude: -122.3130),
+            formatted: "4500 University Way NE, Seattle, WA, 98105"
+        )
+    )
+    private(set) var lookups: [String] = []
+
+    func locate(_ address: String) async throws -> LocatedAddress {
+        lookups.append(address)
         return try result.get()
     }
 }

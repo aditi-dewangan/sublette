@@ -109,6 +109,42 @@ def test_error_samples(client: TestClient, aditi: dict) -> None:
     check("error_not_signed_in", client.get("/v1/me").json())
 
 
+def test_listing_samples(client: TestClient, aditi: dict, mailer: RecordingMailer, clock) -> None:
+    from tests.test_listings import complete_fields, upload_listing_photos
+
+    client.patch("/v1/me", headers=bearer(aditi), json=COMPLETE_PROFILE)
+    fields = complete_fields(clock, upload_listing_photos(client, aditi))
+    draft = client.post("/v1/listings", headers=bearer(aditi), json={"rent_cents": 90_000})
+    check("listing_draft", draft.json())
+    check(
+        "error_listing_incomplete",
+        client.post(
+            f"/v1/listings/{draft.json()['id']}/status",
+            headers=bearer(aditi),
+            json={"status": "active"},
+        ).json(),
+    )
+
+    listing = client.post("/v1/listings", headers=bearer(aditi), json=fields).json()
+    published = client.post(
+        f"/v1/listings/{listing['id']}/status", headers=bearer(aditi), json={"status": "active"}
+    ).json()
+    # Public points are random; pin them so the sample stays stable.
+    for body in (published,):
+        body["public_latitude"], body["public_longitude"] = 47.6601, -122.3119
+    check("listing_owner", published)
+
+    renter = sign_in(client, mailer, "sam@northeastern.edu")
+    seen = client.get(f"/v1/listings/{listing['id']}", headers=bearer(renter)).json()
+    seen["public_latitude"], seen["public_longitude"] = 47.6601, -122.3119
+    check("listing_public", seen)
+
+    page = client.get("/v1/me/listings", headers=bearer(aditi), params={"limit": 1}).json()
+    page["items"][0]["public_latitude"] = page["items"][0]["public_longitude"] = None
+    page["next_cursor"] = "sample-cursor" if page["next_cursor"] else None
+    check("my_listings", page)
+
+
 def test_every_time_in_the_samples_is_utc_to_the_second() -> None:
     def times(value, key=""):
         if isinstance(value, dict):

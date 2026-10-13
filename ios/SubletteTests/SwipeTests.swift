@@ -22,7 +22,8 @@ final class SwipeOutboxTests: XCTestCase {
 
     func testOfflineSwipesWaitAndGoInOrderWithTheirOwnIDs() async {
         let api = StubDeckAPI()
-        api.swipeResults = [.failure(APIError.unreachable)]
+        // Offline for the first two tries: a fails, then a fails again when b is queued.
+        api.swipeResults = [.failure(APIError.unreachable), .failure(APIError.unreachable)]
         let outbox = SwipeOutbox(api: api, preferences: .ephemeral())
         outbox.prepare(for: "user-1")
 
@@ -34,7 +35,10 @@ final class SwipeOutboxTests: XCTestCase {
         // Back online.
         await outbox.flush()
 
-        XCTAssertEqual(api.swipes.map(\.swipeId), ["swipe-a", "swipe-a", "swipe-b"], "a is resent with the same id")
+        XCTAssertEqual(
+            api.swipes.map(\.swipeId), ["swipe-a", "swipe-a", "swipe-a", "swipe-b"],
+            "a is resent with the same id, and b waits behind it"
+        )
         XCTAssertTrue(outbox.pending.isEmpty)
         XCTAssertFalse(outbox.isOffline)
     }

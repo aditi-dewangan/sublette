@@ -176,3 +176,34 @@ def test_renter_profile_samples(client: TestClient, aditi: dict) -> None:
         "renter_profile",
         client.put("/v1/me/renter-profile", headers=bearer(aditi), json=FULL_PROFILE).json(),
     )
+
+
+def test_deck_samples(client: TestClient, mailer: RecordingMailer, clock, db) -> None:
+    from tests.test_deck import make_lister, put_listing, search
+
+    renter = sign_in(client, mailer, "renter@uw.edu")
+    client.patch("/v1/me", headers=bearer(renter), json={**COMPLETE_PROFILE, "gender": "woman"})
+    client.put(
+        "/v1/me/renter-profile",
+        headers=bearer(renter),
+        json=search(
+            clock,
+            preferences=[
+                {"field": "furnished", "value": True, "importance": "nice"},
+                {"field": "laundry", "value": True, "importance": "nice"},
+                {"field": "parking", "value": True, "importance": "must"},
+            ],
+        ),
+    )
+    lister = make_lister(db)
+    lister.email = "lister@uw.edu"
+    put_listing(db, clock, lister, parking=True)
+    put_listing(db, clock, lister, parking=False)
+
+    page = client.get("/v1/deck/listings", headers=bearer(renter)).json()
+    check("deck_listings", page)
+    check("deck_diagnostics", client.get("/v1/deck/diagnostics", headers=bearer(renter)).json())
+    check(
+        "error_profile_incomplete",
+        client.get("/v1/deck/listings", headers=bearer(sign_in(client, mailer, "x@uw.edu"))).json(),
+    )

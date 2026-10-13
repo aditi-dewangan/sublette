@@ -15,7 +15,7 @@ students who need someone to take over their lease. Any `.edu` email can join.
 | 1 | Accounts and .edu email verification | Done |
 | 2 | Lister mode: create and manage a listing | Done |
 | 3 | Renter mode: preferences, map pin, and the mode toggle | Built on `phase-3`; see its pull request |
-| 4 | Matching engine: who sees which listing, scored and explained | Next |
+| 4 | Matching engine: who sees which listing, scored and explained | Built on `phase-4`; see its pull request |
 | 5 to 10 | Swipe decks through the AI recommender | Not started |
 
 ## Set up (once)
@@ -97,6 +97,19 @@ that address in the subject: `[LOCAL] 482913 is your Sublette code (for you@uw.e
 Made-up test addresses email nobody. Production refuses to start with a
 redirect set, so students' codes can never be copied to one inbox.
 
+### Fake listings to try the deck
+
+```sh
+make seed-fake   # 1,000 listings and 200 renters around three campuses
+```
+
+The campuses are UW in Seattle, UT Austin and Boston University, picked from
+the school list by domain. Every fake account's email starts with `seed-`, so
+running it again replaces the batch and real accounts are never touched.
+`make seed-fake ARGS=--remove` takes it all out. Put your own search pin near
+one of those campuses, then try `GET /v1/deck/listings` at
+http://localhost:8000/docs (the deck screens arrive in phase 5).
+
 ## Test it
 
 ```sh
@@ -125,6 +138,8 @@ Each dependency has tests for the day it is down. So far:
 | Server or email provider (iPhone app, signing up) | The screen shows the reason and the student can try again. | `ios/SubletteTests/OnboardingModelTests.swift` |
 | Apple Maps search, for "My campus" (iPhone app) | "Maps can't be reached right now. Move the map yourself, or try again." The renter drags the map or taps to place the pin; the search saves without the shortcut. An unknown school says so the same way. | `ios/SubletteTests/PreferencesEditorModelTests.swift` |
 | Server (iPhone app, renter search) | Loading the saved search offline keeps what was shown and offers a retry; saving offline keeps every answer in the flow. Nobody is signed out. | `ios/SubletteTests/PreferencesEditorModelTests.swift` (`RenterSearchModelTests`) |
+| Sample room pictures for fake listings (`backend/app/data/seed_photos`) | `make seed-fake` still adds every listing and renter, with no photo files, and says so. | `backend/tests/test_deck.py` |
+| PostGIS distance search (deck) | The migration turns PostGIS on, so a database without it fails at deploy. A database outage answers 503 like every `/v1` route. | `backend/tests/test_migrations.py`, `test_health.py` |
 | Photo storage (iPhone app) | "Couldn't upload the photo. You can add one later." The rest of the profile still saves. | `ios/SubletteTests/ProfileFormModelTests.swift`, `AuthorizedRequestTests.swift` |
 
 When a phase adds a dependency (email sending, photo storage, push, the language

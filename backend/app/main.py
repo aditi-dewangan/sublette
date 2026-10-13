@@ -13,6 +13,7 @@ from app.errors import install_error_handlers
 from app.routers import (
     API_V1_PREFIX,
     auth,
+    deck,
     files,
     health,
     listings,
@@ -57,6 +58,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     v1.include_router(uploads.router)
     v1.include_router(listings.router)
     v1.include_router(renter_profile.router)
+    v1.include_router(deck.router)
     app.include_router(v1)
 
     if isinstance(app.state.storage, ServerStorage):

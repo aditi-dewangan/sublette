@@ -96,6 +96,20 @@ Choices made while building, with the reason. Add to the bottom; do not rewrite 
 | Renter mode has Deck, Map, Matches and Profile. Lister mode has Listings, Matches and Profile. The tab bar takes the mode's accent; icons and text stay ink. | Yellow icons on white fail contrast. |
 | The /health status card moved from the Deck tab to the bottom of Profile. | The Deck tab now shows the renter's search. |
 
+### Phase 4: matching engine (added 2026-10-12)
+
+| Decision | Reason |
+| --- | --- |
+| `is_eligible`, `score` and `reasons` take plain values (a `Renter` and a listing) and touch no database or clock. `failures` lists every rule broken; `is_eligible` is "no failures". | Every rule is tested directly, in both directions, and the diagnostics count the same failures the deck applies. |
+| A stay is the overlap of the listing's dates with the renter's, each end allowed to move by the renter's flexibility, never more than the renter wants. No overlap at all is a failure, even when the listing has no minimum stay. | The plan's "stay shorter than min_stay_days" left a zero-day stay eligible; a place for the wrong months is not a match. |
+| Rent over budget is not a filter: it costs points, reaching zero rent points at 25% over. | The plan scores "rent against budget" and does not list budget among the filters. Renters can make it a filter later if they ask. |
+| Distance is measured from the pin to the listing's public point, in the radius filter, the score and the `distance_m` shown. | A renter moving their own pin must never learn the exact address. |
+| The deck loads every eligible listing in the circle, scores them in Python and returns the top 20 (up to 50). The database narrows by status, owner, end date and circle (`ST_DWithin` on a partial GiST index of the public point); every fit rule runs in one place. | About 30 ms for a seeded renter, well under the 300 ms target. One copy of each rule. |
+| Ties go to the newer listing (`published_at`), then the id. | The plan says newer listings break ties; the id makes the order stable. |
+| Diagnostics count, for each rule, how many listings in the circle break it, and name the must-have that keeps out the most. With nothing in the circle, the radius is the answer. A renter with no stated gender is told how many places have a preference and to add a gender. | The plan's empty-deck message, plus the "the app tells them so" rule. |
+| The deck answers 409 `profile_incomplete` or `renter_profile_incomplete` until both are done. | Matching needs smokes, pets, dates, budget and pin. |
+| Listings already swiped (phase 5) and blocked users (phase 7) are not excluded yet; the place to add them is marked in `services/deck.py`. | Those tables don't exist yet. |
+
 ## Known gaps after phase 2
 
 - Photos uploaded in the editor and then abandoned (the editor closed without saving) stay in storage. A clean-up job belongs with phase 8's expiry job.

@@ -123,6 +123,7 @@ extension PreviewData {
         housematesNote: "Two grad students, quiet, both cook.",
         petsAllowed: false,
         smokingAllowed: false,
+        householdGender: .mixed,
         genderPreference: .anyone,
         sameSchoolOnly: false,
         minStayDays: 56,
@@ -138,6 +139,7 @@ extension PreviewData {
             utilitiesIncluded: false, startDate: nil, endDate: nil, spaceType: .entireUnit,
             bedrooms: 0, bathroom: .own, furnished: false, laundry: false, parking: false,
             housematesStaying: nil, housematesNote: nil, petsAllowed: nil, smokingAllowed: nil,
+            householdGender: nil,
             genderPreference: .anyone, sameSchoolOnly: false, minStayDays: 0, landlordConsent: nil,
             photos: [], lister: listing.lister
         )
@@ -166,6 +168,45 @@ struct PreviewListingsAPI: ListingsAPI {
         var listing = PreviewData.listing
         listing.status = status
         return listing
+    }
+}
+
+extension PreviewData {
+    static let renterProfile = RenterProfile(
+        startDate: "2027-06-15",
+        endDate: "2027-09-01",
+        flexibilityDays: 7,
+        maxRentCents: 110_000,
+        preferences: [
+            Preference(field: .spaceType, value: .spaceTypes([.privateRoom, .entireUnit]), importance: .must),
+            Preference(field: .furnished, value: .yes, importance: .must),
+            Preference(field: .laundry, value: .yes, importance: .nice),
+            Preference(field: .housemateCount, value: .count(2), importance: .nice),
+            Preference(field: .housemateGender, value: .gender(.women), importance: .must),
+        ],
+        pin: SearchPin(latitude: 47.6553, longitude: -122.3035, radiusM: SearchPin.defaultRadiusM),
+        complete: true,
+        updatedAt: Date(timeIntervalSince1970: 1_799_000_000)
+    )
+}
+
+/// Answers from memory. A new renter starts with nothing saved.
+struct PreviewRenterAPI: RenterAPI {
+    var profile: RenterProfile = .empty
+
+    func renterProfile() async throws -> RenterProfile {
+        profile
+    }
+
+    func saveRenterProfile(_ form: RenterProfileForm) async throws -> RenterProfile {
+        PreviewData.renterProfile
+    }
+}
+
+/// Every campus is at the same spot, near the University of Washington.
+struct PreviewCampusLocator: CampusLocating {
+    func locateCampus(named schoolName: String) async throws -> Coordinate {
+        Coordinate(latitude: 47.6553, longitude: -122.3035)
     }
 }
 
@@ -202,6 +243,8 @@ extension AppContainer {
             preferences: preferences,
             api: PreviewAccountAPI(user: user ?? PreviewData.newUser),
             listingsAPI: PreviewListingsAPI(),
+            renterAPI: PreviewRenterAPI(),
+            campusLocator: PreviewCampusLocator(),
             addressLocator: PreviewAddressLocator(),
             uploader: PreviewUploader(),
             tokenManager: TokenManager(store: InMemoryTokenStore(), refresher: PreviewRefresher()),

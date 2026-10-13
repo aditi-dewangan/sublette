@@ -11,6 +11,7 @@ STATUSES = ("draft", "active", "paused", "filled", "expired")
 SPACE_TYPES = ("entire_unit", "private_room", "shared_room")
 BATHROOMS = ("private", "shared")
 GENDER_PREFERENCES = ("any", "women", "men")
+HOUSEHOLD_GENDERS = ("women", "men", "mixed")
 
 
 class Listing(Base):
@@ -53,6 +54,9 @@ class Listing(Base):
     housemates_note: Mapped[str | None] = mapped_column(String(140))
     pets_allowed: Mapped[bool | None]
     smoking_allowed: Mapped[bool | None]
+    # Who the renter would live with: the housemates staying. Needed to publish
+    # when anyone stays; cleared when nobody does.
+    household_gender: Mapped[str | None] = mapped_column(String(10))
 
     gender_preference: Mapped[str] = mapped_column(String(10), default="any", server_default="any")
     same_school_only: Mapped[bool] = mapped_column(default=False, server_default="false")

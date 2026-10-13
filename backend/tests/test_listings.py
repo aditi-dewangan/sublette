@@ -55,6 +55,7 @@ def complete_fields(clock: Clock, photo_keys: list[str]) -> dict:
         "housemates_note": "Two grad students, quiet, both cook.",
         "pets_allowed": False,
         "smoking_allowed": False,
+        "household_gender": "mixed",
         "gender_preference": "any",
         "same_school_only": False,
         "min_stay_days": 60,
@@ -700,3 +701,45 @@ def test_a_draft_can_be_saved_without_photos_when_uploads_are_off(
         response = client.post("/v1/listings", headers=bearer(who), json={"rent_cents": 90_000})
 
     assert response.status_code == 201
+
+
+# --- Who lives there ---------------------------------------------------------------
+
+
+def test_household_gender_is_needed_when_housemates_stay(
+    client: TestClient, lister: dict, fields: dict
+) -> None:
+    draft = create(client, lister, {**fields, "household_gender": None})
+
+    response = set_status(client, lister, draft["id"], "active")
+
+    assert response.status_code == 422
+    assert [item["field"] for item in response.json()["fields"]] == ["household_gender"]
+
+
+def test_household_gender_is_not_needed_when_nobody_stays(
+    client: TestClient, lister: dict, fields: dict
+) -> None:
+    draft = create(client, lister, {**fields, "housemates_staying": 0, "household_gender": None})
+
+    assert set_status(client, lister, draft["id"], "active").status_code == 200
+
+
+def test_household_gender_clears_when_nobody_stays(
+    client: TestClient, lister: dict, fields: dict
+) -> None:
+    listing = create(client, lister, fields)
+    assert listing["household_gender"] == "mixed"
+
+    response = client.patch(
+        f"/v1/listings/{listing['id']}", headers=bearer(lister), json={"housemates_staying": 0}
+    )
+
+    assert response.json()["household_gender"] is None
+
+
+def test_household_gender_takes_women_men_or_mixed(client: TestClient, lister: dict) -> None:
+    for value in ("women", "men", "mixed"):
+        assert create(client, lister, {"household_gender": value})["household_gender"] == value
+    response = client.post("/v1/listings", headers=bearer(lister), json={"household_gender": "any"})
+    assert response.status_code == 422

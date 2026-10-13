@@ -24,6 +24,7 @@
       "housemates_note": "Two grad students, quiet, both cook.",
       "pets_allowed": false,
       "smoking_allowed": false,
+      "household_gender": "mixed",
       "gender_preference": "any",
       "same_school_only": false,
       "min_stay_days": 60,

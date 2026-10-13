@@ -9,6 +9,8 @@ final class AppContainer {
     let preferences: Preferences
     let api: AccountAPI
     let listingsAPI: ListingsAPI
+    let renterAPI: RenterAPI
+    let campusLocator: CampusLocating
     let addressLocator: AddressLocating
     let uploader: PhotoUploading
     let appState: AppState
@@ -16,6 +18,7 @@ final class AppContainer {
     let onboarding: OnboardingModel
     let serverStatus: ServerStatusModel
     let listerHome: ListerHomeModel
+    let renterSearch: RenterSearchModel
 
     private let tokenManager: TokenManager
 
@@ -24,6 +27,8 @@ final class AppContainer {
         preferences: Preferences,
         api: AccountAPI,
         listingsAPI: ListingsAPI,
+        renterAPI: RenterAPI,
+        campusLocator: CampusLocating,
         addressLocator: AddressLocating,
         uploader: PhotoUploading,
         tokenManager: TokenManager,
@@ -33,6 +38,8 @@ final class AppContainer {
         self.preferences = preferences
         self.api = api
         self.listingsAPI = listingsAPI
+        self.renterAPI = renterAPI
+        self.campusLocator = campusLocator
         self.addressLocator = addressLocator
         self.uploader = uploader
         self.tokenManager = tokenManager
@@ -42,6 +49,7 @@ final class AppContainer {
         self.onboarding = OnboardingModel(api: api, session: session)
         self.serverStatus = ServerStatusModel(health: health, configuration: configuration)
         self.listerHome = ListerHomeModel(api: listingsAPI)
+        self.renterSearch = RenterSearchModel(api: renterAPI)
     }
 
     /// The real thing: talks to the server named in the build settings and
@@ -72,6 +80,8 @@ final class AppContainer {
             preferences: preferences,
             api: api,
             listingsAPI: LiveListingsAPI(client: signedInClient),
+            renterAPI: LiveRenterAPI(client: signedInClient),
+            campusLocator: AppleCampusLocator(),
             addressLocator: AppleAddressLocator(),
             uploader: PhotoUploader(api: api, session: APIClient.makeSession(timeout: timeout)),
             tokenManager: tokenManager,
@@ -95,6 +105,16 @@ final class AppContainer {
 
     func makeProfileForm(for user: User) -> ProfileFormModel {
         ProfileFormModel(user: user, api: api, uploader: uploader, session: session)
+    }
+
+    func makePreferencesEditor(startAt step: PreferencesEditorModel.Step) -> PreferencesEditorModel {
+        PreferencesEditorModel(
+            profile: renterSearch.profile,
+            schoolName: session.user?.school.name ?? "your school",
+            api: renterAPI,
+            campusLocator: campusLocator,
+            startAt: step
+        )
     }
 
     func makeListingEditor(for request: EditorRequest) -> ListingEditorModel {

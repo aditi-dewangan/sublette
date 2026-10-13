@@ -18,6 +18,9 @@ struct ProfileView: View {
                     header(user)
                     details(user)
                     actions
+                    // Which server the app talks to, and whether it answers.
+                    ServerStatusCard()
+                        .padding(.top, 12)
                 }
                 .padding(24)
                 .frame(maxWidth: .infinity)

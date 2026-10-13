@@ -56,6 +56,9 @@ struct ListingCardView: View {
                         staying == 0 ? "Nobody else staying" : "\(staying) housemate\(staying == 1 ? "" : "s") staying"
                     )
                 }
+                if let household = listing.householdGender, (listing.housematesStaying ?? 0) > 0 {
+                    detail("person.3", household.livesWith)
+                }
                 if let note = listing.housematesNote, !note.isEmpty {
                     Text("“\(note)”")
                         .font(.subheadline)

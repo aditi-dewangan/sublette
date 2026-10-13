@@ -22,6 +22,7 @@
   "housemates_note": null,
   "pets_allowed": null,
   "smoking_allowed": null,
+  "household_gender": null,
   "gender_preference": "any",
   "same_school_only": false,
   "min_stay_days": 0,

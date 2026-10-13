@@ -79,6 +79,7 @@ enum Fixture {
             housematesNote: "Two grad students.",
             petsAllowed: false,
             smokingAllowed: false,
+            householdGender: .women,
             genderPreference: .women,
             sameSchoolOnly: true,
             minStayDays: 56,
@@ -313,5 +314,48 @@ struct TestSession {
             preferences: preferences,
             now: { Fixture.now }
         )
+    }
+}
+
+final class StubRenterAPI: RenterAPI, @unchecked Sendable {
+    var loadResults: [Result<RenterProfile, Error>] = []
+    var saveResult: Result<RenterProfile, Error>?
+    private(set) var saved: [RenterProfileForm] = []
+    private(set) var loads = 0
+
+    func renterProfile() async throws -> RenterProfile {
+        loads += 1
+        guard !loadResults.isEmpty else {
+            return .empty
+        }
+        return try loadResults.removeFirst().get()
+    }
+
+    func saveRenterProfile(_ form: RenterProfileForm) async throws -> RenterProfile {
+        saved.append(form)
+        if let saveResult {
+            return try saveResult.get()
+        }
+        // Echo it back, as the server does.
+        return RenterProfile(
+            startDate: form.startDate,
+            endDate: form.endDate,
+            flexibilityDays: form.flexibilityDays,
+            maxRentCents: form.maxRentCents,
+            preferences: form.preferences,
+            pin: form.pin,
+            complete: form.startDate != nil && form.endDate != nil && form.maxRentCents != nil && form.pin != nil,
+            updatedAt: Fixture.now
+        )
+    }
+}
+
+final class StubCampusLocator: CampusLocating, @unchecked Sendable {
+    var result: Result<Coordinate, Error> = .success(Coordinate(latitude: 47.6553, longitude: -122.3035))
+    private(set) var searches: [String] = []
+
+    func locateCampus(named schoolName: String) async throws -> Coordinate {
+        searches.append(schoolName)
+        return try result.get()
     }
 }

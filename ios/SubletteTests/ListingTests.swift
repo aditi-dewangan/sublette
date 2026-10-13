@@ -89,7 +89,7 @@ final class ListingContractTests: XCTestCase {
                 "address", "latitude", "longitude", "rent_cents", "deposit_cents",
                 "utilities_included", "start_date", "end_date", "space_type", "bedrooms",
                 "bathroom", "furnished", "laundry", "parking", "housemates_staying",
-                "housemates_note", "pets_allowed", "smoking_allowed", "gender_preference",
+                "housemates_note", "household_gender", "pets_allowed", "smoking_allowed", "gender_preference",
                 "same_school_only", "min_stay_days", "landlord_consent", "photo_keys",
             ]
         )

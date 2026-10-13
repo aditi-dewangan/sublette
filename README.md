@@ -12,10 +12,11 @@ students who need someone to take over their lease. Any `.edu` email can join.
 | Phase | What it delivers | Status |
 | --- | --- | --- |
 | 0 | Scaffolding: both codebases run and talk to each other | Done |
-| 1 | Accounts and .edu email verification | Built. All checks pass on GitHub, including the iPhone build. Waiting to be tried in the simulator and merged. |
-| 2 | Lister mode: create and manage a listing | Built on `phase-2`; see its pull request |
-| 3 | Renter mode: preferences, map pin, and the mode toggle | Next |
-| 4 to 10 | Matching engine through the AI recommender | Not started |
+| 1 | Accounts and .edu email verification | Done |
+| 2 | Lister mode: create and manage a listing | Done |
+| 3 | Renter mode: preferences, map pin, and the mode toggle | Built on `phase-3`; see its pull request |
+| 4 | Matching engine: who sees which listing, scored and explained | Next |
+| 5 to 10 | Swipe decks through the AI recommender | Not started |
 
 ## Set up (once)
 
@@ -122,6 +123,8 @@ Each dependency has tests for the day it is down. So far:
 | Apple's address lookup (iPhone app) | "Couldn't look up the address" with a retry; the rest of the listing is kept. | `ios/SubletteTests/ListingEditorModelTests.swift` |
 | Server (iPhone app, signed in) | Reopening the app offline shows the saved profile and keeps the student signed in. Tokens are never thrown away because a request failed. | `ios/SubletteTests/SessionModelTests.swift`, `TokenManagerTests.swift` |
 | Server or email provider (iPhone app, signing up) | The screen shows the reason and the student can try again. | `ios/SubletteTests/OnboardingModelTests.swift` |
+| Apple Maps search, for "My campus" (iPhone app) | "Maps can't be reached right now. Move the map yourself, or try again." The renter drags the map or taps to place the pin; the search saves without the shortcut. An unknown school says so the same way. | `ios/SubletteTests/PreferencesEditorModelTests.swift` |
+| Server (iPhone app, renter search) | Loading the saved search offline keeps what was shown and offers a retry; saving offline keeps every answer in the flow. Nobody is signed out. | `ios/SubletteTests/PreferencesEditorModelTests.swift` (`RenterSearchModelTests`) |
 | Photo storage (iPhone app) | "Couldn't upload the photo. You can add one later." The rest of the profile still saves. | `ios/SubletteTests/ProfileFormModelTests.swift`, `AuthorizedRequestTests.swift` |
 
 When a phase adds a dependency (email sending, photo storage, push, the language

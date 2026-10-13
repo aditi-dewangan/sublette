@@ -56,4 +56,8 @@ extension Endpoint {
     static func listingStatus(_ id: String) -> Endpoint {
         Endpoint(method: .post, path: "/v1/listings/\(id)/status")
     }
+
+    // Renter mode.
+    static let renterProfile = Endpoint(method: .get, path: "/v1/me/renter-profile")
+    static let saveRenterProfile = Endpoint(method: .put, path: "/v1/me/renter-profile")
 }

@@ -1,0 +1,10 @@
+{
+  "start_date": null,
+  "end_date": null,
+  "flexibility_days": 0,
+  "max_rent_cents": null,
+  "preferences": [],
+  "pin": null,
+  "complete": false,
+  "updated_at": null
+}

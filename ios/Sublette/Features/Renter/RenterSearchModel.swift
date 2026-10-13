@@ -59,20 +59,6 @@ final class RenterSearchModel {
     /// The message from the last change made from the empty deck.
     private(set) var changeMessage: String?
 
-    /// Makes one must-have a nice-to-have (the empty deck's "relax" button).
-    func relax(_ field: PreferenceField) async -> Bool {
-        guard var form = profile?.form else {
-            return false
-        }
-        form.preferences = form.preferences.map { preference in
-            guard preference.field == field, preference.importance == .must else {
-                return preference
-            }
-            return Preference(field: preference.field, value: preference.value, importance: .nice)
-        }
-        return await save(form)
-    }
-
     /// Doubles the search radius, up to the largest allowed.
     func widenArea() async -> Bool {
         guard var form = profile?.form, var pin = form.pin else {

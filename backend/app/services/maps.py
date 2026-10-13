@@ -14,7 +14,15 @@ from app.schemas.deck import DeckItem
 from app.schemas.maps import MapCard, MapPin
 from app.services.deck import candidates
 from app.services.listings import listing_out, not_found
-from app.services.matching import Renter, distance_from_pin, failures, reasons, score, score_band
+from app.services.matching import (
+    Renter,
+    distance_from_pin,
+    failures,
+    reasons,
+    score,
+    score_band,
+    summary,
+)
 from app.services.storage import PhotoStorage
 
 MAX_PINS = 500
@@ -134,10 +142,13 @@ def map_card(
     elif listing.status not in SHOWN_STATUSES:
         raise not_found()
     matched = state == "matched"
+    value = score(renter, listing)
     return MapCard(
         item=DeckItem(
             listing=listing_out(listing, viewer, storage, matched=matched),
-            score=score(renter, listing),
+            score=value,
+            band=score_band(value),
+            summary=summary(renter, listing),
             reasons=reasons(renter, listing),
             distance_m=round(distance_from_pin(renter, listing)),
         ),

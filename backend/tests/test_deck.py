@@ -143,6 +143,9 @@ def test_a_fitting_listing_is_shown_with_its_score_and_reasons(
     assert item["reasons"][1] == "$200 under budget"
     assert 3 <= len(item["reasons"]) <= 4
     assert 450 <= item["distance_m"] <= 550
+    assert item["band"] == "strong"
+    assert item["summary"].startswith("Fits your dates, $200 under budget and 0.3 mi")
+    assert "%" not in item["summary"]
 
 
 def test_the_deck_never_shows_the_exact_address(
@@ -342,7 +345,7 @@ def test_diagnostics_names_the_must_have_that_removes_the_most(
         "field": "parking",
         "kind": "must_have",
         "removed": 3,
-        "message": "3 listings don't have parking. Make it nice-to-have to see them.",
+        "message": "3 listings nearby don't have parking.",
     }
     assert [item["field"] for item in body["blockers"]] == ["parking", "furnished"]
 

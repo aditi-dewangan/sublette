@@ -19,6 +19,8 @@ from app.services.matching import (
     failures,
     reasons,
     score,
+    score_band,
+    summary,
 )
 from app.services.storage import PhotoStorage
 
@@ -109,6 +111,8 @@ def deck(
         DeckItem(
             listing=listing_out(item.listing, viewer, storage),
             score=item.score,
+            band=score_band(item.score),
+            summary=summary(renter, item.listing),
             reasons=reasons(renter, item.listing),
             distance_m=round(distance_from_pin(renter, item.listing)),
         )
@@ -203,5 +207,7 @@ def _message(renter: Renter, failure: Failure, removed: int) -> str:
         if failure.field == "housemate_count":
             value = f"{value} housemate{'' if value == 1 else 's'}"
         phrase = MUST_HAVE_PHRASES[failure.field][0 if one else 1].format(value=value)
-        return f"{many} {phrase}. Make it nice-to-have to see {'it' if one else 'them'}."
+        # Must-haves are the renter's call: say what they rule out, never
+        # suggest giving one up.
+        return f"{many} nearby {phrase}."
     return f"{many} {LISTER_FILTER_PHRASES[failure.field][0 if one else 1]}"

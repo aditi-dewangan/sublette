@@ -5,6 +5,15 @@ enum ScoreBand: String, Decodable, Equatable {
     case strong
     case partial
     case other
+
+    /// What a card says instead of a number. Nothing for "other".
+    var fitLabel: String? {
+        switch self {
+        case .strong: return "Great fit"
+        case .partial: return "Good fit"
+        case .other: return nil
+        }
+    }
 }
 
 /// Where a listing stands for this renter.

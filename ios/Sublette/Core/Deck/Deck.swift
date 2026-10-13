@@ -5,9 +5,13 @@ import Foundation
 struct DeckItem: Decodable, Equatable, Identifiable {
     /// As any renter sees it: the public point, never the exact address.
     let listing: Listing
-    /// 0 to 100.
+    /// 0 to 100. Orders the deck and colors the map; never shown as a number.
     let score: Int
-    /// Three or four short sentences, such as "Fits your dates".
+    /// strong, partial or other: shown as "Great fit", "Good fit" or nothing.
+    let band: ScoreBand
+    /// Why it fits, in one or two plain sentences.
+    let summary: String
+    /// The same, in three or four short pieces, such as "Fits your dates".
     let reasons: [String]
     /// From the renter's pin to the listing's public point.
     let distanceM: Int

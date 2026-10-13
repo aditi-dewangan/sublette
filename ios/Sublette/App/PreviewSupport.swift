@@ -223,6 +223,8 @@ extension PreviewData {
     static let deckItem = DeckItem(
         listing: publicListing,
         score: 92,
+        band: .strong,
+        summary: "Fits your dates, $50 under budget and 0.4 mi from your pin. Furnished and in-unit laundry.",
         reasons: ["Fits your dates", "$50 under budget", "0.4 mi from your pin", "Furnished and in-unit laundry"],
         distanceM: 640
     )

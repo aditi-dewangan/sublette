@@ -139,6 +139,13 @@ Choices made while building, with the reason. Add to the bottom; do not rewrite 
 | "Move pin or change radius" on the map moves the search to the middle of the visible map, saves it, and reloads the map and the deck. | "The pin and radius can be changed from the map." |
 | The bbox does not cross the antimeridian. | No campus is near it. |
 
+### Feedback after trying phase 6 (2026-10-13)
+
+| Decision | Reason |
+| --- | --- |
+| Cards show no percentage. The server sends `band` and a one- or two-sentence `summary` ("Fits your dates, $150 under budget and 0.4 mi from your pin. Furnished and in-unit laundry."); the app shows "Great fit" (strong), "Good fit" (partial) or no label, and the sentence. `score` stays in the API for ordering and pin colors. | Aditi: "we don't need a percentage for how much it fits", and the reasons should read as one synthesized line. |
+| Must-haves are never questioned. The empty deck no longer offers "Make it nice-to-have"; it says nothing nearby has every must-have yet, names what rules most places out ("3 listings nearby don't have parking."), and offers "Notify me" and "Search a bigger area". | Aditi: the app should abide by must-haves and not ask renters to change them. |
+
 ## Known gaps after phase 2
 
 - Photos uploaded in the editor and then abandoned (the editor closed without saving) stay in storage. A clean-up job belongs with phase 8's expiry job.

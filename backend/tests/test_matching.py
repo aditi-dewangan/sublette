@@ -417,3 +417,34 @@ from app.services.matching import lister_fits  # noqa: E402
 )
 def test_lister_fits(listing_changes, expected) -> None:
     assert lister_fits(make_renter(), make_listing(**listing_changes), "UW") == expected
+
+
+# --- The sentence on the card ---------------------------------------------------------
+
+from app.services.matching import summary  # noqa: E402
+
+
+def test_summary_of_a_great_fit_has_no_number_in_it() -> None:
+    renter = make_renter([nice("furnished"), nice("laundry")], max_rent_cents=115_000)
+
+    text = summary(renter, make_listing(rent_cents=100_000))
+
+    assert text == (
+        "Fits your dates, $150 under budget and right by your pin. Furnished and in-unit laundry."
+    )
+    assert "%" not in text
+
+
+def test_summary_of_a_partial_fit() -> None:
+    renter = make_renter([nice("parking")])
+    listing = make_listing(
+        start_date=date(2027, 7, 16),
+        end_date=date(2027, 12, 1),
+        rent_cents=128_000,
+        public_latitude=PIN[0] + 1.609344 * DEGREES_PER_KM,
+        parking=False,
+    )
+
+    assert summary(renter, listing) == (
+        "Covers 45 of your 90 days, $80 over budget and 1.0 mi from your pin."
+    )

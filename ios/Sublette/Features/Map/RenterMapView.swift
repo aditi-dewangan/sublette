@@ -261,10 +261,10 @@ struct ListingPinView: View {
     }
 
     static func label(for pin: MapPin) -> String {
-        let fit = "\(pin.score)% fit"
+        let fit = pin.band.fitLabel ?? "Listing"
         let rent = pin.rentCents.map { ", \(Money.dollars($0)) a month" } ?? ""
         switch pin.state {
-        case .new: return "Listing, \(fit)\(rent)"
+        case .new: return "\(fit)\(rent)"
         case .liked: return "Liked listing, \(fit)\(rent)"
         case .saved: return "Saved listing, \(fit)\(rent)"
         case .matched: return "Matched listing\(rent)"

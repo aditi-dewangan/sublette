@@ -433,6 +433,8 @@ extension Fixture {
         DeckItem(
             listing: listing(id: id),
             score: score,
+            band: score >= 75 ? .strong : score >= 50 ? .partial : .other,
+            summary: "Fits your dates, $100 under budget and 0.5 mi from your pin.",
             reasons: ["Fits your dates", "$100 under budget", "0.5 mi from your pin"],
             distanceM: 800
         )

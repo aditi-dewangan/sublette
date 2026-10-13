@@ -351,3 +351,24 @@ def score_band(value: int) -> str:
     if value >= PARTIAL_FROM:
         return "partial"
     return "other"
+
+
+# --- One sentence instead of a number ---------------------------------------------
+
+
+def _lower_first(text: str) -> str:
+    return text[:1].lower() + text[1:] if text and not text.startswith("$") else text
+
+
+def summary(renter: Renter, listing: Listing) -> str:
+    """Why a listing fits, in one or two plain sentences, with no score in it.
+
+    "Fits your dates, $150 under budget and 0.4 mi from your pin. Furnished and
+    in-unit laundry."
+    """
+    parts = reasons(renter, listing)
+    dates, rent, distance = parts[0], parts[1], parts[2]
+    first = f"{dates}, {_lower_first(rent)} and {_lower_first(distance)}."
+    if len(parts) > 3:
+        return f"{first} {parts[3]}."
+    return first

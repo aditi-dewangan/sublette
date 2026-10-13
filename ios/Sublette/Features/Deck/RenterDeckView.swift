@@ -180,14 +180,15 @@ struct EmptyDeckView: View {
         let blocker = diagnostics?.topMustHave ?? diagnostics?.blockers.first
         if let blocker, blocker.kind == .area {
             newArea(blocker)
-        } else if let blocker, blocker.kind == .mustHave, let field = PreferenceField(rawValue: blocker.field) {
-            heading("Your must-haves are hiding listings")
-            paragraph(blocker.message)
-            Button("Make \(field.title.lowercased()) nice-to-have") {
-                change { await search.relax(field) }
+        } else if let blocker, blocker.kind == .mustHave {
+            // Must-haves are the renter's call: explain, never ask them to drop one.
+            heading("Nothing nearby has all your must-haves yet")
+            paragraph("You only see places with everything you marked as a must-have. \(blocker.message)")
+            notifyButton
+            Button("Search a bigger area") {
+                change { await search.widenArea() }
             }
-            .buttonStyle(PrimaryButtonStyle())
-            .accessibilityIdentifier("relax-preference-button")
+            .buttonStyle(SecondaryButtonStyle())
         } else if let blocker, blocker.field == "gender_missing" {
             heading("Some places are hidden")
             paragraph(blocker.message)
@@ -212,17 +213,7 @@ struct EmptyDeckView: View {
     private func newArea(_ blocker: DeckBlocker) -> some View {
         heading("Sublette is new around here")
         paragraph(blocker.message)
-        if search.profile?.notifyNewListings == true {
-            Label("We'll let you know when someone lists nearby.", systemImage: "bell.fill")
-                .font(.subheadline.weight(.semibold))
-                .foregroundStyle(Brand.ink)
-        } else {
-            Button("Notify me when someone lists nearby") {
-                change(reload: false) { await search.setNotifyNewListings(true) }
-            }
-            .buttonStyle(PrimaryButtonStyle())
-            .accessibilityIdentifier("notify-me-button")
-        }
+        notifyButton
         Button("Search a bigger area") {
             change { await search.widenArea() }
         }
@@ -231,6 +222,21 @@ struct EmptyDeckView: View {
             appState.setMode(.lister)
         }
         .buttonStyle(LinkButtonStyle())
+    }
+
+    @ViewBuilder
+    private var notifyButton: some View {
+        if search.profile?.notifyNewListings == true {
+            Label("We'll let you know when a place that fits is listed nearby.", systemImage: "bell.fill")
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(Brand.ink)
+        } else {
+            Button("Notify me when a place that fits is listed") {
+                change(reload: false) { await search.setNotifyNewListings(true) }
+            }
+            .buttonStyle(PrimaryButtonStyle())
+            .accessibilityIdentifier("notify-me-button")
+        }
     }
 
     private func heading(_ text: String) -> some View {

@@ -61,8 +61,9 @@ Pick an iPhone simulator and press Run.
 
 ### Sign up on your own machine
 
-No email is sent in development. The code is printed in the terminal where
-`make dev` is running:
+By default no email is sent in development. The code is printed in the
+terminal where `make dev` is running (to get real emails instead, see
+"Codes by email in development" below):
 
 1. In the app, enter any address ending in `.edu` (it does not have to exist) and tap **Send code**.
 2. In the `make dev` terminal, find the line `Sign-in code for you@school.edu: 123456`.
@@ -73,6 +74,27 @@ in `backend/.dev-storage/`. To start over, use **Delete account** on the
 Profile tab, or `make db-reset` to wipe every account.
 
 Run `make` with no arguments to list every command.
+
+### Codes by email in development
+
+To get codes by email while testing, with every one filed in a DEV label in the
+app's Gmail (`subletteofficial@gmail.com`):
+
+1. Set up Brevo as in "Staging, for $0" step 3, with `subletteofficial@gmail.com` as the verified sender.
+2. Create `backend/.env` with:
+   ```sh
+   SUBLETTE_EMAIL_BACKEND=brevo
+   SUBLETTE_BREVO_API_KEY=xkeysib-your-key
+   SUBLETTE_EMAIL_FROM=Sublette <subletteofficial@gmail.com>
+   SUBLETTE_EMAIL_REDIRECT_TO=subletteofficial+dev@gmail.com
+   ```
+3. In Gmail, create a filter for mail to `subletteofficial+dev@gmail.com`: skip the inbox, apply the label `DEV`, never send it to spam.
+4. Restart `make dev`.
+
+Every code now goes to the DEV label, whatever `.edu` address was typed, with
+that address in the subject: `[LOCAL] 482913 is your Sublette code (for you@uw.edu)`.
+Made-up test addresses email nobody. Production refuses to start with a
+redirect set, so students' codes can never be copied to one inbox.
 
 ## Test it
 

@@ -58,6 +58,7 @@
     "longitude": -122.3035993,
     "radius_m": 3217
   },
+  "notify_new_listings": true,
   "complete": true,
   "updated_at": "2027-01-04T17:00:00Z"
 }

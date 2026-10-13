@@ -190,7 +190,9 @@ final class PreferencesEditorModel {
             flexibilityDays: flexibilityDays,
             maxRentCents: Money.cents(from: budgetText),
             preferences: preferences,
-            pin: center.map { SearchPin(latitude: $0.latitude, longitude: $0.longitude, radiusM: radiusM) }
+            pin: center.map { SearchPin(latitude: $0.latitude, longitude: $0.longitude, radiusM: radiusM) },
+            // Not asked in this flow; kept as it was.
+            notifyNewListings: existing?.notifyNewListings ?? false
         )
     }
 

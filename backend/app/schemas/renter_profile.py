@@ -60,6 +60,8 @@ class RenterProfileIn(BaseModel):
     max_rent_cents: int | None = Field(default=None, gt=0, le=10_000_000)
     preferences: list[Preference] = Field(default_factory=list, max_length=20)
     pin: Pin | None = None
+    # "Tell me when someone lists near my pin."
+    notify_new_listings: bool = False
 
 
 class RenterProfileOut(BaseModel):
@@ -69,6 +71,7 @@ class RenterProfileOut(BaseModel):
     max_rent_cents: int | None
     preferences: list[Preference]
     pin: Pin | None
+    notify_new_listings: bool
     # True once dates, budget and pin are set: enough to build a deck.
     complete: bool
     # Null until the renter saves for the first time.

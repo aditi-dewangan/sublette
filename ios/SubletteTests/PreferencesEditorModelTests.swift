@@ -313,7 +313,7 @@ final class RenterSearchModelTests: XCTestCase {
 final class ModeTabTests: XCTestCase {
     func testEachModeHasItsOwnTabs() {
         XCTAssertEqual(ModeTab.tabs(for: .renter), [.deck, .map, .matches, .profile])
-        XCTAssertEqual(ModeTab.tabs(for: .lister), [.listings, .matches, .profile])
+        XCTAssertEqual(ModeTab.tabs(for: .lister), [.listings, .renters, .matches, .profile])
     }
 
     func testEachModeHasItsOwnAccent() {

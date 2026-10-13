@@ -110,6 +110,22 @@ Choices made while building, with the reason. Add to the bottom; do not rewrite 
 | The deck answers 409 `profile_incomplete` or `renter_profile_incomplete` until both are done. | Matching needs smokes, pets, dates, budget and pin. |
 | Listings already swiped (phase 5) and blocked users (phase 7) are not excluded yet; the place to add them is marked in `services/deck.py`. | Those tables don't exist yet. |
 
+### Phase 5: swipe decks and matches (added 2026-10-13)
+
+| Decision | Reason |
+| --- | --- |
+| One `swipes` table for both sides: `side` is `renter` (a renter on a listing) or `lister` (a lister on a renter who liked it). Unique on side, listing and renter; the app's own `swipe_id` is unique too. | "Sending the same swipe twice changes nothing" is then the database's job, including two copies arriving at the same moment. |
+| The same swipe again answers 200 with `created: false` and the first answer, match included. The opposite swipe answers 409 `already_swiped` until undone. | A retry must look like success; changing your mind goes through undo. |
+| The match is made by the lister's like, in the same transaction as the swipe, with `INSERT … ON CONFLICT DO NOTHING` on (listing, renter). A lister can only swipe on someone who liked the listing and still fits it. | One like can never make a match, and ten copies of the second like make one. Tested with ten threads. |
+| A renter may pass on any live listing but like only one that fits them. | The server never relies on the app to filter. |
+| Undo takes the caller's last swipe only (renter swipes as one list, a lister's per listing), named by its `swipe_id`, and never one that made a match. Undoing a swipe already undone answers 404 `nothing_to_undo`, which the app treats as done. | Undo by id is safe to retry. |
+| Saving a listing takes it out of the deck until unsaved. `GET /v1/saved` lists live saved listings. | The plan lists save and unsave; without a list, saved listings would be lost. |
+| The deck leaves out listings already swiped or saved. Diagnostics report them as `seen`, so an empty deck says "you've seen everything", not "nothing nearby". | |
+| "Notify me" on the empty deck saves `notify_new_listings` on the renter profile. Nothing is sent until notifications arrive in phase 7. | A small flag now; the plan puts notifications in phase 7. |
+| The app queues swipes in a small outbox kept on the phone: sent in order, kept while offline or when the server answers 5xx, 429 or 401, dropped with the server's message on any other refusal. Each queued swipe belongs to one account. | Offline then online must never create a duplicate, and a different account on the same phone must never send someone else's swipes. |
+| Lister mode gains a Renters tab (pick a listing, swipe on its interested renters). The lister sees name, photo, year, program, bio, school, wanted dates and how the renter meets each filter; never the renter's pin or budget. | "Lister deck: pick a listing, then swipe on its interested renters." |
+| Matched listings still show only the public point. | The exact address for matches arrives with the map in phase 6 and chat in phase 7. |
+
 ## Known gaps after phase 2
 
 - Photos uploaded in the editor and then abandoned (the editor closed without saving) stay in storage. A clean-up job belongs with phase 8's expiry job.

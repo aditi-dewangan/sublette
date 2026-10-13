@@ -1,6 +1,7 @@
 {
   "in_area": 2,
   "eligible": 1,
+  "seen": 0,
   "top_must_have": {
     "field": "parking",
     "kind": "must_have",

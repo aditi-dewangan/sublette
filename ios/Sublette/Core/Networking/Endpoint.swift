@@ -67,4 +67,22 @@ extension Endpoint {
     }
 
     static let deckDiagnostics = Endpoint(method: .get, path: "/v1/deck/diagnostics")
+
+    // Swiping and matches.
+    static let swipe = Endpoint(method: .post, path: "/v1/swipes")
+    static let undoSwipe = Endpoint(method: .post, path: "/v1/swipes/undo")
+    static let matches = Endpoint(method: .get, path: "/v1/matches")
+    static let savedListings = Endpoint(method: .get, path: "/v1/saved")
+
+    static func saveListing(_ id: String) -> Endpoint {
+        Endpoint(method: .post, path: "/v1/saved/\(id)")
+    }
+
+    static func unsaveListing(_ id: String) -> Endpoint {
+        Endpoint(method: .delete, path: "/v1/saved/\(id)")
+    }
+
+    static func interestedRenters(_ listingID: String) -> Endpoint {
+        Endpoint(method: .get, path: "/v1/listings/\(listingID)/deck/renters")
+    }
 }

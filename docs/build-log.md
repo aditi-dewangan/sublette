@@ -10,10 +10,11 @@ Spec" doc; its Build plan tab defines phases 0 to 10 and each phase's
 | 0 Scaffolding | Signed off 2026-10-10: builds, runs and tests pass on Aditi's Mac. On `main`. |
 | 1 Accounts and .edu verification | Merged (#1). |
 | 2 Lister mode | Merged (#2). |
-| Dev email inbox | Pull request #3: every development code goes to the DEV label of subletteofficial@gmail.com through Brevo. Working on Aditi's Mac. |
-| 3 Renter mode and the toggle | Pull request #4 (`phase-3`, on top of #3). |
-| 4 Matching engine | Pull request #5 (`phase-4`, on top of `phase-3`). Server only, as the plan says. |
-| 5 Swipe decks and matches | Next. |
+| Dev email inbox | Merged (#3). |
+| 3 Renter mode and the toggle | Merged (#4). |
+| 4 Matching engine | #5 merged into `phase-3` by mistake (stacked PR); #6 brings the same commit to `main`. |
+| 5 Swipe decks and matches | Pull request #7 (`phase-5`, on top of #6). |
+| 6 Map and pins | Next. |
 
 ## How each phase is delivered
 
@@ -30,6 +31,5 @@ Steps are in `README.md`, "Staging, for $0".
 
 ## Waiting on Aditi
 
-- Merging #3, then #4, then #5, in that order.
-- Trying Phase 3 in the simulator: set up a search (dates, budget, space type, must-haves, the pin with My campus), close and reopen the app, check the search reloads; switch modes and check the tabs and colors change.
-- Trying Phase 4: `make seed-fake`, put your pin near UW, then `GET /v1/deck/listings` in http://localhost:8000/docs.
+- Merging #6, then #7. From now on every pull request targets `main` directly.
+- Trying Phase 5 with two simulators (or one simulator and one Mac browser at /docs): account A posts a listing; account B sets a search near it, likes it; A opens Renters, likes B; both see the match.

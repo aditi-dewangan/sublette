@@ -1,0 +1,24 @@
+{
+  "items": [
+    {
+      "renter": {
+        "id": "11111111-2222-4333-8444-555555555555",
+        "first_name": "Aditi",
+        "photo_url": null,
+        "year": "junior",
+        "program": "Informatics",
+        "bio": "Winter internship in Austin. Tidy, quiet, plant person.",
+        "school_name": "University of Washington",
+        "verified": true
+      },
+      "start_date": "2027-02-03",
+      "end_date": "2027-05-04",
+      "liked_at": "2027-01-04T17:00:00Z",
+      "fits": [
+        "Stays 90 days of your dates",
+        "Verified University of Washington student",
+        "Doesn't smoke"
+      ]
+    }
+  ]
+}

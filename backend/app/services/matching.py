@@ -309,3 +309,30 @@ def reasons(renter: Renter, listing: Listing) -> list[str]:
     if met:
         found.append(_nice_sentence(met))
     return found
+
+
+# --- For the lister ----------------------------------------------------------
+
+
+def lister_fits(renter: Renter, listing: Listing, renter_school_name: str) -> list[str]:
+    """How a renter meets the lister's filters, for the lister's deck.
+
+    Only call this for an eligible pair: it describes, it does not check.
+    """
+    stay = stay_days(renter, listing)
+    found = []
+    if listing.min_stay_days:
+        found.append(f"Stays {stay} days (you asked for {listing.min_stay_days}+)")
+    else:
+        found.append(f"Stays {stay} days of your dates")
+    if listing.same_school_only:
+        found.append(f"{renter_school_name} student, like you")
+    else:
+        found.append(f"Verified {renter_school_name} student")
+    if listing.pets_allowed is False:
+        found.append("No pets")
+    if listing.smoking_allowed is False:
+        found.append("Doesn't smoke")
+    if listing.gender_preference != "any":
+        found.append(f"Fits your preference for {listing.gender_preference}")
+    return found

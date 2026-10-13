@@ -162,13 +162,15 @@ struct RenterProfile: Codable, Equatable {
     var maxRentCents: Int?
     var preferences: [Preference]
     var pin: SearchPin?
+    /// "Tell me when someone lists near my pin."
+    var notifyNewListings: Bool
     /// Dates, budget and pin are all set.
     var complete: Bool
     var updatedAt: Date?
 
     static let empty = RenterProfile(
         startDate: nil, endDate: nil, flexibilityDays: 0, maxRentCents: nil,
-        preferences: [], pin: nil, complete: false, updatedAt: nil
+        preferences: [], pin: nil, notifyNewListings: false, complete: false, updatedAt: nil
     )
 
     func preference(_ field: PreferenceField) -> Preference? {
@@ -182,7 +184,8 @@ struct RenterProfile: Codable, Equatable {
             flexibilityDays: flexibilityDays,
             maxRentCents: maxRentCents,
             preferences: preferences,
-            pin: pin
+            pin: pin,
+            notifyNewListings: notifyNewListings
         )
     }
 
@@ -200,6 +203,7 @@ struct RenterProfileForm: Encodable, Equatable {
     var maxRentCents: Int?
     var preferences: [Preference]
     var pin: SearchPin?
+    var notifyNewListings = false
 }
 
 extension Preference {

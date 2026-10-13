@@ -207,3 +207,53 @@ def test_deck_samples(client: TestClient, mailer: RecordingMailer, clock, db) ->
         "error_profile_incomplete",
         client.get("/v1/deck/listings", headers=bearer(sign_in(client, mailer, "x@uw.edu"))).json(),
     )
+
+
+def test_swipe_samples(client: TestClient, mailer: RecordingMailer, clock, db) -> None:
+    import uuid as uuid_module
+
+    from app.models import User
+    from tests.test_deck import make_searching_renter, put_listing
+
+    renter = make_searching_renter(client, mailer, clock)
+    lister = sign_in(client, mailer, "lister@uw.edu")
+    client.patch("/v1/me", headers=bearer(lister), json=COMPLETE_PROFILE)
+    listing = put_listing(db, clock, db.get(User, uuid_module.UUID(lister["user"]["id"])))
+    swipe_id = "22222222-3333-4444-8555-666666666666"
+
+    liked = client.post(
+        "/v1/swipes",
+        headers=bearer(renter),
+        json={"listing_id": str(listing.id), "action": "like", "swipe_id": swipe_id},
+    ).json()
+    check("swipe_result", liked)
+    check(
+        "interested_renters",
+        client.get(f"/v1/listings/{listing.id}/deck/renters", headers=bearer(lister)).json(),
+    )
+    matched = client.post(
+        "/v1/swipes",
+        headers=bearer(lister),
+        json={"listing_id": str(listing.id), "renter_id": renter["user"]["id"], "action": "like"},
+    ).json()
+    check("swipe_result_match", matched)
+    check("matches", client.get("/v1/matches", headers=bearer(renter)).json())
+    check(
+        "error_already_matched",
+        client.post("/v1/swipes/undo", headers=bearer(renter), json={"swipe_id": swipe_id}).json(),
+    )
+
+    other = put_listing(db, clock, db.get(User, uuid_module.UUID(lister["user"]["id"])))
+    client.post(f"/v1/saved/{other.id}", headers=bearer(renter))
+    check("saved", client.get("/v1/saved", headers=bearer(renter)).json())
+    passed = client.post(
+        "/v1/swipes",
+        headers=bearer(renter),
+        json={"listing_id": str(other.id), "action": "pass"},
+    ).json()
+    check(
+        "undo",
+        client.post(
+            "/v1/swipes/undo", headers=bearer(renter), json={"swipe_id": passed["swipe"]["id"]}
+        ).json(),
+    )

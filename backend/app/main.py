@@ -19,6 +19,7 @@ from app.routers import (
     listings,
     me,
     renter_profile,
+    swipes,
     uploads,
 )
 from app.services.email_sender import make_email_sender
@@ -59,6 +60,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     v1.include_router(listings.router)
     v1.include_router(renter_profile.router)
     v1.include_router(deck.router)
+    v1.include_router(swipes.router)
     app.include_router(v1)
 
     if isinstance(app.state.storage, ServerStorage):

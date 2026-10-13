@@ -344,6 +344,7 @@ final class StubRenterAPI: RenterAPI, @unchecked Sendable {
             maxRentCents: form.maxRentCents,
             preferences: form.preferences,
             pin: form.pin,
+            notifyNewListings: form.notifyNewListings,
             complete: form.startDate != nil && form.endDate != nil && form.maxRentCents != nil && form.pin != nil,
             updatedAt: Fixture.now
         )
@@ -357,5 +358,123 @@ final class StubCampusLocator: CampusLocating, @unchecked Sendable {
     func locateCampus(named schoolName: String) async throws -> Coordinate {
         searches.append(schoolName)
         return try result.get()
+    }
+}
+
+final class StubDeckAPI: DeckAPI, @unchecked Sendable {
+    var deckPages: [Result<DeckPage, Error>] = []
+    var diagnosticsResult: Result<DeckDiagnostics, Error> = .success(
+        DeckDiagnostics(inArea: 0, eligible: 0, seen: 0, topMustHave: nil, blockers: [])
+    )
+    /// Answers for swipes, in order. When empty, every swipe is accepted.
+    var swipeResults: [Result<SwipeResult, Error>] = []
+    var undoResult: Result<Void, Error> = .success(())
+    var saveResult: Result<Void, Error> = .success(())
+    var renterPages: [String: [InterestedRenter]] = [:]
+    var matchesResult: Result<MatchPage, Error> = .success(MatchPage(items: []))
+    var savedResult: Result<SavedPage, Error> = .success(SavedPage(items: []))
+
+    private(set) var swipes: [SwipeRequest] = []
+    private(set) var undone: [String] = []
+    private(set) var savedIDs: [String] = []
+    private(set) var unsavedIDs: [String] = []
+    private(set) var deckCalls = 0
+
+    func deck(limit: Int) async throws -> DeckPage {
+        deckCalls += 1
+        guard !deckPages.isEmpty else {
+            return DeckPage(items: [])
+        }
+        return try deckPages.removeFirst().get()
+    }
+
+    func diagnostics() async throws -> DeckDiagnostics {
+        try diagnosticsResult.get()
+    }
+
+    func swipe(_ request: SwipeRequest) async throws -> SwipeResult {
+        swipes.append(request)
+        if !swipeResults.isEmpty {
+            return try swipeResults.removeFirst().get()
+        }
+        return Fixture.swipeResult(for: request)
+    }
+
+    func undo(swipeID: String) async throws -> Swipe {
+        undone.append(swipeID)
+        try undoResult.get()
+        return Fixture.swipeResult(for: SwipeRequest(listingId: "x", action: .pass, swipeId: swipeID)).swipe
+    }
+
+    func save(listingID: String) async throws {
+        savedIDs.append(listingID)
+        try saveResult.get()
+    }
+
+    func unsave(listingID: String) async throws {
+        unsavedIDs.append(listingID)
+    }
+
+    func saved() async throws -> SavedPage {
+        try savedResult.get()
+    }
+
+    func interestedRenters(listingID: String) async throws -> InterestedRenterPage {
+        InterestedRenterPage(items: renterPages[listingID] ?? [])
+    }
+
+    func matches() async throws -> MatchPage {
+        try matchesResult.get()
+    }
+}
+
+extension Fixture {
+    static func deckItem(_ id: String, score: Int = 80) -> DeckItem {
+        DeckItem(
+            listing: listing(id: id),
+            score: score,
+            reasons: ["Fits your dates", "$100 under budget", "0.5 mi from your pin"],
+            distanceM: 800
+        )
+    }
+
+    static func swipeResult(for request: SwipeRequest, match: Match? = nil, created: Bool = true) -> SwipeResult {
+        SwipeResult(
+            swipe: Swipe(
+                id: "server-\(request.swipeId)",
+                swipeId: request.swipeId,
+                side: request.renterId == nil ? .renter : .lister,
+                action: request.action,
+                listingId: request.listingId,
+                renterId: request.renterId ?? "user-1",
+                createdAt: now
+            ),
+            match: match,
+            created: created
+        )
+    }
+
+    static func match(id: String = "match-1", listingID: String = "listing-1") -> Match {
+        Match(
+            id: id,
+            role: .lister,
+            listing: listing(id: listingID),
+            renter: Person(id: "user-2", firstName: "Sam", photoUrl: nil, schoolName: "UW", verified: true),
+            lister: Person(id: "user-1", firstName: "Aditi", photoUrl: nil, schoolName: "UW", verified: true),
+            createdAt: now
+        )
+    }
+
+    static func interestedRenter(_ id: String) -> InterestedRenter {
+        InterestedRenter(
+            renter: RenterCard(
+                id: id, firstName: "Sam", photoUrl: nil, year: .senior, program: "Biology",
+                bio: nil, schoolName: "UW", verified: true
+            ),
+            startDate: "2027-06-15",
+            endDate: "2027-09-01",
+            likedAt: now,
+            fits: ["Stays 78 days of your dates"]
+        )
     }
 }

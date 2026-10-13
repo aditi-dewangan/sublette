@@ -200,6 +200,9 @@ def _message(renter: Renter, failure: Failure, removed: int) -> str:
     """A sentence about one blocker, with what the renter could do about it."""
     one = removed == 1
     many = f"{removed} listing{'' if one else 's'}"
+    if failure.field == "max_rent":
+        budget = f"${round(renter.max_rent_cents / 100):,}"
+        return f"{many} nearby {'costs' if one else 'cost'} more than your {budget} budget."
     if failure.kind == "must_have":
         value = next(
             (value for field, value, _ in renter.preferences if field == failure.field), None

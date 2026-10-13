@@ -102,7 +102,7 @@ Choices made while building, with the reason. Add to the bottom; do not rewrite 
 | --- | --- |
 | `is_eligible`, `score` and `reasons` take plain values (a `Renter` and a listing) and touch no database or clock. `failures` lists every rule broken; `is_eligible` is "no failures". | Every rule is tested directly, in both directions, and the diagnostics count the same failures the deck applies. |
 | A stay is the overlap of the listing's dates with the renter's, each end allowed to move by the renter's flexibility, never more than the renter wants. No overlap at all is a failure, even when the listing has no minimum stay. | The plan's "stay shorter than min_stay_days" left a zero-day stay eligible; a place for the wrong months is not a match. |
-| Rent over budget is not a filter: it costs points, reaching zero rent points at 25% over. | The plan scores "rent against budget" and does not list budget among the filters. Renters can make it a filter later if they ask. |
+| (Replaced 2026-10-13: the budget is now a hard limit.) Rent over budget is not a filter: it costs points, reaching zero rent points at 25% over. | The plan scores "rent against budget" and does not list budget among the filters. Renters can make it a filter later if they ask. |
 | Distance is measured from the pin to the listing's public point, in the radius filter, the score and the `distance_m` shown. | A renter moving their own pin must never learn the exact address. |
 | The deck loads every eligible listing in the circle, scores them in Python and returns the top 20 (up to 50). The database narrows by status, owner, end date and circle (`ST_DWithin` on a partial GiST index of the public point); every fit rule runs in one place. | About 30 ms for a seeded renter, well under the 300 ms target. One copy of each rule. |
 | Ties go to the newer listing (`published_at`), then the id. | The plan says newer listings break ties; the id makes the order stable. |
@@ -144,6 +144,7 @@ Choices made while building, with the reason. Add to the bottom; do not rewrite 
 | Decision | Reason |
 | --- | --- |
 | Cards show no percentage. The server sends `band` and a one- or two-sentence `summary` ("Fits your dates, $150 under budget and 0.4 mi from your pin. Furnished and in-unit laundry."); the app shows "Great fit" (strong), "Good fit" (partial) or no label, and the sentence. `score` stays in the API for ordering and pin colors. | Aditi: "we don't need a percentage for how much it fits", and the reasons should read as one synthesized line. |
+| The maximum rent is a hard limit: a listing over it is never in the deck or on the map and can't be liked, like a failed must-have (`max_rent` in diagnostics: "2 listings nearby cost more than your $1,200 budget."). Rent points now reward room under the budget: 15 of 25 at the budget, all 25 at 20% under or more. | Aditi, 2026-10-13: "yes it should be hard". Replaces phase 4's "rent over budget is not a filter". |
 | Must-haves are never questioned. The empty deck no longer offers "Make it nice-to-have"; it says nothing nearby has every must-have yet, names what rules most places out ("3 listings nearby don't have parking."), and offers "Notify me" and "Search a bigger area". | Aditi: the app should abide by must-haves and not ask renters to change them. |
 
 ## Known gaps after phase 2

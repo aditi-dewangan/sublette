@@ -238,6 +238,7 @@ def test_an_ineligible_listing_never_appears_whatever_its_score(
     put_listing(db, clock, lister, km_north=0, gender_preference="men")  # renter is a woman
     put_listing(db, clock, other_school, km_north=0, same_school_only=True)
     put_listing(db, clock, lister, km_north=0, min_stay_days=120)
+    put_listing(db, clock, lister, km_north=0, rent_cents=120_001)  # $0.01 over budget
 
     assert ids(deck(client, renter, limit=50)) == [str(fits.id)]
 
@@ -348,6 +349,24 @@ def test_diagnostics_names_the_must_have_that_removes_the_most(
         "message": "3 listings nearby don't have parking.",
     }
     assert [item["field"] for item in body["blockers"]] == ["parking", "furnished"]
+
+
+def test_diagnostics_name_the_budget_without_asking_to_raise_it(
+    client: TestClient, renter: dict, db: Session, clock: Clock
+) -> None:
+    lister = make_lister(db)
+    put_listing(db, clock, lister, rent_cents=150_000)
+    put_listing(db, clock, lister, rent_cents=180_000)
+
+    body = diagnostics(client, renter)
+
+    assert deck(client, renter) == []
+    assert body["top_must_have"] == {
+        "field": "max_rent",
+        "kind": "must_have",
+        "removed": 2,
+        "message": "2 listings nearby cost more than your $1,200 budget.",
+    }
 
 
 def test_diagnostics_when_nothing_is_in_the_area(

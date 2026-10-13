@@ -4,7 +4,7 @@ import json
 import random
 import time
 import uuid
-from datetime import date
+from datetime import date, timedelta
 
 import pytest
 from fastapi.testclient import TestClient
@@ -122,7 +122,17 @@ def test_bands_follow_the_score(
     client: TestClient, renter: dict, db: Session, clock: Clock
 ) -> None:
     put_listing(db, clock, make_lister(db))
-    put_listing(db, clock, make_lister(db), rent_cents=150_000, km_north=4.5)
+    # Half the dates, right at the budget, near the edge of the circle: partial.
+    start = clock.now.date() + timedelta(days=75)
+    put_listing(
+        db,
+        clock,
+        make_lister(db),
+        rent_cents=120_000,
+        km_north=4.5,
+        start_date=start,
+        end_date=start + timedelta(days=90),
+    )
 
     found = pins(client, renter)
 

@@ -2,10 +2,11 @@
 
 Three pure functions, used by the deck and by nothing else:
 
-* `is_eligible(renter, listing)`: False when the listing fails any of the
-  renter's must-haves, or the renter fails any of the lister's filters.
+* `is_eligible(renter, listing)`: False when the listing costs more than the
+  renter's maximum rent, fails any of the renter's must-haves, or the renter
+  fails any of the lister's filters.
   `failures` says which.
-* `score(renter, listing)`: 0 to 100. Dates 35, rent against budget 25,
+* `score(renter, listing)`: 0 to 100. Dates 35, rent under budget 25,
   distance from the pin 20, nice-to-haves 20.
 * `reasons(renter, listing)`: three or four short sentences for the card.
 
@@ -29,8 +30,10 @@ RENT_POINTS = 25
 DISTANCE_POINTS = 20
 NICE_POINTS = 20
 
-# Rent this far over budget scores nothing for rent (it is still shown).
-RENT_ZERO_AT_OVER = 0.25
+# Rent at the budget earns RENT_AT_BUDGET of the rent points; this far under
+# it (or more) earns them all.
+RENT_AT_BUDGET = 15
+RENT_FULL_AT_UNDER = 0.20
 
 METERS_PER_MILE = 1_609.344
 
@@ -92,9 +95,9 @@ def _frozen(value: object) -> object:
 class Failure:
     """One reason a renter can't see a listing.
 
-    `field` is a preference name for must-haves (such as `furnished`), and one
-    of pets, smoking, gender, gender_missing, school, dates, min_stay for the
-    lister's filters.
+    `field` is a preference name for must-haves (such as `furnished`) or
+    `max_rent` for the budget, and one of pets, smoking, gender,
+    gender_missing, school, dates, min_stay for the lister's filters.
     """
 
     kind: FailureKind
@@ -189,6 +192,9 @@ def failures(renter: Renter, listing: Listing, listing_school_id: object) -> lis
     elif stay < listing.min_stay_days:
         lister("min_stay")
 
+    # The budget is always a must-have (Aditi, 2026-10-13).
+    if listing.rent_cents is None or listing.rent_cents > renter.max_rent_cents:
+        found.append(Failure("must_have", "max_rent"))
     for field, value in renter.with_importance("must"):
         if not meets(field, value, listing):
             found.append(Failure("must_have", field))
@@ -218,11 +224,11 @@ def score_parts(renter: Renter, listing: Listing) -> dict[str, float]:
 
     rent = listing.rent_cents or 0
     budget = renter.max_rent_cents
-    if rent <= budget:
-        rent_points = RENT_POINTS
+    if rent > budget:
+        rent_points = 0.0  # never shown: over budget is ineligible
     else:
-        over = (rent - budget) / (budget * RENT_ZERO_AT_OVER)
-        rent_points = RENT_POINTS * max(0.0, 1 - over)
+        under = (budget - rent) / (budget * RENT_FULL_AT_UNDER)
+        rent_points = RENT_AT_BUDGET + (RENT_POINTS - RENT_AT_BUDGET) * min(1.0, under)
 
     distance = distance_from_pin(renter, listing)
     distance_points = DISTANCE_POINTS * max(0.0, 1 - distance / renter.radius_m)

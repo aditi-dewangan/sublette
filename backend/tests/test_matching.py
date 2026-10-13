@@ -240,6 +240,9 @@ def test_every_failure_is_listed_not_just_the_first() -> None:
 
     assert found(renter, listing) == ["pets", "gender_missing", "furnished", "parking"]
 
+    over_budget = make_listing(rent_cents=200_000, furnished=False)
+    assert found(make_renter([must("furnished")]), over_budget) == ["max_rent", "furnished"]
+
 
 @pytest.mark.parametrize(
     ("gender", "preference", "fits"),
@@ -284,7 +287,19 @@ def test_stay_days(listing_dates, flex, expected) -> None:
 
 
 def test_a_perfect_fit_scores_100() -> None:
-    assert score(make_renter(), make_listing()) == 100
+    assert score(make_renter(), make_listing(rent_cents=96_000)) == 100
+
+
+# --- The budget is a hard limit -----------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    ("rent", "eligible"), [(119_999, True), (120_000, True), (120_001, False), (300_000, False)]
+)
+def test_the_budget_is_a_hard_limit(rent: int, eligible: bool) -> None:
+    listing = make_listing(rent_cents=rent)
+
+    assert found(make_renter(max_rent_cents=120_000), listing) == ([] if eligible else ["max_rent"])
 
 
 @pytest.mark.parametrize(
@@ -303,9 +318,9 @@ def test_dates_are_worth_35(listing_changes, expected) -> None:
 
 @pytest.mark.parametrize(
     ("rent", "expected"),
-    [(60_000, 25), (120_000, 25), (135_000, 12.5), (150_000, 0), (300_000, 0)],
+    [(60_000, 25), (96_000, 25), (108_000, 20), (120_000, 15), (150_000, 0)],
 )
-def test_rent_against_budget_is_worth_25(rent, expected) -> None:
+def test_rent_under_budget_is_worth_25(rent, expected) -> None:
     parts = score_parts(make_renter(max_rent_cents=120_000), make_listing(rent_cents=rent))
 
     assert parts["rent"] == pytest.approx(expected)
@@ -346,7 +361,7 @@ def test_the_score_is_a_whole_number_from_0_to_100() -> None:
     )
 
     assert score(make_renter([nice("furnished")]), worst) == 0
-    assert isinstance(score(make_renter(), make_listing(rent_cents=135_000)), int)
+    assert isinstance(score(make_renter(), make_listing(rent_cents=111_111)), int)
 
 
 # --- Reasons -------------------------------------------------------------------------
@@ -368,14 +383,14 @@ def test_reasons_for_a_partial_fit() -> None:
     listing = make_listing(
         start_date=date(2027, 7, 16),
         end_date=date(2027, 12, 1),
-        rent_cents=128_000,
+        rent_cents=112_000,
         public_latitude=PIN[0] + 1.609344 * DEGREES_PER_KM,
         parking=False,
     )
 
     assert reasons(renter, listing) == [
         "Covers 45 of your 90 days",
-        "$80 over budget",
+        "$80 under budget",
         "1.0 mi from your pin",
     ]
 
@@ -440,11 +455,11 @@ def test_summary_of_a_partial_fit() -> None:
     listing = make_listing(
         start_date=date(2027, 7, 16),
         end_date=date(2027, 12, 1),
-        rent_cents=128_000,
+        rent_cents=112_000,
         public_latitude=PIN[0] + 1.609344 * DEGREES_PER_KM,
         parking=False,
     )
 
     assert summary(renter, listing) == (
-        "Covers 45 of your 90 days, $80 over budget and 1.0 mi from your pin."
+        "Covers 45 of your 90 days, $80 under budget and 1.0 mi from your pin."
     )

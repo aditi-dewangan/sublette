@@ -42,6 +42,8 @@ class DeckDiagnostics(BaseModel):
     in_area: int
     # Of those, how many the renter may see.
     eligible: int
+    # Listings in the circle the renter already swiped on or saved (not in `in_area`).
+    seen: int
     # The must-have that keeps out the most listings, or null when none does.
     # When nothing is in the area, this is the radius instead.
     top_must_have: Blocker | None

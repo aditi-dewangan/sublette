@@ -388,3 +388,32 @@ def test_reasons_at_budget_and_with_many_nice_to_haves() -> None:
     assert found_reasons[1] == "Right at your budget"
     assert found_reasons[3] == "Furnished, in-unit laundry and 1 more"
     assert 3 <= len(found_reasons) <= 4
+
+
+# --- What the lister sees -------------------------------------------------------------
+
+from app.services.matching import lister_fits  # noqa: E402
+
+
+@pytest.mark.parametrize(
+    ("listing_changes", "expected"),
+    [
+        ({}, ["Stays 90 days of your dates", "Verified UW student"]),
+        (
+            {"min_stay_days": 60, "same_school_only": True},
+            ["Stays 90 days (you asked for 60+)", "UW student, like you"],
+        ),
+        (
+            {"pets_allowed": False, "smoking_allowed": False, "gender_preference": "women"},
+            [
+                "Stays 90 days of your dates",
+                "Verified UW student",
+                "No pets",
+                "Doesn't smoke",
+                "Fits your preference for women",
+            ],
+        ),
+    ],
+)
+def test_lister_fits(listing_changes, expected) -> None:
+    assert lister_fits(make_renter(), make_listing(**listing_changes), "UW") == expected

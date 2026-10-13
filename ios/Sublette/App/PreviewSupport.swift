@@ -185,6 +185,7 @@ extension PreviewData {
             Preference(field: .housemateGender, value: .gender(.women), importance: .must),
         ],
         pin: SearchPin(latitude: 47.6553, longitude: -122.3035, radiusM: SearchPin.defaultRadiusM),
+        notifyNewListings: false,
         complete: true,
         updatedAt: Date(timeIntervalSince1970: 1_799_000_000)
     )
@@ -200,6 +201,94 @@ struct PreviewRenterAPI: RenterAPI {
 
     func saveRenterProfile(_ form: RenterProfileForm) async throws -> RenterProfile {
         PreviewData.renterProfile
+    }
+}
+
+extension PreviewData {
+    /// A listing as a renter sees it: no exact address.
+    static var publicListing: Listing {
+        Listing(
+            id: "listing-3", status: .active, isOwner: false, address: nil, latitude: nil, longitude: nil,
+            publicLatitude: 47.6601, publicLongitude: -122.3119,
+            rentCents: 105_000, depositCents: 0, utilitiesIncluded: true, startDate: "2027-06-15",
+            endDate: "2027-09-01", spaceType: .privateRoom, bedrooms: 3, bathroom: .shared,
+            furnished: true, laundry: true, parking: false, housematesStaying: 2,
+            housematesNote: "Two grad students.", petsAllowed: false, smokingAllowed: false,
+            householdGender: .women, genderPreference: .anyone, sameSchoolOnly: false,
+            minStayDays: 0, landlordConsent: true, photos: [],
+            lister: Lister(firstName: "Lee", photoUrl: nil, schoolName: "University of Washington", verified: true)
+        )
+    }
+
+    static let deckItem = DeckItem(
+        listing: publicListing,
+        score: 92,
+        reasons: ["Fits your dates", "$50 under budget", "0.4 mi from your pin", "Furnished and in-unit laundry"],
+        distanceM: 640
+    )
+
+    static let interestedRenter = InterestedRenter(
+        renter: RenterCard(
+            id: "user-1", firstName: "Aditi", photoUrl: nil, year: .junior, program: "Informatics",
+            bio: "Winter internship in Austin. Tidy, quiet, plant person.",
+            schoolName: "University of Washington", verified: true
+        ),
+        startDate: "2027-06-15",
+        endDate: "2027-09-01",
+        likedAt: Date(timeIntervalSince1970: 1_799_000_000),
+        fits: ["Stays 78 days of your dates", "Verified University of Washington student", "No pets", "Doesn't smoke"]
+    )
+
+    static let match = Match(
+        id: "match-1",
+        role: .lister,
+        listing: publicListing,
+        renter: Person(id: "user-1", firstName: "Aditi", photoUrl: nil, schoolName: "University of Washington", verified: true),
+        lister: Person(id: "user-3", firstName: "Lee", photoUrl: nil, schoolName: "University of Washington", verified: true),
+        createdAt: Date(timeIntervalSince1970: 1_799_000_000)
+    )
+}
+
+/// A deck from memory: one card, one interested renter, and every swipe accepted.
+struct PreviewDeckAPI: DeckAPI {
+    func deck(limit: Int) async throws -> DeckPage {
+        DeckPage(items: [PreviewData.deckItem])
+    }
+
+    func diagnostics() async throws -> DeckDiagnostics {
+        DeckDiagnostics(inArea: 0, eligible: 0, seen: 1, topMustHave: nil, blockers: [])
+    }
+
+    func swipe(_ request: SwipeRequest) async throws -> SwipeResult {
+        SwipeResult(
+            swipe: Swipe(
+                id: request.swipeId, swipeId: request.swipeId,
+                side: request.renterId == nil ? .renter : .lister, action: request.action,
+                listingId: request.listingId, renterId: request.renterId ?? "user-1", createdAt: Date()
+            ),
+            match: request.renterId != nil && request.action == .like ? PreviewData.match : nil,
+            created: true
+        )
+    }
+
+    func undo(swipeID: String) async throws -> Swipe {
+        Swipe(id: swipeID, swipeId: swipeID, side: .renter, action: .pass, listingId: "listing-3", renterId: "user-1", createdAt: Date())
+    }
+
+    func save(listingID: String) async throws {}
+
+    func unsave(listingID: String) async throws {}
+
+    func saved() async throws -> SavedPage {
+        SavedPage(items: [PreviewData.publicListing])
+    }
+
+    func interestedRenters(listingID: String) async throws -> InterestedRenterPage {
+        InterestedRenterPage(items: [PreviewData.interestedRenter])
+    }
+
+    func matches() async throws -> MatchPage {
+        MatchPage(items: [PreviewData.match])
     }
 }
 
@@ -244,6 +333,7 @@ extension AppContainer {
             api: PreviewAccountAPI(user: user ?? PreviewData.newUser),
             listingsAPI: PreviewListingsAPI(),
             renterAPI: PreviewRenterAPI(),
+            deckAPI: PreviewDeckAPI(),
             campusLocator: PreviewCampusLocator(),
             addressLocator: PreviewAddressLocator(),
             uploader: PreviewUploader(),

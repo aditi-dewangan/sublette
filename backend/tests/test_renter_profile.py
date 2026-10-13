@@ -33,6 +33,7 @@ FULL_PROFILE = {
         {"field": "housemate_gender", "value": "women", "importance": "must"},
     ],
     "pin": PIN,
+    "notify_new_listings": True,
 }
 
 
@@ -50,6 +51,7 @@ def test_a_new_renter_has_an_empty_profile(client: TestClient, aditi: dict) -> N
         "max_rent_cents": None,
         "preferences": [],
         "pin": None,
+        "notify_new_listings": False,
         "complete": False,
         "updated_at": None,
     }

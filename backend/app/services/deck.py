@@ -8,7 +8,7 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.errors import ApiError
-from app.models import Listing, RenterProfile, User
+from app.models import Listing, RenterProfile, SavedListing, Swipe, User
 from app.schemas.deck import Blocker, DeckDiagnostics, DeckItem
 from app.services.listings import listing_out
 from app.services.matching import (
@@ -48,9 +48,14 @@ def renter_for(session: Session, user: User) -> Renter:
     return Renter.from_models(user, profile)
 
 
-def candidates(session: Session, renter: Renter, today: date) -> list[Listing]:
+def candidates(
+    session: Session, renter: Renter, today: date, include_seen: bool = False
+) -> list[Listing]:
     """Live listings inside the renter's circle, from active accounts, not the
-    renter's own, and not over yet. Nothing about fit is decided here."""
+    renter's own, and not over yet. Nothing about fit is decided here.
+
+    Listings the renter already swiped on or saved are left out unless
+    `include_seen`."""
     pin = func.geography(
         func.ST_SetSRID(func.ST_MakePoint(renter.pin_longitude, renter.pin_latitude), 4326)
     )
@@ -62,8 +67,14 @@ def candidates(session: Session, renter: Renter, today: date) -> list[Listing]:
         Listing.end_date >= today,
         Listing.public_latitude.is_not(None),
         func.ST_DWithin(public_point(), pin, renter.radius_m),
-        # Phase 5 also leaves out listings already swiped, and phase 7 blocked users.
+        # Phase 8 also leaves out blocked users.
     )
+    if not include_seen:
+        swiped = select(Swipe.listing_id).where(
+            Swipe.side == "renter", Swipe.renter_id == renter.user_id
+        )
+        saved = select(SavedListing.listing_id).where(SavedListing.user_id == renter.user_id)
+        query = query.where(Listing.id.not_in(swiped), Listing.id.not_in(saved))
     return list(session.scalars(query).unique().all())
 
 
@@ -126,7 +137,8 @@ def diagnose(session: Session, renter: Renter, today: date) -> DeckDiagnostics:
         for failure, removed in sorted(counts.items(), key=lambda pair: (-pair[1], pair[0].field))
     ]
     top_must_have = next((item for item in blockers if item.kind == "must_have"), None)
-    if not found:
+    seen = len(candidates(session, renter, today, include_seen=True)) - len(found)
+    if not found and not seen:
         miles = renter.radius_m / METERS_PER_MILE
         area = Blocker(
             field="radius",
@@ -137,7 +149,11 @@ def diagnose(session: Session, renter: Renter, today: date) -> DeckDiagnostics:
         blockers.insert(0, area)
         top_must_have = area
     return DeckDiagnostics(
-        in_area=len(found), eligible=eligible, top_must_have=top_must_have, blockers=blockers
+        in_area=len(found),
+        eligible=eligible,
+        seen=seen,
+        top_must_have=top_must_have,
+        blockers=blockers,
     )
 
 

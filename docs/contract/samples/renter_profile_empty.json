@@ -5,6 +5,7 @@
   "max_rent_cents": null,
   "preferences": [],
   "pin": null,
+  "notify_new_listings": false,
   "complete": false,
   "updated_at": null
 }

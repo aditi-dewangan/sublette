@@ -1,0 +1,70 @@
+{
+  "swipe": {
+    "id": "11111111-2222-4333-8444-555555555555",
+    "swipe_id": null,
+    "side": "lister",
+    "action": "like",
+    "listing_id": "11111111-2222-4333-8444-555555555555",
+    "renter_id": "11111111-2222-4333-8444-555555555555",
+    "created_at": "2027-01-04T17:00:00Z"
+  },
+  "match": {
+    "id": "11111111-2222-4333-8444-555555555555",
+    "role": "lister",
+    "listing": {
+      "id": "11111111-2222-4333-8444-555555555555",
+      "status": "active",
+      "is_owner": true,
+      "address": "1 Private Way",
+      "latitude": 47.66079155587495,
+      "longitude": -122.3035,
+      "public_latitude": 47.65979155587495,
+      "public_longitude": -122.3035,
+      "rent_cents": 100000,
+      "deposit_cents": 0,
+      "utilities_included": false,
+      "start_date": "2027-02-03",
+      "end_date": "2027-05-04",
+      "space_type": "private_room",
+      "bedrooms": 3,
+      "bathroom": "shared",
+      "furnished": true,
+      "laundry": true,
+      "parking": false,
+      "housemates_staying": 2,
+      "housemates_note": null,
+      "pets_allowed": true,
+      "smoking_allowed": false,
+      "household_gender": "mixed",
+      "gender_preference": "any",
+      "same_school_only": false,
+      "min_stay_days": 0,
+      "landlord_consent": true,
+      "photos": [],
+      "lister": {
+        "first_name": "Aditi",
+        "photo_url": null,
+        "school_name": "University of Washington",
+        "verified": true
+      },
+      "created_at": "2027-01-04T17:00:00Z",
+      "published_at": "2027-01-04T17:00:00Z"
+    },
+    "renter": {
+      "id": "11111111-2222-4333-8444-555555555555",
+      "first_name": "Aditi",
+      "photo_url": null,
+      "school_name": "University of Washington",
+      "verified": true
+    },
+    "lister": {
+      "id": "11111111-2222-4333-8444-555555555555",
+      "first_name": "Aditi",
+      "photo_url": null,
+      "school_name": "University of Washington",
+      "verified": true
+    },
+    "created_at": "2027-01-04T17:00:00Z"
+  },
+  "created": true
+}

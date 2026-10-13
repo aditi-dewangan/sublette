@@ -11,6 +11,7 @@ final class Preferences: @unchecked Sendable {
         static let hasLaunchedBefore = "hasLaunchedBefore"
         static let cachedUser = "cachedUser"
         static let usersWhoChoseAMode = "usersWhoChoseAMode"
+        static let pendingSwipes = "pendingSwipes"
     }
 
     init(defaults: UserDefaults = .standard) {
@@ -57,6 +58,24 @@ final class Preferences: @unchecked Sendable {
     var usersWhoChoseAMode: Set<String> {
         get { Set(defaults.stringArray(forKey: Key.usersWhoChoseAMode) ?? []) }
         set { defaults.set(Array(newValue).sorted(), forKey: Key.usersWhoChoseAMode) }
+    }
+
+    /// Swipes made offline and not yet accepted by the server, oldest first.
+    /// Kept across launches so a swipe made on the subway is sent later.
+    var pendingSwipes: [PendingSwipe] {
+        get {
+            guard let data = defaults.data(forKey: Key.pendingSwipes) else {
+                return []
+            }
+            return (try? JSONDecoder().decode([PendingSwipe].self, from: data)) ?? []
+        }
+        set {
+            if newValue.isEmpty {
+                defaults.removeObject(forKey: Key.pendingSwipes)
+            } else if let data = try? JSONEncoder().encode(newValue) {
+                defaults.set(data, forKey: Key.pendingSwipes)
+            }
+        }
     }
 }
 

@@ -33,6 +33,7 @@ def renter_profile_out(profile: RenterProfile | None) -> RenterProfileOut:
             max_rent_cents=None,
             preferences=[],
             pin=None,
+            notify_new_listings=False,
             complete=False,
             updated_at=None,
         )
@@ -50,6 +51,7 @@ def renter_profile_out(profile: RenterProfile | None) -> RenterProfileOut:
         max_rent_cents=profile.max_rent_cents,
         preferences=[Preference(**item) for item in profile.preferences],
         pin=pin,
+        notify_new_listings=profile.notify_new_listings,
         complete=is_complete(profile),
         updated_at=profile.updated_at,
     )
@@ -89,6 +91,7 @@ def save_renter_profile(
     profile.pin_latitude = body.pin.latitude if body.pin else None
     profile.pin_longitude = body.pin.longitude if body.pin else None
     profile.radius_m = body.pin.radius_m if body.pin else None
+    profile.notify_new_listings = body.notify_new_listings
     session.commit()
     session.refresh(profile)
     return renter_profile_out(profile)

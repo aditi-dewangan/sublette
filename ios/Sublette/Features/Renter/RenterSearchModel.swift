@@ -56,6 +56,53 @@ final class RenterSearchModel {
         }
     }
 
+    /// The message from the last change made from the empty deck.
+    private(set) var changeMessage: String?
+
+    /// Makes one must-have a nice-to-have (the empty deck's "relax" button).
+    func relax(_ field: PreferenceField) async -> Bool {
+        guard var form = profile?.form else {
+            return false
+        }
+        form.preferences = form.preferences.map { preference in
+            guard preference.field == field, preference.importance == .must else {
+                return preference
+            }
+            return Preference(field: preference.field, value: preference.value, importance: .nice)
+        }
+        return await save(form)
+    }
+
+    /// Doubles the search radius, up to the largest allowed.
+    func widenArea() async -> Bool {
+        guard var form = profile?.form, var pin = form.pin else {
+            return false
+        }
+        pin.radiusM = min(pin.radiusM * 2, SearchPin.maxRadiusM)
+        form.pin = pin
+        return await save(form)
+    }
+
+    /// "Notify me" when nothing is listed near the pin yet.
+    func setNotifyNewListings(_ on: Bool) async -> Bool {
+        guard var form = profile?.form else {
+            return false
+        }
+        form.notifyNewListings = on
+        return await save(form)
+    }
+
+    private func save(_ form: RenterProfileForm) async -> Bool {
+        changeMessage = nil
+        do {
+            profile = try await api.saveRenterProfile(form)
+            return true
+        } catch {
+            changeMessage = (error as? APIError)?.userMessage ?? APIError.unreachable.userMessage
+            return false
+        }
+    }
+
     /// Shows a profile the preference flow just saved.
     func show(_ saved: RenterProfile) {
         profile = saved

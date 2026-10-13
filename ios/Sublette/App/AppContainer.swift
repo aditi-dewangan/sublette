@@ -10,6 +10,7 @@ final class AppContainer {
     let api: AccountAPI
     let listingsAPI: ListingsAPI
     let renterAPI: RenterAPI
+    let deckAPI: DeckAPI
     let campusLocator: CampusLocating
     let addressLocator: AddressLocating
     let uploader: PhotoUploading
@@ -19,6 +20,10 @@ final class AppContainer {
     let serverStatus: ServerStatusModel
     let listerHome: ListerHomeModel
     let renterSearch: RenterSearchModel
+    let outbox: SwipeOutbox
+    let renterDeck: RenterDeckModel
+    let listerDeck: ListerDeckModel
+    let matchesModel: MatchesModel
 
     private let tokenManager: TokenManager
 
@@ -28,6 +33,7 @@ final class AppContainer {
         api: AccountAPI,
         listingsAPI: ListingsAPI,
         renterAPI: RenterAPI,
+        deckAPI: DeckAPI,
         campusLocator: CampusLocating,
         addressLocator: AddressLocating,
         uploader: PhotoUploading,
@@ -39,6 +45,7 @@ final class AppContainer {
         self.api = api
         self.listingsAPI = listingsAPI
         self.renterAPI = renterAPI
+        self.deckAPI = deckAPI
         self.campusLocator = campusLocator
         self.addressLocator = addressLocator
         self.uploader = uploader
@@ -50,6 +57,11 @@ final class AppContainer {
         self.serverStatus = ServerStatusModel(health: health, configuration: configuration)
         self.listerHome = ListerHomeModel(api: listingsAPI)
         self.renterSearch = RenterSearchModel(api: renterAPI)
+        let outbox = SwipeOutbox(api: deckAPI, preferences: preferences)
+        self.outbox = outbox
+        self.renterDeck = RenterDeckModel(api: deckAPI, outbox: outbox)
+        self.listerDeck = ListerDeckModel(deckAPI: deckAPI, listingsAPI: listingsAPI, outbox: outbox)
+        self.matchesModel = MatchesModel(api: deckAPI)
     }
 
     /// The real thing: talks to the server named in the build settings and
@@ -81,6 +93,7 @@ final class AppContainer {
             api: api,
             listingsAPI: LiveListingsAPI(client: signedInClient),
             renterAPI: LiveRenterAPI(client: signedInClient),
+            deckAPI: LiveDeckAPI(client: signedInClient),
             campusLocator: AppleCampusLocator(),
             addressLocator: AppleAddressLocator(),
             uploader: PhotoUploader(api: api, session: APIClient.makeSession(timeout: timeout)),

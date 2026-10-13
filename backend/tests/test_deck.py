@@ -41,6 +41,10 @@ def search(clock: Clock, **changes) -> dict:
 @pytest.fixture
 def renter(client: TestClient, mailer: RecordingMailer, clock: Clock) -> dict:
     """A UW student with a complete profile and a search around campus."""
+    return make_searching_renter(client, mailer, clock)
+
+
+def make_searching_renter(client: TestClient, mailer: RecordingMailer, clock: Clock) -> dict:
     who = sign_in(client, mailer, "renter@uw.edu")
     client.patch("/v1/me", headers=bearer(who), json={**COMPLETE_PROFILE, "gender": "woman"})
     response = client.put("/v1/me/renter-profile", headers=bearer(who), json=search(clock))

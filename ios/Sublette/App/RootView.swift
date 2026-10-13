@@ -3,13 +3,15 @@ import SwiftUI
 /// The mode header on top and the current mode's tabs under it.
 ///
 /// Renter mode (yellow): Deck, Map, Matches, Profile.
-/// Lister mode (orange): Listings, Matches, Profile.
+/// Lister mode (orange): Listings, Renters, Matches, Profile.
 /// Switching mode swaps the whole set of tabs, with no sign-in step.
 @MainActor
 struct RootView: View {
     @Environment(AppState.self) private var appState
+    @Environment(AppContainer.self) private var container
 
     var body: some View {
+        @Bindable var outbox = container.outbox
         VStack(spacing: 0) {
             ModeHeader()
             ModeTabs(mode: appState.mode)
@@ -17,18 +19,25 @@ struct RootView: View {
                 .id(appState.mode)
         }
         .background(Brand.cream)
+        .sheet(item: $outbox.latestMatch) { match in
+            MatchSheet(match: match) {
+                container.matchesModel.show(match)
+                container.outbox.latestMatch = nil
+            }
+        }
     }
 }
 
 /// The tabs in each mode, in order. Kept as data so tests can check them.
 enum ModeTab: String, CaseIterable {
-    case deck, map, listings, matches, profile
+    case deck, map, listings, renters, matches, profile
 
     var title: String {
         switch self {
         case .deck: return "Deck"
         case .map: return "Map"
         case .listings: return "Listings"
+        case .renters: return "Renters"
         case .matches: return "Matches"
         case .profile: return "Profile"
         }
@@ -39,6 +48,7 @@ enum ModeTab: String, CaseIterable {
         case .deck: return "rectangle.stack"
         case .map: return "map"
         case .listings: return "house"
+        case .renters: return "person.2"
         case .matches: return "bubble.left.and.bubble.right"
         case .profile: return "person.crop.circle"
         }
@@ -47,7 +57,7 @@ enum ModeTab: String, CaseIterable {
     static func tabs(for mode: AppMode) -> [ModeTab] {
         switch mode {
         case .renter: return [.deck, .map, .matches, .profile]
-        case .lister: return [.listings, .matches, .profile]
+        case .lister: return [.listings, .renters, .matches, .profile]
         }
     }
 }
@@ -78,7 +88,8 @@ private struct ModeTabContent: View {
         case .deck: RenterHomeView()
         case .map: MapPlaceholderView()
         case .listings: ListerHomeView()
-        case .matches: MatchesPlaceholderView()
+        case .renters: ListerDeckView()
+        case .matches: MatchesView()
         case .profile: ProfileView()
         }
     }

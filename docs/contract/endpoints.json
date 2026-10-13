@@ -20,6 +20,9 @@
     { "method": "GET", "path": "/v1/me/renter-profile", "auth": true, "phase": 3 },
     { "method": "PUT", "path": "/v1/me/renter-profile", "auth": true, "phase": 3 },
 
+    { "method": "GET", "path": "/v1/deck/listings", "auth": true, "phase": 4 },
+    { "method": "GET", "path": "/v1/deck/diagnostics", "auth": true, "phase": 4 },
+
     { "method": "PUT", "path": "/files/{key}", "auth": false, "phase": 1, "own_storage_only": true },
     { "method": "GET", "path": "/files/{key}", "auth": false, "phase": 1, "own_storage_only": true }
   ]

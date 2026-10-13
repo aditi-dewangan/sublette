@@ -7,7 +7,7 @@ HOST   ?= 127.0.0.1
 PORT   ?= 8000
 
 .DEFAULT_GOAL := help
-.PHONY: help setup dev db db-stop db-reset migrate run test lint fmt check find-refs ios ios-test
+.PHONY: help setup dev db db-stop db-reset migrate seed-fake run test lint fmt check find-refs ios ios-test
 
 help: ## List the commands
 	@grep -E '^[a-z-]+:.*## ' $(MAKEFILE_LIST) | awk -F ':.*## ' '{printf "  make %-10s %s\n", $$1, $$2}'
@@ -32,6 +32,9 @@ db-reset: ## Delete all local data and start a fresh database
 
 migrate: ## Apply database migrations and load the list of schools
 	cd backend && .venv/bin/alembic upgrade head && .venv/bin/python -m app.seed
+
+seed-fake: ## Add 1,000 fake listings and 200 fake renters (ARGS=--remove to take them out)
+	cd backend && .venv/bin/python -m app.seed_fake $(ARGS)
 
 run: ## Start the server at http://localhost:8000 (HOST=0.0.0.0 to reach it from a real iPhone)
 	cd backend && .venv/bin/uvicorn app.main:app --reload --host $(HOST) --port $(PORT)

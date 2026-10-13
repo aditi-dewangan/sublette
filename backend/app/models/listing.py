@@ -1,7 +1,7 @@
 import uuid
 from datetime import date, datetime
 
-from sqlalchemy import Date, DateTime, Float, ForeignKey, Integer, String, func
+from sqlalchemy import Date, DateTime, Float, ForeignKey, Index, Integer, String, func, text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db import Base
@@ -24,6 +24,16 @@ class Listing(Base):
     """
 
     __tablename__ = "listings"
+    __table_args__ = (
+        # The deck's distance search (migration 0005). The expression must stay
+        # identical to `public_point()` in services/deck.py.
+        Index(
+            "ix_listings_active_public_point",
+            text("geography(ST_SetSRID(ST_MakePoint(public_longitude, public_latitude), 4326))"),
+            postgresql_using="gist",
+            postgresql_where=text("status = 'active'"),
+        ),
+    )
 
     id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
     owner_id: Mapped[uuid.UUID] = mapped_column(

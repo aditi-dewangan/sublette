@@ -1,0 +1,25 @@
+{
+  "items": [
+    {
+      "id": "11111111-2222-4333-8444-555555555555",
+      "latitude": 47.66528311174991,
+      "longitude": -122.3035,
+      "exact": true,
+      "score": 96,
+      "band": "strong",
+      "state": "matched",
+      "rent_cents": 100000
+    },
+    {
+      "id": "11111111-2222-4333-8444-555555555555",
+      "latitude": 47.65979155587495,
+      "longitude": -122.3035,
+      "exact": false,
+      "score": 98,
+      "band": "strong",
+      "state": "new",
+      "rent_cents": 100000
+    }
+  ],
+  "truncated": false
+}

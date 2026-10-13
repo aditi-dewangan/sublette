@@ -126,6 +126,19 @@ Choices made while building, with the reason. Add to the bottom; do not rewrite 
 | Lister mode gains a Renters tab (pick a listing, swipe on its interested renters). The lister sees name, photo, year, program, bio, school, wanted dates and how the renter meets each filter; never the renter's pin or budget. | "Lister deck: pick a listing, then swipe on its interested renters." |
 | Matched listings still show only the public point. | The exact address for matches arrives with the map in phase 6 and chat in phase 7. |
 
+### Phase 6: map and pins (added 2026-10-13)
+
+| Decision | Reason |
+| --- | --- |
+| New pins on the map are exactly the deck's listings: eligible, inside the renter's circle, not swiped or saved, filtered by the same code. Liked, saved and matched listings are added wherever they are in the box, while live or paused. Passed listings are never pins. | "The map and the deck show the same set of listings for the same preferences." The circle is drawn on the map and can be moved from it. |
+| `GET /v1/map/listings?bbox=min_lng,min_lat,max_lng,max_lat` sends small pins (id, point, score, band, state, rent), at most 500, matched first then best fit, with `truncated` when more matched. Tapping a pin loads its card from `GET /v1/map/listings/{id}`, the same `DeckItem` as the deck. | Hundreds of full listings would be slow to send and decode. |
+| Bands: strong 75 and up, partial 50 to 74, other below. | The plan names the bands, not the cut-offs. |
+| A renter who matched with a listing sees its exact address and point everywhere: the map pin, its card, `GET /v1/listings/{id}` (even once paused or filled) and `GET /v1/matches`. `is_matched` says so. Everyone else, including a renter who liked or saved it, never does; a test calls every GET endpoint to check. | "Matched listings return their exact location." This replaces phase 5's "public point only for matches". |
+| Pins cluster on the phone: the visible area is cut into a 9 by 9 grid and pins sharing a cell become a number; below about 400 meters across, every pin stands alone. Matched pins never cluster. | SwiftUI's map has no clustering; a grid keeps the map to a few dozen marks at any zoom. |
+| Shapes: a dot for new, a heart for liked, a bookmark for saved, a star for matched. Colors: yellow strong, orange partial, white with a grey outline for the rest, magenta for matched. | The plan's colors; shapes so color is never the only signal. |
+| "Move pin or change radius" on the map moves the search to the middle of the visible map, saves it, and reloads the map and the deck. | "The pin and radius can be changed from the map." |
+| The bbox does not cross the antimeridian. | No campus is near it. |
+
 ## Known gaps after phase 2
 
 - Photos uploaded in the editor and then abandoned (the editor closed without saving) stay in storage. A clean-up job belongs with phase 8's expiry job.

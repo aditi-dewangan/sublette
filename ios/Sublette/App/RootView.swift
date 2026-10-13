@@ -86,7 +86,7 @@ private struct ModeTabContent: View {
     var body: some View {
         switch tab {
         case .deck: RenterHomeView()
-        case .map: MapPlaceholderView()
+        case .map: RenterMapView()
         case .listings: ListerHomeView()
         case .renters: ListerDeckView()
         case .matches: MatchesView()

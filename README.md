@@ -15,9 +15,10 @@ students who need someone to take over their lease. Any `.edu` email can join.
 | 1 | Accounts and .edu email verification | Done |
 | 2 | Lister mode: create and manage a listing | Done |
 | 3 | Renter mode: preferences, map pin, and the mode toggle | Done |
-| 4 | Matching engine: who sees which listing, scored and explained | Done (pull request #6 brings it to `main`) |
-| 5 | Swipe decks and matches | Built on `phase-5`; see its pull request |
-| 6 to 10 | Map through the AI recommender | Not started |
+| 4 | Matching engine: who sees which listing, scored and explained | Done |
+| 5 | Swipe decks and matches | Done |
+| 6 | Map and pins | Built on `phase-6`; see its pull request |
+| 7 to 10 | Chat through the AI recommender | Not started |
 
 ## Set up (once)
 
@@ -142,6 +143,8 @@ Each dependency has tests for the day it is down. So far:
 | Sample room pictures for fake listings (`backend/app/data/seed_photos`) | `make seed-fake` still adds every listing and renter, with no photo files, and says so. | `backend/tests/test_deck.py` |
 | PostGIS distance search (deck) | The migration turns PostGIS on, so a database without it fails at deploy. A database outage answers 503 like every `/v1` route. | `backend/tests/test_migrations.py`, `test_health.py` |
 | Server, while swiping (iPhone app) | Swipes are kept on the phone, survive a relaunch, and go out in order when the connection is back, each with an id made on the phone so the server counts it once. A banner says so. Undo of a swipe still on the phone never reaches the server; undo of a sent one needs a connection and says so. Another account's queued swipes are never sent. | `ios/SubletteTests/SwipeTests.swift`, `backend/tests/test_swipes.py` |
+| Server, on the map (iPhone app) | Pins already shown stay, with "Can't reach Sublette"; a like or pass from a pin is queued like any swipe, and the pin keeps its new state after a reload. | `ios/SubletteTests/MapTests.swift` |
+| Apple's map tiles (iPhone app) | Not testable in unit tests: without tiles MapKit draws an empty grid, and the pins, the circle and the cards still work, because they come from Sublette's server. | Tried by hand |
 | Photo storage (iPhone app) | "Couldn't upload the photo. You can add one later." The rest of the profile still saves. | `ios/SubletteTests/ProfileFormModelTests.swift`, `AuthorizedRequestTests.swift` |
 
 When a phase adds a dependency (email sending, photo storage, push, the language

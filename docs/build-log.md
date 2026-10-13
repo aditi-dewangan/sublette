@@ -13,8 +13,9 @@ Spec" doc; its Build plan tab defines phases 0 to 10 and each phase's
 | Dev email inbox | Merged (#3). |
 | 3 Renter mode and the toggle | Merged (#4). |
 | 4 Matching engine | Merged (#6; #5 had landed on `phase-3` by mistake). |
-| 5 Swipe decks and matches | Pull request #7, rebased on `main`. Every check passes on GitHub, including the iPhone build. Waiting for the two-account test in the simulator, then merge. |
-| 6 Map and pins | Next. |
+| 5 Swipe decks and matches | Merged (#7). |
+| 6 Map and pins | Pull request #8 (`phase-6`). |
+| 7 Chat, checklist and notifications | Next. |
 
 ## How each phase is delivered
 
@@ -31,5 +32,4 @@ Steps are in `README.md`, "Staging, for $0".
 
 ## Waiting on Aditi
 
-- Merging #7. Every pull request now targets `main` directly.
-- Trying Phase 5 with two simulators (or one simulator and one Mac browser at /docs): account A posts a listing; account B sets a search near it, likes it; A opens Renters, likes B; both see the match.
+- Trying Phase 6: `make seed-fake`, put your pin near UW, open the Map tab. Zoom out (numbers), zoom in (pins), tap a pin and like it (it turns into a heart and leaves the deck), move the pin from the map. Then merge #8.

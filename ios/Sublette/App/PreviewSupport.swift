@@ -292,6 +292,30 @@ struct PreviewDeckAPI: DeckAPI {
     }
 }
 
+/// A few pins around the University of Washington, one of each kind.
+struct PreviewMapAPI: MapAPI {
+    func pins(in region: MapRegion) async throws -> MapPage {
+        let offsets: [(Double, Double, ScoreBand, PinState)] = [
+            (0.004, 0.002, .strong, .new), (-0.003, 0.004, .partial, .new), (0.006, -0.005, .other, .new),
+            (-0.006, -0.003, .strong, .liked), (0.001, -0.007, .partial, .saved), (0.008, 0.006, .strong, .matched),
+        ]
+        return MapPage(
+            items: offsets.enumerated().map { index, offset in
+                MapPin(
+                    id: "pin-\(index)", latitude: 47.6553 + offset.0, longitude: -122.3035 + offset.1,
+                    exact: offset.3 == .matched, score: offset.2 == .strong ? 88 : offset.2 == .partial ? 62 : 35,
+                    band: offset.2, state: offset.3, rentCents: 95_000 + index * 10_000
+                )
+            },
+            truncated: false
+        )
+    }
+
+    func card(listingID: String) async throws -> MapCard {
+        MapCard(item: PreviewData.deckItem, state: .new)
+    }
+}
+
 /// Every campus is at the same spot, near the University of Washington.
 struct PreviewCampusLocator: CampusLocating {
     func locateCampus(named schoolName: String) async throws -> Coordinate {
@@ -334,6 +358,7 @@ extension AppContainer {
             listingsAPI: PreviewListingsAPI(),
             renterAPI: PreviewRenterAPI(),
             deckAPI: PreviewDeckAPI(),
+            mapAPI: PreviewMapAPI(),
             campusLocator: PreviewCampusLocator(),
             addressLocator: PreviewAddressLocator(),
             uploader: PreviewUploader(),

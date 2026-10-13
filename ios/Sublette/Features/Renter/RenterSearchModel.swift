@@ -92,6 +92,16 @@ final class RenterSearchModel {
         return await save(form)
     }
 
+    /// Moves the search area (the map's "Search here" and radius).
+    func moveArea(to coordinate: Coordinate, radiusM: Int) async -> Bool {
+        guard var form = profile?.form else {
+            return false
+        }
+        let radius = min(max(radiusM, SearchPin.minRadiusM), SearchPin.maxRadiusM)
+        form.pin = SearchPin(latitude: coordinate.latitude, longitude: coordinate.longitude, radiusM: radius)
+        return await save(form)
+    }
+
     private func save(_ form: RenterProfileForm) async -> Bool {
         changeMessage = nil
         do {

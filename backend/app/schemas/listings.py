@@ -77,7 +77,9 @@ class ListingOut(BaseModel):
     status: Status
     # True when the caller owns this listing.
     is_owner: bool
-    # Exact location: only for the owner. Null for everyone else.
+    # True when the caller is a renter who matched with this listing.
+    is_matched: bool
+    # Exact location: only for the owner and a matched renter. Null for everyone else.
     address: str | None
     latitude: float | None
     longitude: float | None

@@ -17,6 +17,7 @@ from app.routers import (
     files,
     health,
     listings,
+    maps,
     me,
     renter_profile,
     swipes,
@@ -61,6 +62,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     v1.include_router(renter_profile.router)
     v1.include_router(deck.router)
     v1.include_router(swipes.router)
+    v1.include_router(maps.router)
     app.include_router(v1)
 
     if isinstance(app.state.storage, ServerStorage):

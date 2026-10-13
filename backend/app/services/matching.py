@@ -336,3 +336,18 @@ def lister_fits(renter: Renter, listing: Listing, renter_school_name: str) -> li
     if listing.gender_preference != "any":
         found.append(f"Fits your preference for {listing.gender_preference}")
     return found
+
+
+# --- Score bands, for the map ----------------------------------------------------
+
+STRONG_FROM = 75
+PARTIAL_FROM = 50
+
+
+def score_band(value: int) -> str:
+    """strong (75 and up), partial (50 to 74) or other. The map colors pins by this."""
+    if value >= STRONG_FROM:
+        return "strong"
+    if value >= PARTIAL_FROM:
+        return "partial"
+    return "other"

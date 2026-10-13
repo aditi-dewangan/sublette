@@ -1,0 +1,4 @@
+{
+  "code": "invalid_bbox",
+  "message": "The map area must be min_lng,min_lat,max_lng,max_lat, west before east."
+}

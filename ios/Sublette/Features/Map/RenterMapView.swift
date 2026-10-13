@@ -71,9 +71,9 @@ struct RenterMapView: View {
                         PinGroupView(group: group)
                             .onTapGesture { tapped(group) }
                     }
+                    .annotationTitles(.hidden)
                 }
             }
-            .annotationTitles(.hidden)
             .mapControls {
                 MapCompass()
                 MapScaleView()

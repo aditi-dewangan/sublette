@@ -85,4 +85,13 @@ extension Endpoint {
     static func interestedRenters(_ listingID: String) -> Endpoint {
         Endpoint(method: .get, path: "/v1/listings/\(listingID)/deck/renters")
     }
+
+    // The renter's map.
+    static func mapListings(bbox: String) -> Endpoint {
+        Endpoint(method: .get, path: "/v1/map/listings", query: [URLQueryItem(name: "bbox", value: bbox)])
+    }
+
+    static func mapListing(_ id: String) -> Endpoint {
+        Endpoint(method: .get, path: "/v1/map/listings/\(id)")
+    }
 }

@@ -7,7 +7,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.errors import ApiError
-from app.models import Listing, ListingPhoto, User
+from app.models import Listing, ListingPhoto, Match, User
 from app.schemas.errors import FieldError
 from app.schemas.listings import ListerOut, ListingFields, ListingOut, PhotoOut
 from app.services.geo import offset_point
@@ -210,9 +210,19 @@ def new_listing(owner: User) -> Listing:
     return Listing(id=uuid.uuid4(), owner_id=owner.id, owner=owner, status="draft", **DEFAULTS)
 
 
-def listing_out(listing: Listing, viewer: User, storage: PhotoStorage) -> ListingOut:
+def matched_listing_ids(session: Session, renter: User) -> set[uuid.UUID]:
+    """Listings this user matched with as a renter."""
+    return set(session.scalars(select(Match.listing_id).where(Match.renter_id == renter.id)))
+
+
+def listing_out(
+    listing: Listing, viewer: User, storage: PhotoStorage, matched: bool = False
+) -> ListingOut:
+    """The listing as `viewer` may see it. The exact address and point go only
+    to the owner and to a renter who matched with it (`matched`)."""
     owner = listing.owner
     is_owner = viewer.id == listing.owner_id
+    exact = is_owner or matched
 
     def url(key: str | None) -> str | None:
         return (storage.public_url(key) or None) if key else None
@@ -221,9 +231,10 @@ def listing_out(listing: Listing, viewer: User, storage: PhotoStorage) -> Listin
         id=listing.id,
         status=listing.status,
         is_owner=is_owner,
-        address=listing.address if is_owner else None,
-        latitude=listing.latitude if is_owner else None,
-        longitude=listing.longitude if is_owner else None,
+        is_matched=matched,
+        address=listing.address if exact else None,
+        latitude=listing.latitude if exact else None,
+        longitude=listing.longitude if exact else None,
         public_latitude=listing.public_latitude,
         public_longitude=listing.public_longitude,
         rent_cents=listing.rent_cents,

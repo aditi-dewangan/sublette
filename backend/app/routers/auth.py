@@ -3,6 +3,7 @@
 These three endpoints are the only ones under /v1 that need no account.
 """
 
+import logging
 from datetime import timedelta
 
 from fastapi import APIRouter
@@ -26,6 +27,8 @@ from app.services.email_sender import EmailUnavailable
 from app.services.emails import domain_of, require_school_email
 from app.services.schools import school_for_domain
 from app.services.tokens import issue_pair, read_token
+
+logger = logging.getLogger("sublette.auth")
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -67,9 +70,19 @@ def request_code(
     )
 
     code = issue_code(session, settings, email, now)
+    echo = settings.echo_codes and settings.email_backend != "console"
+    if echo:
+        # Development: the code is in the terminal whatever the email does.
+        logger.warning("Sign-in code for %s: %s  (also emailed)", email, code)
     try:
         mailer.send_code(email, code, settings.code_ttl_minutes)
     except EmailUnavailable as error:
+        if echo:
+            logger.warning("The email to %s failed (%s). Use the code printed above.", email, error)
+            session.commit()
+            return RequestCodeOut(
+                expires_in=settings.code_ttl_minutes * 60, resend_in=settings.code_resend_wait_s
+            )
         # Nothing is kept: no code the student never received, and the failed
         # try does not count against their limit.
         session.rollback()

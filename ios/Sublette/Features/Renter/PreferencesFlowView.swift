@@ -143,7 +143,7 @@ private struct BudgetStep: View {
     var body: some View {
         FormField(
             "Most you'd pay each month",
-            hint: "Places under your budget rank higher.",
+            hint: "You'll only see places at or under this. Cheaper ones rank higher.",
             error: model.fieldErrors["max_rent_cents"]
         ) {
             HStack {

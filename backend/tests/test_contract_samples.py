@@ -257,3 +257,38 @@ def test_swipe_samples(client: TestClient, mailer: RecordingMailer, clock, db) -
             "/v1/swipes/undo", headers=bearer(renter), json={"swipe_id": passed["swipe"]["id"]}
         ).json(),
     )
+
+
+def test_map_samples(client: TestClient, mailer: RecordingMailer, clock, db) -> None:
+    import uuid as uuid_module
+
+    from app.models import User
+    from tests.test_deck import make_searching_renter, put_listing
+
+    renter = make_searching_renter(client, mailer, clock)
+    lister = sign_in(client, mailer, "lister@uw.edu")
+    client.patch("/v1/me", headers=bearer(lister), json=COMPLETE_PROFILE)
+    owner = db.get(User, uuid_module.UUID(lister["user"]["id"]))
+    fresh = put_listing(db, clock, owner)
+    matched = put_listing(db, clock, owner, km_north=1)
+    client.post(
+        "/v1/swipes", headers=bearer(renter), json={"listing_id": str(matched.id), "action": "like"}
+    )
+    client.post(
+        "/v1/swipes",
+        headers=bearer(lister),
+        json={"listing_id": str(matched.id), "renter_id": renter["user"]["id"], "action": "like"},
+    )
+    page = client.get(
+        "/v1/map/listings", headers=bearer(renter), params={"bbox": "-123,47,-122,48"}
+    ).json()
+    check("map_listings", page)
+    check("map_card", client.get(f"/v1/map/listings/{fresh.id}", headers=bearer(renter)).json())
+    check(
+        "map_card_matched",
+        client.get(f"/v1/map/listings/{matched.id}", headers=bearer(renter)).json(),
+    )
+    check(
+        "error_invalid_bbox",
+        client.get("/v1/map/listings", headers=bearer(renter), params={"bbox": "x"}).json(),
+    )

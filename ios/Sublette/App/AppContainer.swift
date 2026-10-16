@@ -11,6 +11,7 @@ final class AppContainer {
     let listingsAPI: ListingsAPI
     let renterAPI: RenterAPI
     let deckAPI: DeckAPI
+    let mapAPI: MapAPI
     let campusLocator: CampusLocating
     let addressLocator: AddressLocating
     let uploader: PhotoUploading
@@ -24,6 +25,7 @@ final class AppContainer {
     let renterDeck: RenterDeckModel
     let listerDeck: ListerDeckModel
     let matchesModel: MatchesModel
+    let renterMap: RenterMapModel
 
     private let tokenManager: TokenManager
 
@@ -34,6 +36,7 @@ final class AppContainer {
         listingsAPI: ListingsAPI,
         renterAPI: RenterAPI,
         deckAPI: DeckAPI,
+        mapAPI: MapAPI,
         campusLocator: CampusLocating,
         addressLocator: AddressLocating,
         uploader: PhotoUploading,
@@ -46,6 +49,7 @@ final class AppContainer {
         self.listingsAPI = listingsAPI
         self.renterAPI = renterAPI
         self.deckAPI = deckAPI
+        self.mapAPI = mapAPI
         self.campusLocator = campusLocator
         self.addressLocator = addressLocator
         self.uploader = uploader
@@ -59,9 +63,15 @@ final class AppContainer {
         self.renterSearch = RenterSearchModel(api: renterAPI)
         let outbox = SwipeOutbox(api: deckAPI, preferences: preferences)
         self.outbox = outbox
-        self.renterDeck = RenterDeckModel(api: deckAPI, outbox: outbox)
+        let renterDeck = RenterDeckModel(api: deckAPI, outbox: outbox)
+        self.renterDeck = renterDeck
         self.listerDeck = ListerDeckModel(deckAPI: deckAPI, listingsAPI: listingsAPI, outbox: outbox)
         self.matchesModel = MatchesModel(api: deckAPI)
+        let renterMap = RenterMapModel(api: mapAPI, outbox: outbox)
+        renterMap.onSwiped = { [weak renterDeck] listingID in
+            renterDeck?.forget(listingID: listingID)
+        }
+        self.renterMap = renterMap
     }
 
     /// The real thing: talks to the server named in the build settings and
@@ -94,6 +104,7 @@ final class AppContainer {
             listingsAPI: LiveListingsAPI(client: signedInClient),
             renterAPI: LiveRenterAPI(client: signedInClient),
             deckAPI: LiveDeckAPI(client: signedInClient),
+            mapAPI: LiveMapAPI(client: signedInClient),
             campusLocator: AppleCampusLocator(),
             addressLocator: AppleAddressLocator(),
             uploader: PhotoUploader(api: api, session: APIClient.makeSession(timeout: timeout)),

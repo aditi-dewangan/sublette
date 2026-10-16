@@ -14,7 +14,7 @@ from app.schemas.swipes import (
     SwipeResult,
     UndoIn,
 )
-from app.services.listings import listing_out
+from app.services.listings import listing_out, matched_listing_ids
 from app.services.swipes import (
     interested_renters,
     match_out,
@@ -45,8 +45,12 @@ def undo(body: UndoIn, user: CurrentUser, session: DbSession) -> SwipeOut:
 
 @router.get("/saved", response_model=SavedPage)
 def list_saved(user: CurrentUser, session: DbSession, storage: Storage) -> SavedPage:
+    matched = matched_listing_ids(session, user)
     return SavedPage(
-        items=[listing_out(listing, user, storage) for listing in saved_listings(session, user)]
+        items=[
+            listing_out(listing, user, storage, matched=listing.id in matched)
+            for listing in saved_listings(session, user)
+        ]
     )
 
 

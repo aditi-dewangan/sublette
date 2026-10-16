@@ -192,6 +192,11 @@ final class RenterDeckModel {
         diagnostics = nil
     }
 
+    /// Drops a card swiped somewhere else (on the map).
+    func forget(listingID: String) {
+        cards.removeAll { $0.id == listingID }
+    }
+
     /// Puts the top card aside in Saved. It comes back to the deck if unsaved.
     func save() async {
         guard let card = top, !isWorking else {

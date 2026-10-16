@@ -1,0 +1,54 @@
+{
+  "item": {
+    "listing": {
+      "id": "11111111-2222-4333-8444-555555555555",
+      "status": "active",
+      "is_owner": false,
+      "is_matched": false,
+      "address": null,
+      "latitude": null,
+      "longitude": null,
+      "public_latitude": 47.65979155587495,
+      "public_longitude": -122.3035,
+      "rent_cents": 100000,
+      "deposit_cents": 0,
+      "utilities_included": false,
+      "start_date": "2027-02-03",
+      "end_date": "2027-05-04",
+      "space_type": "private_room",
+      "bedrooms": 3,
+      "bathroom": "shared",
+      "furnished": true,
+      "laundry": true,
+      "parking": false,
+      "housemates_staying": 2,
+      "housemates_note": null,
+      "pets_allowed": true,
+      "smoking_allowed": false,
+      "household_gender": "mixed",
+      "gender_preference": "any",
+      "same_school_only": false,
+      "min_stay_days": 0,
+      "landlord_consent": true,
+      "photos": [],
+      "lister": {
+        "first_name": "Aditi",
+        "photo_url": null,
+        "school_name": "University of Washington",
+        "verified": true
+      },
+      "created_at": "2027-01-04T17:00:00Z",
+      "published_at": "2027-01-04T17:00:00Z"
+    },
+    "score": 96,
+    "band": "strong",
+    "summary": "Fits your dates, $200 under budget and 0.3 mi from your pin.",
+    "reasons": [
+      "Fits your dates",
+      "$200 under budget",
+      "0.3 mi from your pin"
+    ],
+    "distance_m": 499
+  },
+  "state": "new"
+}

@@ -147,6 +147,12 @@ Choices made while building, with the reason. Add to the bottom; do not rewrite 
 | The maximum rent is a hard limit: a listing over it is never in the deck or on the map and can't be liked, like a failed must-have (`max_rent` in diagnostics: "2 listings nearby cost more than your $1,200 budget."). Rent points now reward room under the budget: 15 of 25 at the budget, all 25 at 20% under or more. | Aditi, 2026-10-13: "yes it should be hard". Replaces phase 4's "rent over budget is not a filter". |
 | Must-haves are never questioned. The empty deck no longer offers "Make it nice-to-have"; it says nothing nearby has every must-have yet, names what rules most places out ("3 listings nearby don't have parking."), and offers "Notify me" and "Search a bigger area". | Aditi: the app should abide by must-haves and not ask renters to change them. |
 
+### Codes in the terminal (added 2026-10-15)
+
+| Decision | Reason |
+| --- | --- |
+| A local server prints every sign-in code in its terminal as well as emailing it (`SUBLETTE_EMAIL_ECHO_CODES`, on by default only when `SUBLETTE_ENV=local`). While on, a failed email is logged and the request still succeeds, so the printed code works. Production refuses the setting. | Aditi: codes weren't arriving; she wants the email sent and the code copied to the terminal. Elsewhere a failed email still answers 503 and keeps nothing. |
+
 ## Known gaps after phase 2
 
 - Photos uploaded in the editor and then abandoned (the editor closed without saving) stay in storage. A clean-up job belongs with phase 8's expiry job.

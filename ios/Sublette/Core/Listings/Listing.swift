@@ -124,7 +124,9 @@ struct Listing: Codable, Equatable, Identifiable {
     let id: String
     var status: ListingStatus
     let isOwner: Bool
-    /// Exact location: only filled in for the owner.
+    /// True for a renter who matched with this listing: they see the exact address too.
+    var isMatched: Bool = false
+    /// Exact location: only filled in for the owner and a matched renter.
     var address: String?
     var latitude: Double?
     var longitude: Double?

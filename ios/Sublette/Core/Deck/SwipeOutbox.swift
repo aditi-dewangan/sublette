@@ -54,6 +54,15 @@ final class SwipeOutbox {
         Set(pending.filter { $0.request.renterId == nil }.map(\.request.listingId))
     }
 
+    /// The action of each renter swipe still on the phone, by listing id.
+    var pendingStates: [String: SwipeAction] {
+        var states: [String: SwipeAction] = [:]
+        for swipe in pending where swipe.request.renterId == nil {
+            states[swipe.request.listingId] = swipe.request.action
+        }
+        return states
+    }
+
     /// Ids of renters with a lister swipe still on the phone, for one listing.
     func pendingRenterIDs(listingID: String) -> Set<String> {
         Set(pending.compactMap { $0.request.listingId == listingID ? $0.request.renterId : nil })

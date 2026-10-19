@@ -4,6 +4,7 @@
       "id": "11111111-2222-4333-8444-555555555555",
       "status": "active",
       "is_owner": true,
+      "is_matched": false,
       "address": "4500 University Way NE, Apt 3, Seattle, WA 98105",
       "latitude": 47.6588,
       "longitude": -122.313,

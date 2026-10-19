@@ -433,6 +433,8 @@ extension Fixture {
         DeckItem(
             listing: listing(id: id),
             score: score,
+            band: score >= 75 ? .strong : score >= 50 ? .partial : .other,
+            summary: "Fits your dates, $100 under budget and 0.5 mi from your pin.",
             reasons: ["Fits your dates", "$100 under budget", "0.5 mi from your pin"],
             distanceM: 800
         )
@@ -476,5 +478,36 @@ extension Fixture {
             likedAt: now,
             fits: ["Stays 78 days of your dates"]
         )
+    }
+}
+
+final class StubMapAPI: MapAPI, @unchecked Sendable {
+    var pages: [Result<MapPage, Error>] = []
+    var cardResult: Result<MapCard, Error>?
+    private(set) var regions: [MapRegion] = []
+
+    func pins(in region: MapRegion) async throws -> MapPage {
+        regions.append(region)
+        guard !pages.isEmpty else {
+            return MapPage(items: [], truncated: false)
+        }
+        return try pages.removeFirst().get()
+    }
+
+    func card(listingID: String) async throws -> MapCard {
+        try (cardResult ?? .success(MapCard(item: Fixture.deckItem(listingID), state: .new))).get()
+    }
+}
+
+extension Fixture {
+    static func pin(
+        _ id: String,
+        latitude: Double = 47.66,
+        longitude: Double = -122.31,
+        band: ScoreBand = .strong,
+        state: PinState = .new
+    ) -> MapPin {
+        MapPin(id: id, latitude: latitude, longitude: longitude, exact: state == .matched,
+               score: 80, band: band, state: state, rentCents: 100_000)
     }
 }

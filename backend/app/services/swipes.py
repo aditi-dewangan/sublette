@@ -65,7 +65,7 @@ def match_out(match: Match, viewer: User, storage: PhotoStorage) -> MatchOut:
     return MatchOut(
         id=match.id,
         role="renter" if match.renter_id == viewer.id else "lister",
-        listing=listing_out(match.listing, viewer, storage),
+        listing=listing_out(match.listing, viewer, storage, matched=match.renter_id == viewer.id),
         renter=person_out(match.renter, storage),
         lister=person_out(match.lister, storage),
         created_at=match.created_at,

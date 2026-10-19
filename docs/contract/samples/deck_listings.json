@@ -5,6 +5,7 @@
         "id": "11111111-2222-4333-8444-555555555555",
         "status": "active",
         "is_owner": false,
+        "is_matched": false,
         "address": null,
         "latitude": null,
         "longitude": null,
@@ -40,7 +41,9 @@
         "created_at": "2027-01-04T17:00:00Z",
         "published_at": "2027-01-04T17:00:00Z"
       },
-      "score": 98,
+      "score": 96,
+      "band": "strong",
+      "summary": "Fits your dates, $200 under budget and 0.3 mi from your pin. Furnished and in-unit laundry.",
       "reasons": [
         "Fits your dates",
         "$200 under budget",

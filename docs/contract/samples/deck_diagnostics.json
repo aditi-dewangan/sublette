@@ -6,14 +6,14 @@
     "field": "parking",
     "kind": "must_have",
     "removed": 1,
-    "message": "1 listing doesn't have parking. Make it nice-to-have to see it."
+    "message": "1 listing nearby doesn't have parking."
   },
   "blockers": [
     {
       "field": "parking",
       "kind": "must_have",
       "removed": 1,
-      "message": "1 listing doesn't have parking. Make it nice-to-have to see it."
+      "message": "1 listing nearby doesn't have parking."
     }
   ]
 }

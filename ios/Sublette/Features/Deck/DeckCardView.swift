@@ -17,23 +17,21 @@ struct DeckCardView: View {
                     Text(item.listing.rentCents.map { "\(Money.dollars($0))/mo" } ?? "")
                         .font(.system(.title2, design: .rounded).weight(.bold))
                     Spacer()
-                    Text("\(item.score)% fit")
-                        .font(.footnote.weight(.bold))
-                        .padding(.horizontal, 10)
-                        .padding(.vertical, 5)
-                        .background(Brand.yellow, in: Capsule())
-                        .accessibilityLabel("Fit score \(item.score) out of 100")
+                    if let label = item.band.fitLabel {
+                        Text(label)
+                            .font(.footnote.weight(.bold))
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 5)
+                            .background(item.band == .strong ? Brand.yellow : Brand.orange.opacity(0.35), in: Capsule())
+                    }
                 }
                 Text([item.listing.spaceSummary, item.listing.dateSummary ?? ""]
                     .filter { !$0.isEmpty }
                     .joined(separator: " · "))
                     .font(.subheadline)
-                VStack(alignment: .leading, spacing: 6) {
-                    ForEach(item.reasons, id: \.self) { reason in
-                        Label(reason, systemImage: "checkmark.circle.fill")
-                            .font(.subheadline.weight(.medium))
-                    }
-                }
+                Text(item.summary)
+                    .font(.subheadline.weight(.medium))
+                    .fixedSize(horizontal: false, vertical: true)
                 Button("See everything", action: onDetails)
                     .buttonStyle(LinkButtonStyle())
                     .accessibilityIdentifier("deck-card-details")
@@ -62,14 +60,14 @@ struct DeckDetailSheet: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 18) {
                     VStack(alignment: .leading, spacing: 8) {
-                        Text("Why it fits · \(item.score)%")
+                        Text(item.band.fitLabel ?? "Why it might fit")
                             .font(.headline)
-                        ForEach(item.reasons, id: \.self) { reason in
-                            Label(reason, systemImage: "checkmark.circle.fill")
-                                .font(.subheadline)
-                        }
+                        Text(item.summary)
+                            .font(.subheadline)
+                            .fixedSize(horizontal: false, vertical: true)
                     }
                     .foregroundStyle(Brand.ink)
+                    .frame(maxWidth: .infinity, alignment: .leading)
                     ListingCardView(listing: item.listing)
                 }
                 .padding(20)

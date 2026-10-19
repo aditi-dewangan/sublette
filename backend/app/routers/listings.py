@@ -14,6 +14,7 @@ from app.schemas.listings import ListingFields, ListingOut, ListingPage, StatusC
 from app.services.listings import (
     apply_fields,
     listing_out,
+    matched_listing_ids,
     new_listing,
     not_found,
     require_publishable,
@@ -90,12 +91,16 @@ def my_listings(
 def read_listing(
     listing_id: uuid.UUID, user: CurrentUser, session: DbSession, storage: Storage
 ) -> ListingOut:
-    """Any verified student may read an active listing; only the owner sees
-    the exact address, and only the owner sees drafts, paused and filled ones."""
+    """Any verified student may read an active listing. The exact address goes
+    only to the owner and a renter matched with it; drafts, paused and filled
+    listings only to them too."""
     listing = session.get(Listing, listing_id)
-    if listing is None or (listing.owner_id != user.id and listing.status != "active"):
+    if listing is None:
         raise not_found()
-    return listing_out(listing, user, storage)
+    matched = listing.id in matched_listing_ids(session, user)
+    if listing.owner_id != user.id and listing.status != "active" and not matched:
+        raise not_found()
+    return listing_out(listing, user, storage, matched=matched)
 
 
 @router.patch("/listings/{listing_id}", response_model=ListingOut)

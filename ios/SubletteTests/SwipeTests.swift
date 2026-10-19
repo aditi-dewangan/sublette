@@ -357,7 +357,9 @@ final class SwipeContractTests: XCTestCase {
     func testMatchesSavedUndoAndInterestedRenters() throws {
         let matches = try decoder.decode(MatchPage.self, from: Fixture.sample("matches"))
         XCTAssertEqual(matches.items.first?.role, .renter)
-        XCTAssertNil(matches.items.first?.listing.address)
+        // Since phase 6, a matched renter sees the exact address.
+        XCTAssertEqual(matches.items.first?.listing.isMatched, true)
+        XCTAssertNotNil(matches.items.first?.listing.address)
 
         let saved = try decoder.decode(SavedPage.self, from: Fixture.sample("saved"))
         XCTAssertEqual(saved.items.count, 1)

@@ -10,9 +10,14 @@ class DeckItem(BaseModel):
 
     # As any renter sees it: public point only, never the exact address.
     listing: ListingOut
-    # 0 to 100.
+    # 0 to 100. For ordering and pin colors; the app does not show the number.
     score: int
-    # Three or four short sentences, such as "Fits your dates".
+    # strong (75+), partial (50 to 74) or other. The app shows "Great fit" or "Good fit".
+    band: Literal["strong", "partial", "other"]
+    # Why it fits, in one or two plain sentences, such as
+    # "Fits your dates, $150 under budget and 0.4 mi from your pin."
+    summary: str
+    # The same, as three or four short pieces, such as "Fits your dates".
     reasons: list[str]
     # From the renter's pin to the listing's public point.
     distance_m: int

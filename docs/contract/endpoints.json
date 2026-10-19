@@ -31,6 +31,9 @@
     { "method": "POST", "path": "/v1/saved/{listing_id}", "auth": true, "phase": 5 },
     { "method": "DELETE", "path": "/v1/saved/{listing_id}", "auth": true, "phase": 5 },
 
+    { "method": "GET", "path": "/v1/map/listings", "auth": true, "phase": 6 },
+    { "method": "GET", "path": "/v1/map/listings/{listing_id}", "auth": true, "phase": 6 },
+
     { "method": "PUT", "path": "/files/{key}", "auth": false, "phase": 1, "own_storage_only": true },
     { "method": "GET", "path": "/files/{key}", "auth": false, "phase": 1, "own_storage_only": true }
   ]

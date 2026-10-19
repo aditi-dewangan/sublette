@@ -102,7 +102,7 @@ Choices made while building, with the reason. Add to the bottom; do not rewrite 
 | --- | --- |
 | `is_eligible`, `score` and `reasons` take plain values (a `Renter` and a listing) and touch no database or clock. `failures` lists every rule broken; `is_eligible` is "no failures". | Every rule is tested directly, in both directions, and the diagnostics count the same failures the deck applies. |
 | A stay is the overlap of the listing's dates with the renter's, each end allowed to move by the renter's flexibility, never more than the renter wants. No overlap at all is a failure, even when the listing has no minimum stay. | The plan's "stay shorter than min_stay_days" left a zero-day stay eligible; a place for the wrong months is not a match. |
-| Rent over budget is not a filter: it costs points, reaching zero rent points at 25% over. | The plan scores "rent against budget" and does not list budget among the filters. Renters can make it a filter later if they ask. |
+| (Replaced 2026-10-13: the budget is now a hard limit.) Rent over budget is not a filter: it costs points, reaching zero rent points at 25% over. | The plan scores "rent against budget" and does not list budget among the filters. Renters can make it a filter later if they ask. |
 | Distance is measured from the pin to the listing's public point, in the radius filter, the score and the `distance_m` shown. | A renter moving their own pin must never learn the exact address. |
 | The deck loads every eligible listing in the circle, scores them in Python and returns the top 20 (up to 50). The database narrows by status, owner, end date and circle (`ST_DWithin` on a partial GiST index of the public point); every fit rule runs in one place. | About 30 ms for a seeded renter, well under the 300 ms target. One copy of each rule. |
 | Ties go to the newer listing (`published_at`), then the id. | The plan says newer listings break ties; the id makes the order stable. |
@@ -125,6 +125,33 @@ Choices made while building, with the reason. Add to the bottom; do not rewrite 
 | The app queues swipes in a small outbox kept on the phone: sent in order, kept while offline or when the server answers 5xx, 429 or 401, dropped with the server's message on any other refusal. Each queued swipe belongs to one account. | Offline then online must never create a duplicate, and a different account on the same phone must never send someone else's swipes. |
 | Lister mode gains a Renters tab (pick a listing, swipe on its interested renters). The lister sees name, photo, year, program, bio, school, wanted dates and how the renter meets each filter; never the renter's pin or budget. | "Lister deck: pick a listing, then swipe on its interested renters." |
 | Matched listings still show only the public point. | The exact address for matches arrives with the map in phase 6 and chat in phase 7. |
+
+### Phase 6: map and pins (added 2026-10-13)
+
+| Decision | Reason |
+| --- | --- |
+| New pins on the map are exactly the deck's listings: eligible, inside the renter's circle, not swiped or saved, filtered by the same code. Liked, saved and matched listings are added wherever they are in the box, while live or paused. Passed listings are never pins. | "The map and the deck show the same set of listings for the same preferences." The circle is drawn on the map and can be moved from it. |
+| `GET /v1/map/listings?bbox=min_lng,min_lat,max_lng,max_lat` sends small pins (id, point, score, band, state, rent), at most 500, matched first then best fit, with `truncated` when more matched. Tapping a pin loads its card from `GET /v1/map/listings/{id}`, the same `DeckItem` as the deck. | Hundreds of full listings would be slow to send and decode. |
+| Bands: strong 75 and up, partial 50 to 74, other below. | The plan names the bands, not the cut-offs. |
+| A renter who matched with a listing sees its exact address and point everywhere: the map pin, its card, `GET /v1/listings/{id}` (even once paused or filled) and `GET /v1/matches`. `is_matched` says so. Everyone else, including a renter who liked or saved it, never does; a test calls every GET endpoint to check. | "Matched listings return their exact location." This replaces phase 5's "public point only for matches". |
+| Pins cluster on the phone: the visible area is cut into a 9 by 9 grid and pins sharing a cell become a number; below about 400 meters across, every pin stands alone. Matched pins never cluster. | SwiftUI's map has no clustering; a grid keeps the map to a few dozen marks at any zoom. |
+| Shapes: a dot for new, a heart for liked, a bookmark for saved, a star for matched. Colors: yellow strong, orange partial, white with a grey outline for the rest, magenta for matched. | The plan's colors; shapes so color is never the only signal. |
+| "Move pin or change radius" on the map moves the search to the middle of the visible map, saves it, and reloads the map and the deck. | "The pin and radius can be changed from the map." |
+| The bbox does not cross the antimeridian. | No campus is near it. |
+
+### Feedback after trying phase 6 (2026-10-13)
+
+| Decision | Reason |
+| --- | --- |
+| Cards show no percentage. The server sends `band` and a one- or two-sentence `summary` ("Fits your dates, $150 under budget and 0.4 mi from your pin. Furnished and in-unit laundry."); the app shows "Great fit" (strong), "Good fit" (partial) or no label, and the sentence. `score` stays in the API for ordering and pin colors. | Aditi: "we don't need a percentage for how much it fits", and the reasons should read as one synthesized line. |
+| The maximum rent is a hard limit: a listing over it is never in the deck or on the map and can't be liked, like a failed must-have (`max_rent` in diagnostics: "2 listings nearby cost more than your $1,200 budget."). Rent points now reward room under the budget: 15 of 25 at the budget, all 25 at 20% under or more. | Aditi, 2026-10-13: "yes it should be hard". Replaces phase 4's "rent over budget is not a filter". |
+| Must-haves are never questioned. The empty deck no longer offers "Make it nice-to-have"; it says nothing nearby has every must-have yet, names what rules most places out ("3 listings nearby don't have parking."), and offers "Notify me" and "Search a bigger area". | Aditi: the app should abide by must-haves and not ask renters to change them. |
+
+### Codes in the terminal (added 2026-10-15)
+
+| Decision | Reason |
+| --- | --- |
+| A local server prints every sign-in code in its terminal as well as emailing it (`SUBLETTE_EMAIL_ECHO_CODES`, on by default only when `SUBLETTE_ENV=local`). While on, a failed email is logged and the request still succeeds, so the printed code works. Production refuses the setting. | Aditi: codes weren't arriving; she wants the email sent and the code copied to the terminal. Elsewhere a failed email still answers 503 and keeps nothing. |
 
 ## Known gaps after phase 2
 

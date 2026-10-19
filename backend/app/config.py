@@ -65,6 +65,11 @@ class Settings(BaseSettings):
     # Development and staging only: send every code here instead of to the
     # student, e.g. "subletteofficial+dev@gmail.com". Refused in production.
     email_redirect_to: str = ""
+    # Also print every sign-in code in the server's terminal, as well as
+    # emailing it. Unset means on for a local server and off everywhere else.
+    # While on, a failed email still lets the student sign in with the printed
+    # code. Refused in production.
+    email_echo_codes: bool | None = None
     brevo_api_key: str = ""
     brevo_api_url: str = "https://api.brevo.com/v3/smtp/email"
     # Seconds to wait for an HTTPS email provider.
@@ -117,6 +122,13 @@ class Settings(BaseSettings):
     def _no_trailing_slash(cls, value: str) -> str:
         return value.rstrip("/")
 
+    @property
+    def echo_codes(self) -> bool:
+        """True when sign-in codes are also printed in the terminal."""
+        if self.email_echo_codes is None:
+            return self.env == "local"
+        return self.email_echo_codes and self.env != "production"
+
     @model_validator(mode="after")
     def _refuse_unsafe_settings(self) -> Self:
         """Stop a hosted server from starting on developer defaults."""
@@ -128,6 +140,11 @@ class Settings(BaseSettings):
             problems.append("SUBLETTE_EMAIL_BACKEND=console would log sign-in codes; use smtp")
         if self.env == "production" and self.storage_backend == "local":
             problems.append("SUBLETTE_STORAGE_BACKEND=local loses photos on redeploy; use s3")
+        if self.env == "production" and self.email_echo_codes:
+            problems.append(
+                "SUBLETTE_EMAIL_ECHO_CODES would print students' sign-in codes in the "
+                "server log; it is for development only"
+            )
         if self.env == "production" and self.email_redirect_to:
             problems.append(
                 "SUBLETTE_EMAIL_REDIRECT_TO would send every student's code to one inbox; "

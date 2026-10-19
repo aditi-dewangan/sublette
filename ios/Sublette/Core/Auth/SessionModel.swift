@@ -84,8 +84,12 @@ final class SessionModel {
         setSignedIn(user)
     }
 
+    /// Runs before the tokens are forgotten, while requests can still be made.
+    @ObservationIgnored var willSignOut: (() async -> Void)?
+
     /// Forgets this phone's tokens. The account itself is untouched.
     func signOut() async {
+        await willSignOut?()
         await tokens.clear()
         preferences.cachedUser = nil
         state = .signedOut

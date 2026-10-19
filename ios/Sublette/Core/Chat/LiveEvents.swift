@@ -1,0 +1,134 @@
+import Foundation
+import Observation
+
+/// The live connection: a WebSocket to `/v1/ws` while the app is open and
+/// signed in. New messages, matches and checklist changes arrive here within
+/// a second; when the app is closed they come as push notifications instead.
+///
+/// The connection looks after itself: it reconnects after a drop (waiting a
+/// little longer each time, up to 30 seconds), refreshes the token when the
+/// server closes with 4401, and gives up only when the account is suspended
+/// (4403). Each time it connects it reports `.ready`, so screens can reload
+/// anything they missed.
+@MainActor
+@Observable
+final class LiveEvents {
+    private(set) var isConnected = false
+
+    /// Called on the main actor for every event.
+    @ObservationIgnored var onEvent: ((LiveEvent) -> Void)?
+
+    @ObservationIgnored private let url: URL?
+    @ObservationIgnored private let tokens: AccessTokenProviding
+    @ObservationIgnored private let session: URLSession
+    @ObservationIgnored private var loop: Task<Void, Never>?
+    @ObservationIgnored private var socket: URLSessionWebSocketTask?
+
+    private enum Ending {
+        case tokenRejected
+        case suspended
+        case dropped(afterReady: Bool)
+    }
+
+    nonisolated static let maxWait: TimeInterval = 30
+
+    init(client: APIClient, tokens: AccessTokenProviding, session: URLSession = URLSession(configuration: .default)) {
+        self.url = client.webSocketURL(for: .liveEvents)
+        self.tokens = tokens
+        self.session = session
+    }
+
+    /// Connects, unless already connected or connecting.
+    func start() {
+        guard loop == nil, url != nil else {
+            return
+        }
+        loop = Task { [weak self] in
+            await self?.run()
+        }
+    }
+
+    /// Disconnects, as when the app goes to the background or signs out.
+    func stop() {
+        loop?.cancel()
+        loop = nil
+        socket?.cancel(with: .goingAway, reason: nil)
+        socket = nil
+        isConnected = false
+    }
+
+    /// How long to wait before the next try, after `failures` drops in a row.
+    nonisolated static func wait(afterFailures failures: Int) -> TimeInterval {
+        min(maxWait, pow(2, Double(max(0, failures - 1))))
+    }
+
+    private func run() async {
+        var failures = 0
+        while !Task.isCancelled {
+            guard let token = await tokens.accessToken() else {
+                break // signed out
+            }
+            switch await connectOnce(token: token) {
+            case .suspended:
+                loop = nil
+                return
+            case .tokenRejected:
+                failures += 1
+                if await tokens.refreshedAccessToken(afterRejecting: token) == nil, failures > 3 {
+                    loop = nil
+                    return
+                }
+            case .dropped(let afterReady):
+                failures = afterReady ? 1 : failures + 1
+            }
+            guard !Task.isCancelled else {
+                break
+            }
+            try? await Task.sleep(nanoseconds: UInt64(Self.wait(afterFailures: failures) * 1_000_000_000))
+        }
+        loop = nil
+    }
+
+    private func connectOnce(token: String) async -> Ending {
+        guard let url else {
+            return .suspended
+        }
+        var request = URLRequest(url: url)
+        request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        let socket = session.webSocketTask(with: request)
+        self.socket = socket
+        socket.resume()
+        defer {
+            isConnected = false
+        }
+
+        let decoder = APIClient.makeDecoder()
+        var ready = false
+        do {
+            while !Task.isCancelled {
+                let data: Data
+                switch try await socket.receive() {
+                case .string(let text): data = Data(text.utf8)
+                case .data(let bytes): data = bytes
+                @unknown default: continue
+                }
+                // An event this version can't read is skipped, not fatal.
+                guard let event = try? decoder.decode(LiveEvent.self, from: data) else {
+                    continue
+                }
+                if event == .ready {
+                    ready = true
+                    isConnected = true
+                }
+                onEvent?(event)
+            }
+        } catch {
+            // Closed by the server, or the network went away.
+        }
+        switch socket.closeCode.rawValue {
+        case 4401: return .tokenRejected
+        case 4403: return .suspended
+        default: return .dropped(afterReady: ready)
+        }
+    }
+}

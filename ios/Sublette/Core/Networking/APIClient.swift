@@ -80,6 +80,27 @@ final class APIClient: @unchecked Sendable {
         _ = try await perform(endpoint, body: nil)
     }
 
+    /// Sends a JSON body and ignores the answer's body.
+    func sendNoContent<Body: Encodable>(_ endpoint: Endpoint, body: Body) async throws {
+        let encoded: Data
+        do {
+            encoded = try encoder.encode(body)
+        } catch {
+            throw APIError.invalidRequest
+        }
+        _ = try await perform(endpoint, body: encoded)
+    }
+
+    /// The address of a WebSocket endpoint: ws:// for http://, wss:// for https://.
+    func webSocketURL(for endpoint: Endpoint) -> URL? {
+        guard let url = url(for: endpoint),
+              var components = URLComponents(url: url, resolvingAgainstBaseURL: false) else {
+            return nil
+        }
+        components.scheme = components.scheme == "https" ? "wss" : "ws"
+        return components.url
+    }
+
     func url(for endpoint: Endpoint) -> URL? {
         var base = baseURL.absoluteString
         while base.hasSuffix("/") {

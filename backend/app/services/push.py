@@ -12,6 +12,9 @@ saved and shows the next time the app opens.
 
 import json
 import logging
+import shutil
+import subprocess
+import tempfile
 import time
 import uuid
 from collections.abc import Callable
@@ -61,11 +64,79 @@ class PushSender(Protocol):
         """Send one notification. Raises PushUnavailable."""
 
 
+def apns_payload(note: PushNote) -> dict:
+    return {
+        "aps": {
+            "alert": {"title": note.title, "body": note.body},
+            "sound": "default",
+            # Groups a chat's notifications together on the lock screen.
+            "thread-id": note.data.get("match_id", note.data.get("kind", "sublette")),
+        },
+        **note.data,
+    }
+
+
+class SimulatorPushSender:
+    """Delivers into an iPhone simulator on this Mac with `xcrun simctl push`.
+
+    A Debug build in the simulator registers its simulator id (environment
+    "simulator") instead of an Apple token, so a local server can show real
+    notifications, in the background and on the lock screen, with no Apple
+    account. Local servers only.
+    """
+
+    def __init__(self, topic: str, timeout_s: int = 10) -> None:
+        self._topic = topic
+        self._timeout_s = timeout_s
+
+    @staticmethod
+    def simulator_id(token: str) -> str:
+        """The simulator's UDID, from the 32 hex digits the app sent."""
+        raw = uuid.UUID(hex=token)
+        return str(raw).upper()
+
+    def send(self, token: str, environment: str, note: PushNote) -> Outcome:
+        if shutil.which("xcrun") is None:
+            raise PushUnavailable("xcrun not found: simulator pushes need a Mac with Xcode")
+        try:
+            device = self.simulator_id(token)
+        except ValueError:
+            return "unregistered"
+        with tempfile.NamedTemporaryFile("w", suffix=".apns", delete=True) as payload:
+            json.dump(apns_payload(note), payload)
+            payload.flush()
+            try:
+                result = subprocess.run(
+                    ["xcrun", "simctl", "push", device, self._topic, payload.name],
+                    capture_output=True,
+                    text=True,
+                    timeout=self._timeout_s,
+                )
+            except (OSError, subprocess.TimeoutExpired) as error:
+                logger.warning("simctl push failed: %s", type(error).__name__)
+                raise PushUnavailable(type(error).__name__) from error
+        if result.returncode == 0:
+            return "sent"
+        detail = (result.stderr or result.stdout or "").strip()[:300]
+        if "Invalid device" in detail or "No devices are booted" in detail:
+            # That simulator was deleted or isn't running.
+            logger.info("Simulator %s isn't running; push not shown", device)
+            raise PushUnavailable("simulator not running")
+        logger.warning("simctl push refused (%s): %s", result.returncode, detail)
+        raise PushUnavailable(f"simctl {result.returncode}")
+
+
 class LogPushSender:
-    """Development default: print the notification instead of sending it."""
+    """Development default: print the notification in the terminal, and show it
+    in the simulator when the phone is one."""
+
+    def __init__(self, simulator: SimulatorPushSender | None = None) -> None:
+        self._simulator = simulator
 
     def send(self, token: str, environment: str, note: PushNote) -> Outcome:
         logger.info("Push to phone %s…: %s: %s %s", token[:8], note.title, note.body, note.data)
+        if environment == "simulator" and self._simulator is not None:
+            return self._simulator.send(token, environment, note)
         return "sent"
 
 
@@ -109,15 +180,9 @@ class ApnsPushSender:
         return f"bearer {self._provider_token[0]}"
 
     def send(self, token: str, environment: str, note: PushNote) -> Outcome:
-        payload = {
-            "aps": {
-                "alert": {"title": note.title, "body": note.body},
-                "sound": "default",
-                # Groups a chat's notifications together on the lock screen.
-                "thread-id": note.data.get("match_id", note.data.get("kind", "sublette")),
-            },
-            **note.data,
-        }
+        if environment not in APNS_HOSTS:
+            return "sent"  # a simulator: only a local server can reach it
+        payload = apns_payload(note)
         try:
             reply = self._client.post(
                 f"{APNS_HOSTS[environment]}/3/device/{token}",
@@ -156,7 +221,8 @@ def make_push_sender(settings: Settings) -> PushSender:
         return ApnsPushSender(settings)
     if settings.push_backend == "none":
         return NoPushSender()
-    return LogPushSender()
+    local = settings.env in ("local", "test")
+    return LogPushSender(SimulatorPushSender(settings.apns_topic) if local else None)
 
 
 class PushDispatcher:

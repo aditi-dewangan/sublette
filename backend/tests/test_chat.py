@@ -623,6 +623,19 @@ def test_signing_out_stops_pushes_to_that_phone_only(
     assert db.scalars(select(DeviceToken.token)).all() == ["bb" * 32]
 
 
+def test_a_simulator_can_register_with_a_local_server_only(
+    app: FastAPI, client: TestClient, renter: dict
+) -> None:
+    body = {"token": "e4d956d3b9614689854f5b74239d2f8d", "environment": "simulator"}
+
+    assert client.post("/v1/devices", headers=bearer(renter), json=body).status_code == 204
+
+    app.state.settings = app.state.settings.model_copy(update={"env": "staging"})
+    refused = client.post("/v1/devices", headers=bearer(renter), json=body)
+    assert refused.status_code == 422
+    assert refused.json()["code"] == "simulator_not_supported"
+
+
 def test_a_device_token_must_look_like_one(client: TestClient, renter: dict) -> None:
     response = client.post(
         "/v1/devices", headers=bearer(renter), json={"token": "<script>", "environment": "sandbox"}

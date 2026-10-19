@@ -94,4 +94,43 @@ extension Endpoint {
     static func mapListing(_ id: String) -> Endpoint {
         Endpoint(method: .get, path: "/v1/map/listings/\(id)")
     }
+
+    // Chat (phase 7).
+    static func match(_ id: String) -> Endpoint {
+        Endpoint(method: .get, path: "/v1/matches/\(id)")
+    }
+
+    static func messages(matchID: String, before: String?) -> Endpoint {
+        Endpoint(
+            method: .get,
+            path: "/v1/matches/\(matchID)/messages",
+            query: before.map { [URLQueryItem(name: "before", value: $0)] } ?? []
+        )
+    }
+
+    static func sendMessage(matchID: String) -> Endpoint {
+        Endpoint(method: .post, path: "/v1/matches/\(matchID)/messages")
+    }
+
+    static func markRead(matchID: String) -> Endpoint {
+        Endpoint(method: .post, path: "/v1/matches/\(matchID)/read")
+    }
+
+    static func checklist(matchID: String) -> Endpoint {
+        Endpoint(method: .patch, path: "/v1/matches/\(matchID)/checklist")
+    }
+
+    static func filled(matchID: String) -> Endpoint {
+        Endpoint(method: .post, path: "/v1/matches/\(matchID)/filled")
+    }
+
+    // Push notifications.
+    static let registerDevice = Endpoint(method: .post, path: "/v1/devices")
+
+    static func unregisterDevice(token: String) -> Endpoint {
+        Endpoint(method: .delete, path: "/v1/devices/\(token)")
+    }
+
+    /// The live connection: a WebSocket, opened with the same token as any request.
+    static let liveEvents = Endpoint(method: .get, path: "/v1/ws")
 }

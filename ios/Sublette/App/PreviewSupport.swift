@@ -1,4 +1,5 @@
 import SwiftUI
+import UserNotifications
 
 // Everything SwiftUI previews need to draw a screen without a server.
 //
@@ -247,7 +248,10 @@ extension PreviewData {
         listing: publicListing,
         renter: Person(id: "user-1", firstName: "Aditi", photoUrl: nil, schoolName: "University of Washington", verified: true),
         lister: Person(id: "user-3", firstName: "Lee", photoUrl: nil, schoolName: "University of Washington", verified: true),
-        createdAt: Date(timeIntervalSince1970: 1_799_000_000)
+        createdAt: Date(timeIntervalSince1970: 1_799_000_000),
+        checklist: Checklist(tourDone: true, landlordConsentConfirmed: false, datesAgreed: true, subleaseSigned: false),
+        unreadCount: 1,
+        lastMessage: PreviewData.messages.first
     )
 }
 
@@ -292,6 +296,53 @@ struct PreviewDeckAPI: DeckAPI {
     func matches() async throws -> MatchPage {
         MatchPage(items: [PreviewData.match])
     }
+}
+
+extension PreviewData {
+    static let messages: [ChatMessage] = [
+        ChatMessage(
+            id: "m1", messageId: nil, matchId: "match-1", senderId: "user-1", mine: false,
+            body: "Hi! Is the room still free for my dates?", createdAt: Date(timeIntervalSince1970: 1_799_000_100)
+        ),
+        ChatMessage(
+            id: "m2", messageId: nil, matchId: "match-1", senderId: "user-3", mine: true,
+            body: "Yes! Want to see it Thursday at 5?", createdAt: Date(timeIntervalSince1970: 1_799_000_200)
+        ),
+    ]
+}
+
+/// A chat from memory.
+struct PreviewChatAPI: ChatAPI {
+    func match(id: String) async throws -> Match { PreviewData.match }
+
+    func messages(matchID: String, before: String?) async throws -> MessagePage {
+        MessagePage(items: PreviewData.messages, hasMore: false)
+    }
+
+    func send(matchID: String, _ request: MessageRequest) async throws -> ChatMessage {
+        ChatMessage(
+            id: request.messageId, messageId: request.messageId, matchId: matchID, senderId: "user-3",
+            mine: true, body: request.body, createdAt: Date()
+        )
+    }
+
+    func markRead(matchID: String) async throws {}
+
+    func updateChecklist(matchID: String, _ change: ChecklistChange) async throws -> Match {
+        PreviewData.match
+    }
+
+    func confirmFilled(matchID: String) async throws -> Match { PreviewData.match }
+
+    func registerDevice(_ request: DeviceRequest) async throws {}
+
+    func unregisterDevice(token: String) async throws {}
+}
+
+struct PreviewNotificationPermissions: NotificationPermissions {
+    func status() async -> UNAuthorizationStatus { .denied }
+    func request() async -> Bool { false }
+    func registerForRemoteNotifications() {}
 }
 
 /// A few pins around the University of Washington, one of each kind.
@@ -361,6 +412,9 @@ extension AppContainer {
             renterAPI: PreviewRenterAPI(),
             deckAPI: PreviewDeckAPI(),
             mapAPI: PreviewMapAPI(),
+            chatAPI: PreviewChatAPI(),
+            notificationPermissions: PreviewNotificationPermissions(),
+            liveEvents: nil,
             campusLocator: PreviewCampusLocator(),
             addressLocator: PreviewAddressLocator(),
             uploader: PreviewUploader(),

@@ -4,14 +4,16 @@ import Foundation
 /// tokens are in the Keychain.
 final class Preferences: @unchecked Sendable {
     // UserDefaults is safe to use from any thread.
-    private let defaults: UserDefaults
+    fileprivate let defaults: UserDefaults
 
-    private enum Key {
+    fileprivate enum Key {
         static let lastMode = "lastMode"
         static let hasLaunchedBefore = "hasLaunchedBefore"
         static let cachedUser = "cachedUser"
         static let usersWhoChoseAMode = "usersWhoChoseAMode"
         static let pendingSwipes = "pendingSwipes"
+        static let safetyCardSeen = "safetyCardSeen"
+        static let deviceToken = "deviceToken"
     }
 
     init(defaults: UserDefaults = .standard) {
@@ -76,6 +78,20 @@ final class Preferences: @unchecked Sendable {
                 defaults.set(data, forKey: Key.pendingSwipes)
             }
         }
+    }
+}
+
+extension Preferences {
+    /// "account:match" for each chat where the safety card was read.
+    var safetyCardSeen: Set<String> {
+        get { Set(defaults.stringArray(forKey: Key.safetyCardSeen) ?? []) }
+        set { defaults.set(Array(newValue).sorted(), forKey: Key.safetyCardSeen) }
+    }
+
+    /// The push token last sent to the server, so signing out can withdraw it.
+    var deviceToken: String? {
+        get { defaults.string(forKey: Key.deviceToken) }
+        set { defaults.set(newValue, forKey: Key.deviceToken) }
     }
 }
 

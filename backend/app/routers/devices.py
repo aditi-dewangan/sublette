@@ -4,7 +4,8 @@ from fastapi import APIRouter, Response
 from sqlalchemy import delete
 from sqlalchemy.dialects.postgresql import insert
 
-from app.deps import CurrentUser, DbSession, Now
+from app.deps import AppSettings, CurrentUser, DbSession, Now
+from app.errors import ApiError
 from app.models import DeviceToken
 from app.schemas.chat import DeviceIn
 
@@ -12,10 +13,16 @@ router = APIRouter(tags=["devices"])
 
 
 @router.post("/devices", status_code=204, response_class=Response)
-def register_device(body: DeviceIn, user: CurrentUser, session: DbSession, now: Now) -> Response:
+def register_device(
+    body: DeviceIn, user: CurrentUser, session: DbSession, settings: AppSettings, now: Now
+) -> Response:
     """This phone may receive pushes for the signed-in account. Sending the
     same token again is fine; a token another account had moves to this one
     (the same phone, signed in as someone else)."""
+    if body.environment == "simulator" and settings.env not in ("local", "test"):
+        raise ApiError(
+            422, "simulator_not_supported", "Simulators get pushes from a local server only."
+        )
     token = body.token.lower()
     session.execute(
         insert(DeviceToken)

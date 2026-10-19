@@ -71,5 +71,6 @@ class DeviceIn(BaseModel):
 
     # The token Apple gave the phone, as hex.
     token: str = Field(min_length=16, max_length=200, pattern=r"^[0-9a-fA-F]+$")
-    # Debug builds talk to Apple's sandbox push server.
-    environment: Literal["sandbox", "production"]
+    # Debug builds talk to Apple's sandbox push server. "simulator" is a
+    # simulator's own id, for a local server to push into with simctl.
+    environment: Literal["sandbox", "production", "simulator"]

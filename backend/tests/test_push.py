@@ -1,6 +1,7 @@
 """The Apple Push Notification service sender, against a stand-in for Apple."""
 
 import json
+from pathlib import Path
 
 import httpx2
 import jwt
@@ -194,3 +195,90 @@ def test_the_default_prints_pushes_in_the_terminal(caplog) -> None:
 
 def test_push_can_be_turned_off() -> None:
     assert isinstance(make_push_sender(Settings(env="test", push_backend="none")), NoPushSender)
+
+
+# --- Simulator pushes (a local server on a Mac) -----------------------------------------
+
+SIMULATOR = "e4d956d3b9614689854f5b74239d2f8d"
+
+
+class FakeSimctl:
+    def __init__(self, returncode: int = 0, stderr: str = "", error: Exception | None = None):
+        self.returncode = returncode
+        self.stderr = stderr
+        self.error = error
+        self.calls: list[tuple[list[str], dict]] = []
+
+    def __call__(self, args, **kwargs):
+        import subprocess
+
+        payload = json.loads(Path(args[-1]).read_text())
+        self.calls.append((args, payload))
+        if self.error is not None:
+            raise self.error
+        return subprocess.CompletedProcess(args, self.returncode, stdout="", stderr=self.stderr)
+
+
+@pytest.fixture
+def simctl(monkeypatch) -> FakeSimctl:
+    fake = FakeSimctl()
+    monkeypatch.setattr("app.services.push.shutil.which", lambda name: "/usr/bin/xcrun")
+    monkeypatch.setattr("app.services.push.subprocess.run", fake)
+    return fake
+
+
+def local_sender():
+    return make_push_sender(Settings(env="local"))
+
+
+def test_a_simulator_gets_the_push_with_simctl(simctl: FakeSimctl) -> None:
+    assert local_sender().send(SIMULATOR, "simulator", NOTE) == "sent"
+
+    [(args, payload)] = simctl.calls
+    assert args[:4] == ["xcrun", "simctl", "push", "E4D956D3-B961-4689-854F-5B74239D2F8D"]
+    assert args[4] == "app.sublette.Sublette"
+    assert payload["aps"]["alert"]["body"] == "Is parking included?"
+    assert payload["match_id"] == "m1"
+
+
+def test_real_phones_are_only_logged_locally(simctl: FakeSimctl) -> None:
+    assert local_sender().send(TOKEN, "sandbox", NOTE) == "sent"
+
+    assert simctl.calls == []
+
+
+def test_no_xcode_is_a_clear_failure(monkeypatch) -> None:
+    monkeypatch.setattr("app.services.push.shutil.which", lambda name: None)
+
+    with pytest.raises(PushUnavailable, match="xcrun"):
+        local_sender().send(SIMULATOR, "simulator", NOTE)
+
+
+def test_a_slow_simctl_times_out(simctl: FakeSimctl) -> None:
+    import subprocess
+
+    simctl.error = subprocess.TimeoutExpired("xcrun", 10)
+
+    with pytest.raises(PushUnavailable):
+        local_sender().send(SIMULATOR, "simulator", NOTE)
+
+
+@pytest.mark.parametrize(
+    "stderr", ["Invalid device: E4D956D3", "garbage \x00 output", "No devices are booted."]
+)
+def test_simctl_refusing_is_a_clear_failure(simctl: FakeSimctl, stderr: str) -> None:
+    simctl.returncode = 148
+    simctl.stderr = stderr
+
+    with pytest.raises(PushUnavailable):
+        local_sender().send(SIMULATOR, "simulator", NOTE)
+
+
+def test_a_hosted_server_never_runs_simctl(simctl: FakeSimctl, key_pair) -> None:
+    staging = Settings(env="test").model_copy(update={"env": "staging"})
+    hosted = make_push_sender(staging)
+    apns = sender_for(key_pair[0], Apple())
+
+    assert hosted.send(SIMULATOR, "simulator", NOTE) == "sent"
+    assert apns.send(SIMULATOR, "simulator", NOTE) == "sent"
+    assert simctl.calls == []

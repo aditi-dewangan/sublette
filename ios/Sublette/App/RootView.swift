@@ -20,9 +20,28 @@ struct RootView: View {
         }
         .background(Brand.cream)
         .sheet(item: $outbox.latestMatch) { match in
-            MatchSheet(match: match) {
-                container.matchesModel.show(match)
-                container.outbox.latestMatch = nil
+            MatchSheet(
+                match: match,
+                onChat: {
+                    container.matchesModel.show(match)
+                    container.outbox.latestMatch = nil
+                    appState.openChat(matchID: match.id, role: match.role)
+                },
+                onClose: {
+                    container.matchesModel.show(match)
+                    container.outbox.latestMatch = nil
+                }
+            )
+            .task { await container.notifications.askAtFirstMatch() }
+        }
+        .onChange(of: container.notifications.target) { _, target in
+            guard let target else {
+                return
+            }
+            container.notifications.target = nil
+            switch target {
+            case .chat(let matchID, let role): appState.openChat(matchID: matchID, role: role)
+            case .deck: appState.openDeck()
             }
         }
     }
@@ -65,17 +84,26 @@ enum ModeTab: String, CaseIterable {
 @MainActor
 private struct ModeTabs: View {
     let mode: AppMode
+    @Environment(AppState.self) private var appState
+    @Environment(AppContainer.self) private var container
 
     var body: some View {
-        TabView {
+        @Bindable var appState = appState
+        TabView(selection: $appState.tab) {
             ForEach(ModeTab.tabs(for: mode), id: \.self) { tab in
                 ModeTabContent(tab: tab)
                     .tabItem { Label(tab.title, systemImage: tab.systemImage) }
+                    .tag(tab)
+                    .badge(tab == .matches ? unread : 0)
                     .toolbarBackground(mode.accent.opacity(0.22), for: .tabBar)
                     .toolbarBackground(.visible, for: .tabBar)
             }
         }
         .tint(Brand.ink)
+    }
+
+    private var unread: Int {
+        container.matchesModel.unreadCount(as: mode == .renter ? .renter : .lister)
     }
 }
 

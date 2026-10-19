@@ -1,8 +1,10 @@
 # Working on Sublette
 
-Read `README.md` first. The product spec and the eleven-phase build plan live in
-the "Sublette: Product and Business Spec" doc; build one phase at a time and
-stop for sign-off when its "Done when" list is true.
+Start with `docs/CONTEXT.md`: where the build stands, how Aditi wants the work
+done, and what has been decided. Then `README.md`. The phases still to build
+are in `docs/build-plan.md` (copied from the "Sublette: Product and Business
+Spec" doc); build one phase at a time and stop for sign-off when its "Done
+when" list is true.
 
 ## Rules for every change
 

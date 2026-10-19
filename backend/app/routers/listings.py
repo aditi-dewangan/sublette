@@ -7,7 +7,7 @@ from datetime import datetime
 from fastapi import APIRouter, Query
 from sqlalchemy import and_, or_, select
 
-from app.deps import CurrentUser, DbSession, Now, Storage
+from app.deps import CurrentUser, DbSession, Now, Push, Storage
 from app.errors import ApiError
 from app.models import Listing
 from app.schemas.listings import ListingFields, ListingOut, ListingPage, StatusChange
@@ -19,6 +19,7 @@ from app.services.listings import (
     not_found,
     require_publishable,
 )
+from app.services.notify import alert_new_listing
 
 router = APIRouter(tags=["listings"])
 
@@ -132,11 +133,14 @@ def change_status(
     user: CurrentUser,
     session: DbSession,
     storage: Storage,
+    push: Push,
     now: Now,
 ) -> ListingOut:
-    """Publish (active), pause, or mark filled."""
+    """Publish (active), pause, or mark filled. The first publish tells
+    renters who asked to hear about new places that fit them."""
     listing = _own_listing(session, listing_id, user)
     target = change.status
+    first_publish = False
     if target != listing.status:
         if target not in TRANSITIONS[listing.status]:
             message = {
@@ -148,9 +152,12 @@ def change_status(
             require_publishable(listing, now.date())
             if listing.published_at is None:
                 listing.published_at = now
+                first_publish = True
         listing.status = target
         session.commit()
         session.refresh(listing)
+        if first_publish:
+            alert_new_listing(push, listing.id, now)
     return listing_out(listing, user, storage)
 
 

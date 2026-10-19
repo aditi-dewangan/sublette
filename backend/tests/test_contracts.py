@@ -39,6 +39,13 @@ def contract_endpoints() -> set[tuple[str, str]]:
     return {(item["method"], item["path"]) for item in contract_entries()}
 
 
+def http_endpoints() -> set[tuple[str, str]]:
+    """Every endpoint except the WebSocket, which OpenAPI doesn't list."""
+    return {
+        (item["method"], item["path"]) for item in contract_entries() if not item.get("websocket")
+    }
+
+
 def design_tokens() -> dict:
     return json.loads((CONTRACT / "design-tokens.json").read_text())
 
@@ -56,7 +63,23 @@ def test_server_routes_match_the_contract(app: FastAPI) -> None:
         if method.upper() in HTTP_METHODS
     }
 
-    assert served == contract_endpoints()
+    assert served == http_endpoints()
+
+
+WEBSOCKETS = [item for item in contract_entries() if item.get("websocket")]
+
+
+@pytest.mark.parametrize("item", WEBSOCKETS, ids=lambda item: item["path"])
+def test_websockets_exist_and_refuse_a_connection_with_no_token(item: dict, client) -> None:
+    """A WebSocket path the server doesn't have closes with 1000-range codes
+    before accepting; ours accepts and then closes with 4401."""
+    from starlette.websockets import WebSocketDisconnect
+
+    with pytest.raises(WebSocketDisconnect) as closed, client.websocket_connect(item["path"]) as ws:
+        ws.receive_json()
+
+    assert closed.value.code == 4401
+    assert closed.value.reason == "not_signed_in"
 
 
 def test_every_path_except_health_is_under_v1() -> None:
@@ -84,7 +107,7 @@ def test_only_sign_in_and_health_are_open_to_everyone() -> None:
 AUTH_ENDPOINTS = [
     item
     for item in json.loads((CONTRACT / "endpoints.json").read_text())["endpoints"]
-    if item["auth"]
+    if item["auth"] and not item.get("websocket")
 ]
 
 

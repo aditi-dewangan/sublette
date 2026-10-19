@@ -47,6 +47,14 @@ def issue_pair(settings: Settings, user_id: uuid.UUID, now: datetime) -> TokenPa
 
 def read_token(settings: Settings, token: str, kind: TokenType, now: datetime) -> uuid.UUID:
     """The user id inside a token of the expected kind. Raises 401 otherwise."""
+    return read_token_until(settings, token, kind, now)[0]
+
+
+def read_token_until(
+    settings: Settings, token: str, kind: TokenType, now: datetime
+) -> tuple[uuid.UUID, int]:
+    """The user id and the expiry (a Unix time) of a token of the expected
+    kind. Raises 401 otherwise."""
     invalid = ApiError(401, "token_invalid", "Please sign in again.")
     try:
         claims = jwt.decode(
@@ -62,10 +70,11 @@ def read_token(settings: Settings, token: str, kind: TokenType, now: datetime) -
             },
         )
         user_id = uuid.UUID(claims["sub"])
+        expires = int(claims["exp"])
     except (jwt.InvalidTokenError, ValueError, TypeError) as error:
         raise invalid from error
     if claims.get("typ") != kind:
         raise invalid
-    if claims["exp"] <= now.timestamp():
+    if expires <= now.timestamp():
         raise ApiError(401, "token_expired", "Your session has expired. Please sign in again.")
-    return user_id
+    return user_id, expires

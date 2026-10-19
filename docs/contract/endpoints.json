@@ -1,5 +1,5 @@
 {
-  "about": "Every HTTP endpoint the server exposes. The server's routes and the iPhone app's Endpoint.swift are both tested against this file, so a path renamed in one place and not the others fails the build. `auth: true` endpoints are tested to refuse a request with no token. `own_storage_only` endpoints exist only when this server stores photos itself (SUBLETTE_STORAGE_BACKEND local or database). Path placeholders such as {listing_id} match any `\\(...)` in Swift.",
+  "about": "Every HTTP endpoint the server exposes. The server's routes and the iPhone app's Endpoint.swift are both tested against this file, so a path renamed in one place and not the others fails the build. `auth: true` endpoints are tested to refuse a request with no token. `own_storage_only` endpoints exist only when this server stores photos itself (SUBLETTE_STORAGE_BACKEND local or database). Path placeholders such as {listing_id} match any `\\(...)` in Swift. `websocket: true` marks the WebSocket: a GET that upgrades, missing from the server's OpenAPI list, so it is checked on its own.",
   "endpoints": [
     { "method": "GET", "path": "/health", "auth": false, "phase": 0 },
 
@@ -33,6 +33,16 @@
 
     { "method": "GET", "path": "/v1/map/listings", "auth": true, "phase": 6 },
     { "method": "GET", "path": "/v1/map/listings/{listing_id}", "auth": true, "phase": 6 },
+
+    { "method": "GET", "path": "/v1/matches/{match_id}", "auth": true, "phase": 7 },
+    { "method": "GET", "path": "/v1/matches/{match_id}/messages", "auth": true, "phase": 7 },
+    { "method": "POST", "path": "/v1/matches/{match_id}/messages", "auth": true, "phase": 7 },
+    { "method": "POST", "path": "/v1/matches/{match_id}/read", "auth": true, "phase": 7 },
+    { "method": "PATCH", "path": "/v1/matches/{match_id}/checklist", "auth": true, "phase": 7 },
+    { "method": "POST", "path": "/v1/matches/{match_id}/filled", "auth": true, "phase": 7 },
+    { "method": "POST", "path": "/v1/devices", "auth": true, "phase": 7 },
+    { "method": "DELETE", "path": "/v1/devices/{token}", "auth": true, "phase": 7 },
+    { "method": "GET", "path": "/v1/ws", "auth": true, "phase": 7, "websocket": true },
 
     { "method": "PUT", "path": "/files/{key}", "auth": false, "phase": 1, "own_storage_only": true },
     { "method": "GET", "path": "/files/{key}", "auth": false, "phase": 1, "own_storage_only": true }

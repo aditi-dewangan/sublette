@@ -12,6 +12,8 @@ from app.db import get_session
 from app.errors import ApiError
 from app.models import User
 from app.services.email_sender import EmailSender
+from app.services.live import LiveHub
+from app.services.push import PushDispatcher
 from app.services.storage import PhotoStorage
 from app.services.tokens import read_token
 
@@ -33,6 +35,14 @@ def get_storage(request: Request) -> PhotoStorage:
     return request.app.state.storage
 
 
+def get_live(request: Request) -> LiveHub:
+    return request.app.state.live
+
+
+def get_push(request: Request) -> PushDispatcher:
+    return request.app.state.push
+
+
 def get_client_ip(request: Request) -> str:
     """The caller's address. Behind a hosting platform's proxy this relies on
     uvicorn's --proxy-headers option, which the Dockerfile turns on."""
@@ -49,6 +59,8 @@ AppSettings = Annotated[Settings, Depends(get_app_settings)]
 Mailer = Annotated[EmailSender, Depends(get_email_sender)]
 Storage = Annotated[PhotoStorage, Depends(get_storage)]
 ClientIp = Annotated[str, Depends(get_client_ip)]
+Live = Annotated[LiveHub, Depends(get_live)]
+Push = Annotated[PushDispatcher, Depends(get_push)]
 
 
 def get_current_user(request: Request, session: DbSession, settings: AppSettings, now: Now) -> User:

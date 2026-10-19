@@ -31,8 +31,10 @@ class RenterProfile(Base):
     pin_latitude: Mapped[float | None] = mapped_column(Float)
     pin_longitude: Mapped[float | None] = mapped_column(Float)
     radius_m: Mapped[int | None] = mapped_column(Integer)
-    # "Tell me when someone lists near my pin" (the empty-deck button). Sent in phase 7.
+    # "Tell me when someone lists near my pin" (the empty-deck button).
     notify_new_listings: Mapped[bool] = mapped_column(default=False, server_default="false")
+    # When the last "a new place fits your search" push went out; at most one a day.
+    last_alerted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(

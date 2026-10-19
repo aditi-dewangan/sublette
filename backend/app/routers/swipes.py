@@ -4,10 +4,10 @@ import uuid
 
 from fastapi import APIRouter, Query, Response
 
-from app.deps import CurrentUser, DbSession, Storage
+from app.deps import CurrentUser, DbSession, Live, Push, Storage
+from app.models import Match
 from app.schemas.swipes import (
     InterestedRenterPage,
-    MatchPage,
     SavedPage,
     SwipeIn,
     SwipeOut,
@@ -15,10 +15,9 @@ from app.schemas.swipes import (
     UndoIn,
 )
 from app.services.listings import listing_out, matched_listing_ids
+from app.services.notify import announce_match
 from app.services.swipes import (
     interested_renters,
-    match_out,
-    matches_for,
     record_swipe,
     save_listing,
     saved_listings,
@@ -31,10 +30,22 @@ router = APIRouter(tags=["swipes"])
 
 
 @router.post("/swipes", response_model=SwipeResult)
-def swipe(body: SwipeIn, user: CurrentUser, session: DbSession, storage: Storage) -> SwipeResult:
+def swipe(
+    body: SwipeIn,
+    user: CurrentUser,
+    session: DbSession,
+    storage: Storage,
+    live: Live,
+    push: Push,
+) -> SwipeResult:
     """Like or pass. A lister's like on a renter who liked the listing makes a
-    match. The same swipe sent again changes nothing (`created` is false)."""
-    return record_swipe(session, user, body, storage)
+    match, and the renter is told. The same swipe sent again changes nothing
+    (`created` is false)."""
+    result = record_swipe(session, user, body, storage)
+    if result.created and result.match is not None:
+        # Only the swipe that made the match can be new and carry one.
+        announce_match(session, live, push, storage, session.get(Match, result.match.id))
+    return result
 
 
 @router.post("/swipes/undo", response_model=SwipeOut)
@@ -77,10 +88,3 @@ def listing_deck(
 ) -> InterestedRenterPage:
     """For the owner only: renters who liked this listing and still fit it."""
     return InterestedRenterPage(items=interested_renters(session, user, listing_id, storage, limit))
-
-
-@router.get("/matches", response_model=MatchPage)
-def list_matches(user: CurrentUser, session: DbSession, storage: Storage) -> MatchPage:
-    return MatchPage(
-        items=[match_out(match, user, storage) for match in matches_for(session, user)]
-    )

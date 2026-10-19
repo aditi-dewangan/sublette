@@ -1,5 +1,6 @@
 """SQLAlchemy table models. Import each model here so Alembic can see it."""
 
+from app.models.chat import DeviceToken, Message
 from app.models.email_code import EmailCode
 from app.models.listing import Listing, ListingPhoto
 from app.models.rate_limit import RateLimitHit
@@ -10,10 +11,12 @@ from app.models.swipe import Match, SavedListing, Swipe
 from app.models.user import User
 
 __all__ = [
+    "DeviceToken",
     "EmailCode",
     "Listing",
     "ListingPhoto",
     "Match",
+    "Message",
     "RateLimitHit",
     "RenterProfile",
     "SavedListing",

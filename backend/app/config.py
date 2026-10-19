@@ -81,6 +81,20 @@ class Settings(BaseSettings):
     smtp_security: Literal["starttls", "ssl", "none"] = "starttls"
     smtp_timeout_s: int = 10
 
+    # --- Push notifications ---
+    # "log" prints each notification in the server's terminal instead of
+    # sending it. "apns" sends through Apple Push Notification service, which
+    # needs a key from a paid Apple Developer account. "none" sends nothing.
+    push_backend: Literal["log", "apns", "none"] = "log"
+    apns_team_id: str = ""
+    apns_key_id: str = ""
+    # The .p8 key Apple gives you: its text, or the path to the file.
+    apns_private_key: str = ""
+    apns_private_key_path: str = ""
+    # The app's bundle id.
+    apns_topic: str = "app.sublette.Sublette"
+    push_timeout_s: int = 10
+
     # --- Photo storage ---
     # "local" keeps photos in a folder and serves them from this server.
     # "database" keeps them in a database table and serves them from this
@@ -164,6 +178,13 @@ class Settings(BaseSettings):
                     "SUBLETTE_EMAIL_FROM must be a sender Brevo has verified, "
                     'such as "Sublette <you@example.com>"'
                 )
+        if self.push_backend == "apns":
+            missing = [name for name in ("apns_team_id", "apns_key_id") if not getattr(self, name)]
+            if not (self.apns_private_key or self.apns_private_key_path):
+                missing.append("apns_private_key")
+            if missing:
+                names = ", ".join(f"SUBLETTE_{name.upper()}" for name in missing)
+                problems.append(f"{names} required when SUBLETTE_PUSH_BACKEND=apns")
         if self.storage_backend == "s3":
             missing = [
                 name

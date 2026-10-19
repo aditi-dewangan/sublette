@@ -31,6 +31,7 @@ def user_out(user: User, storage: PhotoStorage) -> UserOut:
         smokes=user.smokes,
         has_pets=user.has_pets,
         profile_complete=user.profile_complete,
+        completed_sublets=user.completed_sublets,
         created_at=user.created_at,
     )
 

@@ -4,6 +4,7 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict
 
+from app.schemas.chat import Checklist, Filled, MessageOut
 from app.schemas.common import UtcDateTime
 from app.schemas.listings import ListingOut
 
@@ -54,6 +55,8 @@ class PersonOut(BaseModel):
     photo_url: str | None
     school_name: str
     verified: bool
+    # Sublets this person finished through Sublette (both sides confirmed "Filled").
+    completed_sublets: int
 
 
 class MatchOut(BaseModel):
@@ -64,6 +67,11 @@ class MatchOut(BaseModel):
     renter: PersonOut
     lister: PersonOut
     created_at: UtcDateTime
+    checklist: Checklist
+    filled: Filled
+    # Messages from the other side the caller hasn't opened yet.
+    unread_count: int
+    last_message: MessageOut | None
 
 
 class SwipeResult(BaseModel):
@@ -75,7 +83,7 @@ class SwipeResult(BaseModel):
 
 
 class MatchPage(BaseModel):
-    """Newest first."""
+    """Latest message (or the match itself, before any message) first."""
 
     items: list[MatchOut]
 

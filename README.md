@@ -17,8 +17,9 @@ students who need someone to take over their lease. Any `.edu` email can join.
 | 3 | Renter mode: preferences, map pin, and the mode toggle | Done |
 | 4 | Matching engine: who sees which listing, scored and explained | Done |
 | 5 | Swipe decks and matches | Done |
-| 6 | Map and pins | Built on `phase-6`; see its pull request |
-| 7 to 10 | Chat through the AI recommender | Not started |
+| 6 | Map and pins | Done |
+| 7 | Chat, checklist and notifications | Built on `phase-7`; see its pull request |
+| 8 to 10 | Trust and safety through the AI recommender | Not started |
 
 ## Set up (once)
 
@@ -126,7 +127,29 @@ the school list by domain. Every fake account's email starts with `seed-`, so
 running it again replaces the batch and real accounts are never touched.
 `make seed-fake ARGS=--remove` takes it all out. Put your own search pin near
 one of those campuses, then try `GET /v1/deck/listings` at
-http://localhost:8000/docs (the deck screens arrive in phase 5).
+http://localhost:8000/docs.
+
+### Chat between two simulators
+
+You need two accounts, one on each side, and both apps open:
+
+1. `make dev` in one Terminal window (from the `sublette` folder).
+2. In Xcode, pick an iPhone simulator and press Run. Sign up as a renter
+   (any made-up `.edu` address; the code is printed in the `make dev` window)
+   and like a listing.
+3. In Xcode, pick a *different* iPhone simulator (Product > Destination) and
+   press Run again. Both simulators stay open. Sign up as the lister who owns
+   that listing, open Renters, and like the renter back. That's a match.
+4. Tap "Send a message". Messages show on the other simulator within a second.
+   The checklist ticks on both. "Mark filled" takes the listing out of every
+   deck and off the map.
+
+Notifications: allow them when asked (at the first match), then press the
+Home button (Device > Home, or Shift-Command-H) on one simulator and send a
+message from the other. A local server pushes straight into the simulator with
+Xcode's `xcrun simctl push`, so this needs no Apple account. Every push is
+also printed in the `make dev` window. Real iPhones need Apple Push
+Notification service: see "Push notifications on a real iPhone" below.
 
 ## Test it
 
@@ -163,6 +186,10 @@ Each dependency has tests for the day it is down. So far:
 | Server, on the map (iPhone app) | Pins already shown stay, with "Can't reach Sublette"; a like or pass from a pin is queued like any swipe, and the pin keeps its new state after a reload. | `ios/SubletteTests/MapTests.swift` |
 | Apple's map tiles (iPhone app) | Not testable in unit tests: without tiles MapKit draws an empty grid, and the pins, the circle and the cards still work, because they come from Sublette's server. | Tried by hand |
 | Photo storage (iPhone app) | "Couldn't upload the photo. You can add one later." The rest of the profile still saves. | `ios/SubletteTests/ProfileFormModelTests.swift`, `AuthorizedRequestTests.swift` |
+| Apple Push Notification service (server, `httpx2` over HTTP/2, a `.p8` key signed with `cryptography`) | The message, match or listing is saved and the request answers at once: pushes are sent afterwards on their own threads, with a 10-second limit. Apple down, slow, answering garbage, or a broken key is logged and dropped; the app shows everything the next time it opens. A phone Apple says is gone is forgotten. | `backend/tests/test_push.py`, `test_chat.py` |
+| `xcrun simctl push` (local server, simulator pushes) | No Xcode, a slow or stopped simulator, or garbage output: logged in the `make dev` window, nothing else changes. Hosted servers never run it and refuse simulator registrations. | `backend/tests/test_push.py`, `test_chat.py` |
+| Live connection (iPhone app, WebSocket `/v1/ws`) | Chat still works without it: sending is a normal request, and each chat reloads when opened. The app reconnects on its own (1, 2, 4… up to 30 seconds apart), refreshes the token when the server asks (close code 4401), and reloads anything missed when it is back. A message that fails to send stays on screen with "Not sent. Try again", and a retry is stored once. | `ios/SubletteTests/ChatTests.swift`, `backend/tests/test_chat.py` |
+| Notification permission (iPhone app) | Asked once, at the first match. Declining changes nothing else; chat works while the app is open. | `ios/SubletteTests/ChatTests.swift` (`NotificationsTests`) |
 
 When a phase adds a dependency (email sending, photo storage, push, the language
 model), it adds a row here and the tests behind it.
@@ -246,6 +273,18 @@ docs/
 scripts/          check_renames.py  ios-test.sh
 ```
 
+## Push notifications on a real iPhone
+
+Locally, pushes go to simulators (above) and are printed in the terminal.
+Real phones need Apple Push Notification service, which needs a paid Apple
+Developer account ($99 a year). Nothing is set up for that yet. When it is:
+
+1. In the Apple Developer site, Keys > +, tick "Apple Push Notifications
+   service", download the `.p8` file, and note its Key ID and your Team ID.
+2. On the server set `SUBLETTE_PUSH_BACKEND=apns`, `SUBLETTE_APNS_TEAM_ID`,
+   `SUBLETTE_APNS_KEY_ID` and `SUBLETTE_APNS_PRIVATE_KEY` (the file's text) or
+   `SUBLETTE_APNS_PRIVATE_KEY_PATH`.
+
 ## Conventions
 
 - REST under `/v1`, JSON with snake_case keys, errors as `{code, message}`. Validation errors add `fields`.
@@ -264,4 +303,5 @@ scripts/          check_renames.py  ios-test.sh
 | No code arrives by email | In development none is sent. Read it from the `make dev` terminal. |
 | "Too many tries" while testing | Limits are per email and per hour. Use another made-up `.edu` address, or `make db-reset`. |
 | A real iPhone can't reach the server | `localhost` on a phone is the phone. Run `HOST=0.0.0.0 make run`, set `SUBLETTE_PUBLIC_BASE_URL=http://<your-mac-name>.local:8000` in `backend/.env`, and use the same address for Debug in `ios/project.yml`. |
+| No notification in the simulator | Allow notifications when the app asks (at the first match), check the `make dev` window shows "Push to phone", and that the other simulator is on its Home screen. Messages to an open app arrive live, not as a push. |
 | A new Swift file is missing in Xcode | Run `make ios` again. The project is generated from the folders. |

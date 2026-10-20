@@ -2,6 +2,8 @@ import SwiftUI
 
 @main
 struct SubletteApp: App {
+    @UIApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
+    @Environment(\.scenePhase) private var scenePhase
     @State private var container: AppContainer
 
     init() {
@@ -18,7 +20,16 @@ struct SubletteApp: App {
                 // The palette is designed for a light background. Dark mode arrives in phase 9.
                 .preferredColorScheme(.light)
                 .task {
+                    appDelegate.notifications = container.notifications
+                    appDelegate.openChatID = { [weak container] in container?.matchesModel.activeChat?.match.id }
                     await container.start()
+                }
+                .onChange(of: scenePhase) { _, phase in
+                    switch phase {
+                    case .active: Task { await container.appBecameActive() }
+                    case .background: container.appWentToBackground()
+                    default: break
+                    }
                 }
         }
     }

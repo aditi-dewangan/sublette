@@ -63,4 +63,7 @@ struct User: Codable, Equatable, Identifiable {
     var hasPets: Bool?
     /// True once first name, year, program, smokes and pets are all answered.
     var profileComplete: Bool
+    /// Sublets finished through Sublette. Optional so a profile saved on the
+    /// phone by an older version still loads.
+    var completedSublets: Int?
 }

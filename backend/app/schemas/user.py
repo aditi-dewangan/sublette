@@ -36,6 +36,8 @@ class UserOut(BaseModel):
     has_pets: bool | None
     # True once first name, year, program, smokes and has_pets are all answered.
     profile_complete: bool
+    # Sublets finished through Sublette: both sides confirmed "Filled".
+    completed_sublets: int
     created_at: UtcDateTime
 
 

@@ -80,16 +80,24 @@ struct Person: Codable, Equatable {
     let photoUrl: String?
     let schoolName: String
     let verified: Bool
+    /// Sublets this person finished through Sublette.
+    var completedSublets: Int = 0
 }
 
 struct Match: Decodable, Equatable, Identifiable {
     let id: String
     /// The signed-in student's side of this match.
     let role: SwipeSide
-    let listing: Listing
+    var listing: Listing
     let renter: Person
     let lister: Person
     let createdAt: Date
+    /// The steps to a sublet, shared by both people.
+    var checklist: Checklist = .empty
+    var filled: Filled = .none
+    /// Messages from the other person not yet opened.
+    var unreadCount: Int = 0
+    var lastMessage: ChatMessage?
 
     /// The person on the other side.
     var other: Person {

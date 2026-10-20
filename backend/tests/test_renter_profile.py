@@ -1,6 +1,7 @@
 """Renter mode: saving what a renter needs, and keeping their pin private."""
 
 import json
+import uuid
 from datetime import date
 
 import pytest
@@ -255,11 +256,17 @@ def test_no_endpoint_returns_one_users_pin_to_another_user(
         {**FULL_PROFILE, "pin": {"latitude": 42.34, "longitude": -71.09, "radius_m": 5000}},
     )
 
-    ids = {"listing_id": listing["id"], "user_id": owner["user"]["id"], "key": "x"}
+    ids = {
+        "listing_id": listing["id"],
+        "user_id": owner["user"]["id"],
+        "key": "x",
+        "match_id": str(uuid.uuid4()),
+        "token": "ab" * 32,
+    }
     entries = json.loads((REPO_ROOT / "docs/contract/endpoints.json").read_text())["endpoints"]
     checked = 0
     for entry in entries:
-        if entry["method"] != "GET" or entry.get("own_storage_only"):
+        if entry["method"] != "GET" or entry.get("own_storage_only") or entry.get("websocket"):
             continue
         path = entry["path"]
         for name, value in ids.items():

@@ -27,6 +27,7 @@ from app.schemas.swipes import (
     SwipeOut,
     SwipeResult,
 )
+from app.services.chat import Activity, checklist_out, filled_out, message_out
 from app.services.deck import renter_for
 from app.services.listings import listing_out, not_found
 from app.services.matching import Renter, failures, lister_fits
@@ -58,10 +59,15 @@ def person_out(user: User, storage: PhotoStorage) -> PersonOut:
         photo_url=_url(storage, user.photo_key),
         school_name=user.school.display_name,
         verified=user.verified_at is not None,
+        completed_sublets=user.completed_sublets,
     )
 
 
-def match_out(match: Match, viewer: User, storage: PhotoStorage) -> MatchOut:
+def match_out(
+    match: Match, viewer: User, storage: PhotoStorage, activity: Activity | None = None
+) -> MatchOut:
+    activity = activity or Activity()
+    last = activity.last_message
     return MatchOut(
         id=match.id,
         role="renter" if match.renter_id == viewer.id else "lister",
@@ -69,6 +75,10 @@ def match_out(match: Match, viewer: User, storage: PhotoStorage) -> MatchOut:
         renter=person_out(match.renter, storage),
         lister=person_out(match.lister, storage),
         created_at=match.created_at,
+        checklist=checklist_out(match),
+        filled=filled_out(match),
+        unread_count=activity.unread,
+        last_message=message_out(last, viewer.id) if last else None,
     )
 
 
@@ -310,13 +320,3 @@ def interested_renters(
         if len(found) >= limit:
             break
     return found
-
-
-def matches_for(session: Session, user: User) -> list[Match]:
-    return list(
-        session.scalars(
-            select(Match)
-            .where(or_(Match.renter_id == user.id, Match.lister_id == user.id))
-            .order_by(Match.created_at.desc(), Match.id.desc())
-        ).unique()
-    )

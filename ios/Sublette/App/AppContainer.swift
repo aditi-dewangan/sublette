@@ -12,6 +12,7 @@ final class AppContainer {
     let renterAPI: RenterAPI
     let deckAPI: DeckAPI
     let mapAPI: MapAPI
+    let chatAPI: ChatAPI
     let campusLocator: CampusLocating
     let addressLocator: AddressLocating
     let uploader: PhotoUploading
@@ -26,6 +27,9 @@ final class AppContainer {
     let listerDeck: ListerDeckModel
     let matchesModel: MatchesModel
     let renterMap: RenterMapModel
+    let notifications: NotificationsModel
+    /// Nil in previews and tests, which have no server to connect to.
+    let liveEvents: LiveEvents?
 
     private let tokenManager: TokenManager
 
@@ -37,6 +41,9 @@ final class AppContainer {
         renterAPI: RenterAPI,
         deckAPI: DeckAPI,
         mapAPI: MapAPI,
+        chatAPI: ChatAPI,
+        notificationPermissions: NotificationPermissions,
+        liveEvents: LiveEvents?,
         campusLocator: CampusLocating,
         addressLocator: AddressLocating,
         uploader: PhotoUploading,
@@ -50,6 +57,8 @@ final class AppContainer {
         self.renterAPI = renterAPI
         self.deckAPI = deckAPI
         self.mapAPI = mapAPI
+        self.chatAPI = chatAPI
+        self.liveEvents = liveEvents
         self.campusLocator = campusLocator
         self.addressLocator = addressLocator
         self.uploader = uploader
@@ -66,12 +75,49 @@ final class AppContainer {
         let renterDeck = RenterDeckModel(api: deckAPI, outbox: outbox)
         self.renterDeck = renterDeck
         self.listerDeck = ListerDeckModel(deckAPI: deckAPI, listingsAPI: listingsAPI, outbox: outbox)
-        self.matchesModel = MatchesModel(api: deckAPI)
+        let matchesModel = MatchesModel(api: deckAPI, chatAPI: chatAPI, preferences: preferences)
+        self.matchesModel = matchesModel
+        let notifications = NotificationsModel(
+            api: chatAPI,
+            permissions: notificationPermissions,
+            preferences: preferences,
+            simulatorID: Runtime.isRunningUnitTests ? nil : NotificationsModel.currentSimulatorID
+        )
+        self.notifications = notifications
+        session.willSignOut = { [weak notifications, weak liveEvents] in
+            await liveEvents?.stop()
+            await notifications?.willSignOut()
+        }
         let renterMap = RenterMapModel(api: mapAPI, outbox: outbox)
         renterMap.onSwiped = { [weak renterDeck] listingID in
             renterDeck?.forget(listingID: listingID)
         }
         self.renterMap = renterMap
+        liveEvents?.onEvent = { [weak self] event in
+            self?.handle(event)
+        }
+    }
+
+    /// One live event, to every screen that shows it.
+    private func handle(_ event: LiveEvent) {
+        matchesModel.handle(event)
+        if case .match(let match, isNew: true) = event, outbox.latestMatch == nil {
+            // The renter's side of a match the lister just made.
+            outbox.latestMatch = match
+        }
+    }
+
+    /// Connects while the app is open and someone is signed in.
+    func appBecameActive() async {
+        guard !Runtime.isRunningUnitTests, session.user != nil else {
+            return
+        }
+        liveEvents?.start()
+        await notifications.didSignIn()
+    }
+
+    func appWentToBackground() {
+        liveEvents?.stop()
     }
 
     /// The real thing: talks to the server named in the build settings and
@@ -105,6 +151,9 @@ final class AppContainer {
             renterAPI: LiveRenterAPI(client: signedInClient),
             deckAPI: LiveDeckAPI(client: signedInClient),
             mapAPI: LiveMapAPI(client: signedInClient),
+            chatAPI: LiveChatAPI(client: signedInClient),
+            notificationPermissions: SystemNotificationPermissions(),
+            liveEvents: LiveEvents(client: signedInClient, tokens: tokenManager),
             campusLocator: AppleCampusLocator(),
             addressLocator: AppleAddressLocator(),
             uploader: PhotoUploader(api: api, session: APIClient.makeSession(timeout: timeout)),

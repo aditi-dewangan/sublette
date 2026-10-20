@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime
 
-from sqlalchemy import DateTime, ForeignKey, String, UniqueConstraint, func
+from sqlalchemy import BigInteger, DateTime, ForeignKey, String, UniqueConstraint, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db import Base
@@ -43,7 +43,11 @@ class Swipe(Base):
 
 
 class Match(Base):
-    """A renter liked a listing and its lister liked them back. One per pair."""
+    """A renter liked a listing and its lister liked them back. One per pair.
+
+    Also the pair's chat (messages point here), their shared checklist, how far
+    each side has read, and each side's "Filled" confirmation.
+    """
 
     __tablename__ = "matches"
     __table_args__ = (UniqueConstraint("listing_id", "renter_id"),)
@@ -59,6 +63,23 @@ class Match(Base):
         ForeignKey("users.id", ondelete="CASCADE"), index=True
     )
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+    # The checklist both sides share. Either may tick or untick any step.
+    tour_done: Mapped[bool] = mapped_column(default=False, server_default="false")
+    landlord_consent_confirmed: Mapped[bool] = mapped_column(default=False, server_default="false")
+    dates_agreed: Mapped[bool] = mapped_column(default=False, server_default="false")
+    sublease_signed: Mapped[bool] = mapped_column(default=False, server_default="false")
+    checklist_updated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+    # The `seq` of the last message each side has seen; later ones are unread.
+    renter_read_seq: Mapped[int] = mapped_column(BigInteger, default=0, server_default="0")
+    lister_read_seq: Mapped[int] = mapped_column(BigInteger, default=0, server_default="0")
+    # Each side's "Filled" confirmation. The lister's fills the listing; both
+    # make a completed sublet.
+    renter_filled_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    lister_filled_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    # Orders the Matches list by latest activity.
+    last_message_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
     listing: Mapped[Listing] = relationship(lazy="joined")
     renter: Mapped[User] = relationship(foreign_keys=[renter_id], lazy="joined")

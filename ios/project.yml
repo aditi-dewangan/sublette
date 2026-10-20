@@ -71,6 +71,8 @@ targets:
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: app.sublette.Sublette
+        # Push notifications (phase 7).
+        CODE_SIGN_ENTITLEMENTS: Sublette/Sublette.entitlements
         # iPhone only. Set per target: XcodeGen's iOS preset overrides a project-level value.
         TARGETED_DEVICE_FAMILY: "1"
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon

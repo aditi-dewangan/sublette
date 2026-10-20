@@ -14,8 +14,8 @@ Spec" doc; its Build plan tab defines phases 0 to 10 and each phase's
 | 3 Renter mode and the toggle | Merged (#4). |
 | 4 Matching engine | Merged (#6; #5 had landed on `phase-3` by mistake). |
 | 5 Swipe decks and matches | Merged (#7). |
-| 6 Map and pins | Pull request #8 (`phase-6`). |
-| 7 Chat, checklist and notifications | Next. |
+| 6 Map and pins | Merged (#8). |
+| 7 Chat, checklist and notifications | Pull request (`phase-7`). |
 
 ## How each phase is delivered
 
@@ -32,4 +32,7 @@ Steps are in `README.md`, "Staging, for $0".
 
 ## Waiting on Aditi
 
-- Trying Phase 6: `make seed-fake`, put your pin near UW, open the Map tab. Zoom out (numbers), zoom in (pins), tap a pin and like it (it turns into a heart and leaves the deck), move the pin from the map. Then merge #8.
+- Trying phase 7 on two simulators: README, "Chat between two simulators".
+  Then merge the phase 7 pull request.
+- Deciding whether to buy the Apple Developer membership ($99/year), needed
+  for notifications on real iPhones and for TestFlight in phase 9.

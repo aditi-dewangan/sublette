@@ -292,3 +292,49 @@ def test_map_samples(client: TestClient, mailer: RecordingMailer, clock, db) -> 
         "error_invalid_bbox",
         client.get("/v1/map/listings", headers=bearer(renter), params={"bbox": "x"}).json(),
     )
+
+
+def test_chat_samples(client: TestClient, mailer: RecordingMailer, clock, db) -> None:
+    import uuid as uuid_module
+
+    from app.models import User
+    from tests.test_chat import live, receive
+    from tests.test_deck import make_searching_renter, put_listing
+
+    renter = make_searching_renter(client, mailer, clock)
+    lister = sign_in(client, mailer, "lister@uw.edu")
+    client.patch("/v1/me", headers=bearer(lister), json=COMPLETE_PROFILE)
+    listing = put_listing(db, clock, db.get(User, uuid_module.UUID(lister["user"]["id"])))
+    client.post(
+        "/v1/swipes", headers=bearer(renter), json={"listing_id": str(listing.id), "action": "like"}
+    )
+    with live(client, renter) as phone:
+        check("ws_ready", receive(phone))
+        made = client.post(
+            "/v1/swipes",
+            headers=bearer(lister),
+            json={
+                "listing_id": str(listing.id),
+                "renter_id": renter["user"]["id"],
+                "action": "like",
+            },
+        ).json()["match"]
+        check("ws_match_event", receive(phone))
+        path = f"/v1/matches/{made['id']}"
+
+        sent = client.post(
+            f"{path}/messages",
+            headers=bearer(lister),
+            json={"body": "Hi! Want to tour Thursday?", "message_id": str(uuid_module.uuid4())},
+        )
+        check("message", sent.json())
+        check("ws_message_event", receive(phone))
+
+    client.post(f"{path}/messages", headers=bearer(renter), json={"body": "Yes, 5pm works."})
+    check("messages", client.get(f"{path}/messages", headers=bearer(renter)).json())
+    client.patch(f"{path}/checklist", headers=bearer(renter), json={"tour_done": True})
+    check("match", client.get(path, headers=bearer(renter)).json())
+    check("match_filled", client.post(f"{path}/filled", headers=bearer(lister)).json())
+
+    stranger = sign_in(client, mailer, "stranger@uw.edu")
+    check("error_not_your_match", client.get(path, headers=bearer(stranger)).json())

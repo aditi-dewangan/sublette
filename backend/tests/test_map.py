@@ -214,22 +214,35 @@ def exact_marks(listing) -> list[str]:
 
 
 def test_an_unmatched_renter_never_receives_an_exact_location(
-    client: TestClient, renter: dict, lister: dict, db: Session, clock: Clock
+    client: TestClient, renter: dict, lister: dict, db: Session, clock: Clock, mailer
 ) -> None:
     """Every GET endpoint, called by a renter who liked and saved the listing but
-    did not match: none may carry the real address or point."""
+    did not match: none may carry the real address or point. The listing's
+    match with someone else (and its chat) is tried too."""
     listing = put_listing(db, clock, owner(db, lister), latitude=47.6612345, address=EXACT_ADDRESS)
     swipe(client, renter, listing.id)
     other = put_listing(db, clock, owner(db, lister), latitude=47.6612345, address=EXACT_ADDRESS)
     client.post(f"/v1/saved/{other.id}", headers=bearer(renter))
+    matched = make_searching_renter_named(client, mailer, clock, "matched@uw.edu")
+    swipe(client, matched, listing.id)
+    match = swipe(client, lister, listing.id, renter_id=matched["user"]["id"])["match"]
+    client.post(
+        f"/v1/matches/{match['id']}/messages",
+        headers=bearer(matched),
+        json={"body": f"See you at {EXACT_ADDRESS}"},
+    )
 
     entries = json.loads((REPO_ROOT / "docs/contract/endpoints.json").read_text())["endpoints"]
     checked = 0
     for entry in entries:
-        if entry["method"] != "GET" or entry.get("own_storage_only"):
+        if entry["method"] != "GET" or entry.get("own_storage_only") or entry.get("websocket"):
             continue
         for target in (listing, other):
-            path = entry["path"].replace("{listing_id}", str(target.id))
+            path = (
+                entry["path"]
+                .replace("{listing_id}", str(target.id))
+                .replace("{match_id}", match["id"])
+            )
             response = client.get(path, headers=bearer(renter), params={"bbox": WIDE})
             for mark in (EXACT_ADDRESS, "47.6612345"):
                 assert mark not in response.text, f"{entry['path']} leaked {mark}"

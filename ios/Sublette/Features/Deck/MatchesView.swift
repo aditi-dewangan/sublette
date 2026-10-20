@@ -1,7 +1,7 @@
 import SwiftUI
 
 /// The Matches tab. Renter mode lists matches as a renter and saved listings;
-/// Lister mode lists matches on the student's own listings. Chat is phase 7.
+/// Lister mode lists matches on the student's own listings. A match opens its chat.
 @MainActor
 struct MatchesView: View {
     @Environment(AppContainer.self) private var container
@@ -9,11 +9,32 @@ struct MatchesView: View {
     @Environment(SessionModel.self) private var session
 
     @State private var openListing: Listing?
+    @State private var openChatID: String?
 
     private var model: MatchesModel { container.matchesModel }
     private var role: SwipeSide { appState.mode == .renter ? .renter : .lister }
 
     var body: some View {
+        NavigationStack {
+            list
+                .navigationDestination(item: $openChatID) { matchID in
+                    if let match = model.matches.first(where: { $0.id == matchID }) {
+                        ChatView(model: model.openChat(match))
+                    }
+                }
+        }
+        .task(id: appState.chatToOpen) {
+            guard let matchID = appState.chatToOpen else {
+                return
+            }
+            appState.chatOpened()
+            if await model.match(id: matchID) != nil {
+                openChatID = matchID
+            }
+        }
+    }
+
+    private var list: some View {
         List {
             if case .failed(let message) = model.state {
                 ErrorText(message)
@@ -33,8 +54,9 @@ struct MatchesView: View {
                         .foregroundStyle(Brand.ink.opacity(0.75))
                 }
                 ForEach(mine) { match in
-                    Button { openListing = match.listing } label: { MatchRow(match: match) }
+                    Button { openChatID = match.id } label: { MatchRow(match: match) }
                         .buttonStyle(.plain)
+                        .accessibilityIdentifier("match-row")
                 }
             }
             if role == .renter {
@@ -68,6 +90,9 @@ struct MatchesView: View {
                 container.outbox.prepare(for: userID)
             }
             await model.load()
+            if !model.matches.isEmpty {
+                await container.notifications.askAtFirstMatch()
+            }
         }
         .sheet(item: $openListing) { listing in
             NavigationStack {
@@ -96,19 +121,45 @@ private struct MatchRow: View {
         HStack(spacing: 12) {
             AvatarView(urlString: match.other.photoUrl, size: 48)
             VStack(alignment: .leading, spacing: 2) {
-                Text(match.other.firstName ?? "Your match")
-                    .font(.headline)
+                HStack(spacing: 6) {
+                    Text(match.other.firstName ?? "Your match")
+                        .font(.headline)
+                    if match.listing.status == .filled {
+                        Text("Filled")
+                            .font(.caption.weight(.semibold))
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 2)
+                            .background(Brand.ink.opacity(0.1), in: Capsule())
+                    }
+                }
                 Text(match.listing.spaceSummary.isEmpty ? match.listing.title : match.listing.spaceSummary)
                     .font(.subheadline)
                     .lineLimit(1)
-                Text("Chat arrives in the next update.")
-                    .font(.footnote)
-                    .opacity(0.7)
+                Text(preview)
+                    .font(.footnote.weight(match.unreadCount > 0 ? .semibold : .regular))
+                    .lineLimit(1)
+                    .opacity(match.unreadCount > 0 ? 1 : 0.7)
             }
             Spacer()
+            if match.unreadCount > 0 {
+                Text("\(match.unreadCount)")
+                    .font(.caption.weight(.bold))
+                    .foregroundStyle(Brand.textOnMagenta)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
+                    .background(Brand.magenta, in: Capsule())
+                    .accessibilityLabel("\(match.unreadCount) unread")
+            }
         }
         .foregroundStyle(Brand.ink)
         .contentShape(Rectangle())
+    }
+
+    private var preview: String {
+        guard let last = match.lastMessage else {
+            return "Say hi and set up a tour."
+        }
+        return last.mine ? "You: \(last.body)" : last.body
     }
 }
 
@@ -138,6 +189,7 @@ private struct SavedRow: View {
 @MainActor
 struct MatchSheet: View {
     let match: Match
+    let onChat: () -> Void
     let onClose: () -> Void
 
     var body: some View {
@@ -154,13 +206,12 @@ struct MatchSheet: View {
                 .font(.body)
                 .multilineTextAlignment(.center)
                 .foregroundStyle(Brand.ink)
-            Text("Chat arrives in the next update. Find this match in the Matches tab.")
-                .font(.footnote)
-                .multilineTextAlignment(.center)
-                .foregroundStyle(Brand.ink.opacity(0.75))
             Spacer()
-            Button("Keep swiping", action: onClose)
+            Button("Send a message", action: onChat)
                 .buttonStyle(PrimaryButtonStyle())
+                .accessibilityIdentifier("send-a-message-button")
+            Button("Keep swiping", action: onClose)
+                .buttonStyle(SecondaryButtonStyle())
                 .accessibilityIdentifier("keep-swiping-button")
         }
         .padding(28)
@@ -174,5 +225,5 @@ struct MatchSheet: View {
 }
 
 #Preview("It's a match") {
-    MatchSheet(match: PreviewData.match, onClose: {})
+    MatchSheet(match: PreviewData.match, onChat: {}, onClose: {})
 }

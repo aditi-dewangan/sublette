@@ -37,8 +37,8 @@ TEST_DATABASE_URL = os.environ.get(
 UNREACHABLE_DATABASE_URL = "postgresql+psycopg://sublette:sublette@127.0.0.1:1/sublette_test"
 
 DATA_TABLES = (
-    "matches, swipes, saved_listings, renter_profiles, listing_photos, listings, "
-    "stored_files, users, email_codes, rate_limit_hits, school_domains, schools"
+    "messages, device_tokens, matches, swipes, saved_listings, renter_profiles, listing_photos, "
+    "listings, stored_files, users, email_codes, rate_limit_hits, school_domains, schools"
 )
 
 
@@ -51,10 +51,13 @@ def alembic_config(database_url: str) -> Config:
 
 @pytest.fixture(autouse=True)
 def _no_ambient_settings(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Tests must not depend on the developer's own SUBLETTE_* variables."""
+    """Tests must not depend on the developer's own SUBLETTE_* variables, nor
+    on the backend/.env file that holds them (a real Brevo key there once made
+    "a key is required" pass without one)."""
     for name in list(os.environ):
         if name.startswith("SUBLETTE_") and name != "SUBLETTE_TEST_DATABASE_URL":
             monkeypatch.delenv(name)
+    monkeypatch.setitem(Settings.model_config, "env_file", None)
 
 
 @pytest.fixture(scope="session")

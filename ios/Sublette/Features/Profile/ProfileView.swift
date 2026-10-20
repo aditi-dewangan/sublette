@@ -51,6 +51,11 @@ struct ProfileView: View {
                 .font(.system(.title, design: .rounded).weight(.bold))
                 .foregroundStyle(Brand.ink)
             VerifiedBadge(schoolName: user.school.name)
+            if let done = user.completedSublets, done > 0 {
+                Label(done == 1 ? "1 sublet completed" : "\(done) sublets completed", systemImage: "star.fill")
+                    .font(.footnote.weight(.semibold))
+                    .foregroundStyle(Brand.ink)
+            }
             if let year = user.year, let program = user.program {
                 Text("\(year.title) · \(program)")
                     .font(.subheadline)

@@ -1,4 +1,5 @@
 import Foundation
+import UserNotifications
 import XCTest
 @testable import Sublette
 
@@ -509,5 +510,104 @@ extension Fixture {
     ) -> MapPin {
         MapPin(id: id, latitude: latitude, longitude: longitude, exact: state == .matched,
                score: 80, band: band, state: state, rentCents: 100_000)
+    }
+}
+
+final class StubChatAPI: ChatAPI, @unchecked Sendable {
+    var pages: [Result<MessagePage, Error>] = []
+    /// Answers for sends, in order. When empty, every message is accepted.
+    var sendResults: [Result<Void, Error>] = []
+    var checklistResult: Result<Void, Error> = .success(())
+    var matchResult: Result<Match, Error> = .success(Fixture.match(id: "fetched"))
+    var registerResult: Result<Void, Error> = .success(())
+
+    private(set) var sent: [MessageRequest] = []
+    private(set) var readCalls: [String] = []
+    private(set) var checklistChanges: [ChecklistChange] = []
+    private(set) var filledCalls = 0
+    private(set) var registered: [DeviceRequest] = []
+    private(set) var unregistered: [String] = []
+    private(set) var pageRequests: [String?] = []
+
+    func match(id: String) async throws -> Match {
+        try matchResult.get()
+    }
+
+    func messages(matchID: String, before: String?) async throws -> MessagePage {
+        pageRequests.append(before)
+        guard !pages.isEmpty else {
+            return MessagePage(items: [], hasMore: false)
+        }
+        return try pages.removeFirst().get()
+    }
+
+    func send(matchID: String, _ request: MessageRequest) async throws -> ChatMessage {
+        sent.append(request)
+        if !sendResults.isEmpty {
+            try sendResults.removeFirst().get()
+        }
+        return Fixture.message(id: "server-\(request.messageId)", body: request.body, mine: true, messageID: request.messageId)
+    }
+
+    func markRead(matchID: String) async throws {
+        readCalls.append(matchID)
+    }
+
+    func updateChecklist(matchID: String, _ change: ChecklistChange) async throws -> Match {
+        checklistChanges.append(change)
+        try checklistResult.get()
+        var match = Fixture.match(id: matchID)
+        if let value = change.tourDone { match.checklist.tourDone = value }
+        return match
+    }
+
+    func confirmFilled(matchID: String) async throws -> Match {
+        filledCalls += 1
+        var match = Fixture.match(id: matchID)
+        match.filled = Filled(renterConfirmed: false, listerConfirmed: true, completed: false)
+        return match
+    }
+
+    func registerDevice(_ request: DeviceRequest) async throws {
+        registered.append(request)
+        try registerResult.get()
+    }
+
+    func unregisterDevice(token: String) async throws {
+        unregistered.append(token)
+    }
+}
+
+final class StubPermissions: NotificationPermissions, @unchecked Sendable {
+    var current: UNAuthorizationStatus
+    var grants = true
+    private(set) var requests = 0
+    private(set) var registrations = 0
+
+    init(_ status: UNAuthorizationStatus) {
+        current = status
+    }
+
+    func status() async -> UNAuthorizationStatus { current }
+
+    func request() async -> Bool {
+        requests += 1
+        current = grants ? .authorized : .denied
+        return grants
+    }
+
+    func registerForRemoteNotifications() {
+        registrations += 1
+    }
+}
+
+extension Fixture {
+    static func message(
+        id: String, body: String = "Hello", mine: Bool = false, matchID: String = "match-1", messageID: String? = nil
+    ) -> ChatMessage {
+        ChatMessage(
+            id: id, messageId: messageID, matchId: matchID, senderId: mine ? "user-1" : "user-2",
+            mine: mine, body: body, createdAt: now
+        )
     }
 }

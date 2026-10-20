@@ -153,6 +153,24 @@ Choices made while building, with the reason. Add to the bottom; do not rewrite 
 | --- | --- |
 | A local server prints every sign-in code in its terminal as well as emailing it (`SUBLETTE_EMAIL_ECHO_CODES`, on by default only when `SUBLETTE_ENV=local`). While on, a failed email is logged and the request still succeeds, so the printed code works. Production refuses the setting. | Aditi: codes weren't arriving; she wants the email sent and the code copied to the terminal. Elsewhere a failed email still answers 503 and keeps nothing. |
 
+### Phase 7: chat, checklist and notifications (added 2026-10-19)
+
+| Decision | Reason |
+| --- | --- |
+| Messages are sent with `POST /v1/matches/{id}/messages`; the WebSocket only carries events from the server to the phone. | A normal request gives a clear answer or error and can be retried; a socket that drops mid-send can't say whether the message got there. Same idempotency as swipes: the app makes a `message_id`, the database stores it once. |
+| `/v1/ws` signs in with the usual `Authorization: Bearer` header and closes when the access token expires (code 4401), so the app refreshes and reconnects; 4403 for a suspended account. Events carry the whole match as the recipient sees it. | A suspension takes effect within 15 minutes even on an open socket. One event updates the list, the badge and an open chat. |
+| The live hub lives in the server process. | Render's free plan runs one process. Several would need a shared channel (PostgreSQL `LISTEN/NOTIFY` is the free one); the hub is the only place to change. |
+| Anyone not in the match gets 403 `not_your_match` on every chat endpoint, also for a match id that doesn't exist. | The plan asks for 403; answering the same for a missing match means ids can't be probed. |
+| Messages are ordered by a running number (`seq`), and "read up to" is that number per side. | Two messages in the same second still have an order, and unread counts never depend on clocks. |
+| Either side can tick or untick any checklist step. | It's shared; the plan doesn't say whose step is whose. |
+| "Filled" (`POST /v1/matches/{id}/filled`): the lister's confirmation marks the listing filled (out of every deck and off the map); the renter's alone doesn't, so a renter can't close someone's listing. When both have confirmed, each gets a completed sublet, counted on the profile (`completed_sublets`) and shown to the other side. Chat stays open afterwards. | The plan: both sides confirm "Filled" and each gets a mark, so the count of filled sublets can be trusted. |
+| Pushes: a new match goes to the renter (the lister made it); a message goes to the recipient only when no phone of theirs is connected; a new place that fits goes to renters who tapped "Notify me", at most one a day. Sent on background threads after the change is saved. | The plan's rules, plus the "Notify me" promise from phase 5. A push must never slow or fail the thing it announces. |
+| Push backend is a setting: `log` by default, `apns` for real phones, `none`. APNs uses a `.p8` key (token authentication) over HTTP/2 with `httpx2[http2]`. | APNs needs a paid Apple Developer account ($99/year), so it is ready but off until Aditi decides. |
+| A Debug build in the simulator registers its simulator id, and a local server pushes into it with `xcrun simctl push`. Hosted servers refuse such registrations. | Lets Aditi see real background notifications between two simulators for $0. |
+| Notification permission is asked at the first match (the match screen, or opening Matches with one), never at launch. Tapping a notification switches to the right mode and opens the chat. | The plan. |
+| The safety card replaces the composer in each chat until "Got it" is tapped or you've written there; remembered per account and chat on the phone. Suggested first questions differ for renters and listers and disappear once anyone has written. | "A safety card before the first message." |
+| Tests ignore `backend/.env`. | The Brevo key in Aditi's `.env` made a "key required" test fail on her Mac only. |
+
 ## Known gaps after phase 2
 
 - Photos uploaded in the editor and then abandoned (the editor closed without saving) stay in storage. A clean-up job belongs with phase 8's expiry job.

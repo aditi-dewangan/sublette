@@ -15,8 +15,10 @@ dependencies = [
     "sqlalchemy>=2.0.30,<2.1",
     "psycopg[binary]>=3.2,<4",
     "alembic>=1.13,<2",
-    "pyjwt>=2.9,<3",
+    "pyjwt[crypto]>=2.9,<3",
     "boto3>=1.35,<2",
+    # Apple Push Notification service speaks HTTP/2 only.
+    "httpx2[http2]>=2.13,<3",
 ]
 
 [project.optional-dependencies]

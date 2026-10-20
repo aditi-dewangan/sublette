@@ -17,7 +17,8 @@ Spec" doc; its Build plan tab defines phases 0 to 10 and each phase's
 | 6 Map and pins | Merged (#8). |
 | 7 Chat, checklist and notifications | Merged (#9). |
 | 8 Trust, safety and admin | Merged (#10). |
-| 9 Polish, offline and release prep | Pull request (`phase-9`). TestFlight and App Store wait for the Apple account. |
+| 9 Polish, offline and release prep | Merged (#11). TestFlight and App Store wait for the Apple account. |
+| 10 AI recommender | Pull request (`phase-10`). |
 
 ## How each phase is delivered
 

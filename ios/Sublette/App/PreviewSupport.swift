@@ -339,6 +339,23 @@ struct PreviewChatAPI: ChatAPI {
     func unregisterDevice(token: String) async throws {}
 }
 
+/// An assistant that always suggests the preview listing.
+struct PreviewAssistantAPI: AssistantAPI {
+    func status() async throws -> AssistantStatus {
+        AssistantStatus(enabled: true, label: "Suggestions are generated automatically and drawn only from listings on Sublette.")
+    }
+
+    func ask(_ message: String) async throws -> AssistantAnswer {
+        AssistantAnswer(
+            understood: PreferenceChanges(maxRentCents: 120_000),
+            summary: "Under $1,200",
+            items: [AssistantItem(item: PreviewData.deckItem, why: "Furnished, close to your pin, and $150 under budget.")],
+            generatedBy: "sublette",
+            label: "Suggestions are generated automatically and drawn only from listings on Sublette."
+        )
+    }
+}
+
 /// Analytics and referrals that go nowhere.
 struct PreviewReleaseAPI: ReleaseAPI {
     func send(_ event: EventRequest) async throws {}
@@ -449,6 +466,7 @@ extension AppContainer {
             chatAPI: PreviewChatAPI(),
             safetyAPI: PreviewSafetyAPI(),
             releaseAPI: PreviewReleaseAPI(),
+            assistantAPI: PreviewAssistantAPI(),
             notificationPermissions: PreviewNotificationPermissions(),
             liveEvents: nil,
             campusLocator: PreviewCampusLocator(),

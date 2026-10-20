@@ -396,3 +396,23 @@ def test_safety_samples(client: TestClient, mailer: RecordingMailer, clock, db) 
     )
     db.commit()
     check("error_account_suspended", client.get("/v1/me", headers=bearer(lister)).json())
+
+
+def test_assistant_samples(client: TestClient, mailer: RecordingMailer, clock, db) -> None:
+    import uuid as uuid_module
+
+    from app.models import User
+    from tests.test_deck import make_searching_renter, put_listing
+
+    renter = make_searching_renter(client, mailer, clock)
+    lister = sign_in(client, mailer, "lister@uw.edu")
+    client.patch("/v1/me", headers=bearer(lister), json=COMPLETE_PROFILE)
+    put_listing(db, clock, db.get(User, uuid_module.UUID(lister["user"]["id"])), furnished=True)
+
+    check("assistant_status", client.get("/v1/assistant", headers=bearer(renter)).json())
+    answer = client.post(
+        "/v1/assistant/query",
+        headers=bearer(renter),
+        json={"message": "Furnished private room, ideally parking, under $1,200"},
+    )
+    check("assistant_answer", answer.json())

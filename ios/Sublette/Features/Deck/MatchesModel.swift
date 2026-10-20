@@ -23,11 +23,28 @@ final class MatchesModel {
     private let api: DeckAPI
     private let chatAPI: ChatAPI
     private let preferences: Preferences
+    private let cache: OfflineStoring?
+    /// Messages written offline, shared by every chat.
+    let outbox: MessageOutbox?
 
-    init(api: DeckAPI, chatAPI: ChatAPI, preferences: Preferences) {
+    init(
+        api: DeckAPI,
+        chatAPI: ChatAPI,
+        preferences: Preferences,
+        cache: OfflineStoring? = nil,
+        outbox: MessageOutbox? = nil
+    ) {
         self.api = api
         self.chatAPI = chatAPI
         self.preferences = preferences
+        self.cache = cache
+        self.outbox = outbox
+        outbox?.onSent = { [weak self] message in
+            self?.activeChat?.delivered(message)
+        }
+        outbox?.onRefused = { [weak self] queued, reason in
+            self?.activeChat?.refused(queued.id, reason: reason)
+        }
     }
 
     private var userID: String?
@@ -42,6 +59,7 @@ final class MatchesModel {
         saved = []
         activeChat = nil
         state = .idle
+        outbox?.prepare(for: userID)
     }
 
     func matches(as role: SwipeSide) -> [Match] {
@@ -64,10 +82,18 @@ final class MatchesModel {
             matches = try await matchPage.items
             saved = try await savedPage.items
             state = .loaded
+            if let userID {
+                cache?.save(matches, key: CacheKey.matches(userID))
+                cache?.save(saved, key: CacheKey.saved(userID))
+            }
         } catch let error as APIError where error == .cancelled {
             state = .idle
         } catch {
-            // Offline: whatever was loaded stays shown.
+            // Offline: whatever was loaded stays shown, or what the phone kept.
+            if matches.isEmpty, saved.isEmpty, let userID {
+                matches = cache?.load([Match].self, key: CacheKey.matches(userID)) ?? []
+                saved = cache?.load([Listing].self, key: CacheKey.saved(userID)) ?? []
+            }
             state = .failed((error as? APIError)?.userMessage ?? APIError.unreachable.userMessage)
         }
     }
@@ -92,13 +118,20 @@ final class MatchesModel {
     func handle(_ event: LiveEvent) {
         switch event {
         case .ready:
-            Task { await load() }
+            Task {
+                // Back online: messages written offline go first.
+                await outbox?.flush()
+                await load()
+            }
         case .message(_, let match):
             upsert(match, toTop: true)
         case .match(let match, _):
             upsert(match, toTop: false)
         case .matchRemoved(let id):
             matches.removeAll { $0.id == id }
+            if let userID {
+                cache?.remove(key: CacheKey.chat(userID, match: id))
+            }
         case .unknown:
             break
         }
@@ -110,7 +143,10 @@ final class MatchesModel {
         if let activeChat, activeChat.match.id == match.id {
             return activeChat
         }
-        let chat = ChatModel(match: match, api: chatAPI, preferences: preferences, userID: userID ?? "")
+        let chat = ChatModel(
+            match: match, api: chatAPI, preferences: preferences, userID: userID ?? "",
+            cache: cache, outbox: outbox
+        )
         chat.onMatchChanged = { [weak self] changed in
             self?.upsert(changed, toTop: false)
         }

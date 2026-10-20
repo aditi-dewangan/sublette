@@ -13,8 +13,8 @@ struct RenterDeckView: View {
     var body: some View {
         VStack(spacing: 12) {
             toolbar
-            if model.outbox.isOffline {
-                OfflineBanner { Task { await model.outbox.flush() } }
+            if model.outbox.isOffline || model.showingSaved {
+                OfflineBanner { Task { await model.reload() } }
             }
             if let message = model.message {
                 ErrorText(message)

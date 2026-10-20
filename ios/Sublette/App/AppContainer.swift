@@ -32,6 +32,9 @@ final class AppContainer {
     let notifications: NotificationsModel
     let safety: SafetyModel
     let analytics: AnalyticsModel
+    /// Deck cards, matches, saved listings and chats kept for offline use.
+    let offlineCache: OfflineStoring
+    let messageOutbox: MessageOutbox
     /// Nil in previews and tests, which have no server to connect to.
     let liveEvents: LiveEvents?
 
@@ -56,7 +59,8 @@ final class AppContainer {
         addressLocator: AddressLocating,
         uploader: PhotoUploading,
         tokenManager: TokenManager,
-        health: HealthChecking
+        health: HealthChecking,
+        offlineCache: OfflineStoring? = nil
     ) {
         self.configuration = configuration
         self.preferences = preferences
@@ -74,6 +78,10 @@ final class AppContainer {
         self.uploader = uploader
         self.tokenManager = tokenManager
         self.appState = AppState(preferences: preferences)
+        let cache = offlineCache ?? OfflineCache(inMemory: true)
+        self.offlineCache = cache
+        let messageOutbox = MessageOutbox(api: chatAPI, cache: cache)
+        self.messageOutbox = messageOutbox
         let session = SessionModel(api: api, tokens: tokenManager, preferences: preferences)
         self.session = session
         self.onboarding = OnboardingModel(api: api, session: session)
@@ -82,10 +90,12 @@ final class AppContainer {
         self.renterSearch = RenterSearchModel(api: renterAPI)
         let outbox = SwipeOutbox(api: deckAPI, preferences: preferences)
         self.outbox = outbox
-        let renterDeck = RenterDeckModel(api: deckAPI, outbox: outbox)
+        let renterDeck = RenterDeckModel(api: deckAPI, outbox: outbox, cache: cache)
         self.renterDeck = renterDeck
         self.listerDeck = ListerDeckModel(deckAPI: deckAPI, listingsAPI: listingsAPI, outbox: outbox)
-        let matchesModel = MatchesModel(api: deckAPI, chatAPI: chatAPI, preferences: preferences)
+        let matchesModel = MatchesModel(
+            api: deckAPI, chatAPI: chatAPI, preferences: preferences, cache: cache, outbox: messageOutbox
+        )
         self.matchesModel = matchesModel
         let notifications = NotificationsModel(
             api: chatAPI,
@@ -99,10 +109,14 @@ final class AppContainer {
         let analytics = AnalyticsModel(api: releaseAPI, preferences: preferences)
         analytics.isSignedIn = { [weak session] in session?.user != nil }
         self.analytics = analytics
-        session.willSignOut = { [weak notifications, weak liveEvents, weak safety] in
+        session.willSignOut = { [weak notifications, weak liveEvents, weak safety, weak session, preferences] in
             liveEvents?.stop()
             await notifications?.willSignOut()
             safety?.reset()
+            // A shared phone keeps nothing of the last account's.
+            if let accountID = session?.user?.id ?? preferences.cachedUser?.id {
+                cache.removeAll(accountID: accountID)
+            }
         }
         let renterMap = RenterMapModel(api: mapAPI, outbox: outbox)
         renterMap.onSwiped = { [weak renterDeck] listingID in
@@ -158,6 +172,7 @@ final class AppContainer {
         }
         liveEvents?.start()
         await notifications.didSignIn()
+        await messageOutbox.flush()
         await analytics.appOpened()
     }
 
@@ -205,7 +220,8 @@ final class AppContainer {
             addressLocator: AppleAddressLocator(),
             uploader: PhotoUploader(api: api, session: APIClient.makeSession(timeout: timeout)),
             tokenManager: tokenManager,
-            health: openClient
+            health: openClient,
+            offlineCache: OfflineCache()
         )
     }
 

@@ -315,6 +315,14 @@ private struct PendingBubble: View {
                 }
                 .font(.footnote.weight(.semibold))
                 .foregroundStyle(Brand.accentText)
+            } else if message.waiting {
+                HStack(spacing: 12) {
+                    Label("Sends when you're back online", systemImage: "clock")
+                        .foregroundStyle(Brand.ink.opacity(0.75))
+                    Button("Delete", role: .destructive) { model.discard(message) }
+                        .foregroundStyle(Brand.accentText)
+                }
+                .font(.footnote.weight(.semibold))
             }
         }
         .frame(maxWidth: .infinity, alignment: .trailing)

@@ -2,7 +2,7 @@ import Foundation
 
 /// One listing in a renter's deck, with how well it fits and why.
 /// The deck screens arrive in phase 5; the server side is phase 4.
-struct DeckItem: Decodable, Equatable, Identifiable {
+struct DeckItem: Codable, Equatable, Identifiable {
     /// As any renter sees it: the public point, never the exact address.
     let listing: Listing
     /// 0 to 100. Orders the deck and colors the map; never shown as a number.
@@ -84,7 +84,7 @@ struct Person: Codable, Equatable {
     var completedSublets: Int = 0
 }
 
-struct Match: Decodable, Equatable, Identifiable {
+struct Match: Codable, Equatable, Identifiable {
     let id: String
     /// The signed-in student's side of this match.
     let role: SwipeSide

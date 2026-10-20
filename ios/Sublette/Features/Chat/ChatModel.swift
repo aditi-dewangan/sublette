@@ -7,6 +7,8 @@ struct PendingMessage: Identifiable, Equatable {
     let id: String
     let body: String
     var failed: Bool
+    /// Written offline: kept on the phone and sent when the connection is back.
+    var waiting = false
 }
 
 /// One open chat: its messages, the shared checklist and "Filled".
@@ -39,21 +41,35 @@ final class ChatModel {
     @ObservationIgnored private let preferences: Preferences
     @ObservationIgnored private let userID: String
     @ObservationIgnored private let makeID: () -> String
+    @ObservationIgnored private let cache: OfflineStoring?
+    @ObservationIgnored private let outbox: MessageOutbox?
+
+    /// The latest messages kept on the phone for reading offline.
+    static let cachedMessages = 50
 
     init(
         match: Match,
         api: ChatAPI,
         preferences: Preferences,
         userID: String,
+        cache: OfflineStoring? = nil,
+        outbox: MessageOutbox? = nil,
         makeID: @escaping () -> String = { UUID().uuidString.lowercased() }
     ) {
         self.match = match
         self.api = api
         self.preferences = preferences
         self.userID = userID
+        self.cache = cache
+        self.outbox = outbox
         self.makeID = makeID
         self.safetyAcknowledged = preferences.safetyCardSeen.contains(Self.safetyKey(userID: userID, matchID: match.id))
+        self.pending = (outbox?.queued(for: match.id) ?? []).map {
+            PendingMessage(id: $0.id, body: $0.body, failed: false, waiting: true)
+        }
     }
+
+    private var cacheKey: String { CacheKey.chat(userID, match: match.id) }
 
     var role: SwipeSide { match.role }
     var other: Person { match.other }
@@ -110,13 +126,21 @@ final class ChatModel {
                 hasOlder = page.hasMore
             }
             state = .loaded
+            cache?.save(
+                MessagePage(items: Array(messages.suffix(Self.cachedMessages)), hasMore: true),
+                key: cacheKey
+            )
             await markRead()
         } catch let error as APIError where error == .cancelled {
             state = messages.isEmpty ? .idle : .loaded
         } catch let error as APIError where error.serverCode == "chat_unavailable" {
             isGone = true
+            cache?.remove(key: cacheKey)
         } catch {
-            // Offline: what was loaded stays on screen.
+            // Offline: what was loaded stays on screen, or what the phone kept.
+            if messages.isEmpty, let saved = cache?.load(MessagePage.self, key: cacheKey) {
+                merge(saved.items)
+            }
             state = .failed(Self.message(for: error))
         }
     }
@@ -163,6 +187,7 @@ final class ChatModel {
 
     func discard(_ message: PendingMessage) {
         pending.removeAll { $0.id == message.id }
+        outbox?.remove(id: message.id)
     }
 
     func toggle(_ step: Checklist.Step) async {
@@ -185,6 +210,23 @@ final class ChatModel {
         } catch {
             problem = Self.message(for: error)
         }
+    }
+
+    /// A message sent from the outbox once the connection came back.
+    func delivered(_ message: ChatMessage) {
+        guard message.matchId == match.id else {
+            return
+        }
+        merge([message])
+    }
+
+    /// The server refused a queued message for good.
+    func refused(_ id: String, reason: String) {
+        if let index = pending.firstIndex(where: { $0.id == id }) {
+            pending[index].waiting = false
+            pending[index].failed = true
+        }
+        problem = reason
     }
 
     /// A live event. Only this chat's are used.
@@ -215,6 +257,12 @@ final class ChatModel {
         do {
             let sent = try await api.send(matchID: match.id, MessageRequest(body: message.body, messageId: message.id))
             merge([sent])
+        } catch let error as APIError where error == .unreachable && outbox != nil {
+            // Offline: it waits on the phone and goes out when the connection is back.
+            if let index = pending.firstIndex(where: { $0.id == message.id }) {
+                pending[index].waiting = true
+            }
+            outbox?.add(QueuedMessage(id: message.id, matchID: match.id, body: message.body))
         } catch {
             if let index = pending.firstIndex(where: { $0.id == message.id }) {
                 pending[index].failed = true
@@ -234,6 +282,7 @@ final class ChatModel {
         }
         let sentIDs = Set(messages.compactMap(\.messageId))
         pending.removeAll { sentIDs.contains($0.id) }
+        sentIDs.forEach { outbox?.remove(id: $0) }
     }
 
     private func update(_ changed: Match) {

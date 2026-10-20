@@ -647,3 +647,27 @@ final class StubSafetyAPI: SafetyAPI, @unchecked Sendable {
         return try termsResult.get()
     }
 }
+
+final class StubReleaseAPI: ReleaseAPI, @unchecked Sendable {
+    var crashResults: [Result<Void, Error>] = []
+    var eventResult: Result<Void, Error> = .success(())
+    var referralResult: Result<User, Error> = .success(Fixture.completeUser)
+    private(set) var events: [EventRequest] = []
+    private(set) var crashes: [CrashRequest] = []
+
+    func send(_ event: EventRequest) async throws {
+        events.append(event)
+        try eventResult.get()
+    }
+
+    func send(_ crash: CrashRequest) async throws {
+        crashes.append(crash)
+        if !crashResults.isEmpty {
+            try crashResults.removeFirst().get()
+        }
+    }
+
+    func useReferral(code: String) async throws -> User {
+        try referralResult.get()
+    }
+}

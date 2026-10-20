@@ -11,6 +11,7 @@ from app.models import Listing, ListingPhoto, Match, User
 from app.schemas.errors import FieldError
 from app.schemas.listings import ListerOut, ListingFields, ListingOut, PhotoOut
 from app.services.geo import offset_point
+from app.services.lifestyle import QUESTIONS
 from app.services.storage import KEY_PATTERN, PhotoStorage, owner_prefix
 
 MIN_PHOTOS = 4
@@ -84,6 +85,10 @@ def apply_fields(
     if listing.housemates_staying == 0:
         # Nobody stays, so there is nobody to describe.
         listing.household_gender = None
+    if listing.housemates_staying == 0 or listing.space_type == "entire_unit":
+        # Nobody to live with: no housemates' lifestyle either.
+        for question in QUESTIONS:
+            setattr(listing, question, None)
 
     if moved or (listing.latitude is not None and listing.public_latitude is None):
         if listing.latitude is None or listing.longitude is None:
@@ -265,6 +270,11 @@ def listing_out(
         same_school_only=listing.same_school_only,
         min_stay_days=listing.min_stay_days,
         landlord_consent=listing.landlord_consent,
+        sleep_schedule=listing.sleep_schedule,
+        tidiness=listing.tidiness,
+        guests=listing.guests,
+        home_daytime=listing.home_daytime,
+        home_vibe=listing.home_vibe,
         photos=[PhotoOut(key=photo.key, url=url(photo.key)) for photo in listing.photos],
         lister=ListerOut(
             first_name=owner.first_name,

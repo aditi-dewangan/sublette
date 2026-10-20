@@ -63,9 +63,11 @@ struct ProfileUpdate: Encodable, Equatable {
     var gender: Gender?
     var smokes: Bool
     var hasPets: Bool
+    var homeLife = HomeLife()
 
     private enum CodingKeys: String, CodingKey {
         case firstName, year, program, bio, gender, smokes, hasPets
+        case sleepSchedule, tidiness, guests, homeDaytime, homeVibe
     }
 
     func encode(to encoder: Encoder) throws {
@@ -78,6 +80,7 @@ struct ProfileUpdate: Encodable, Equatable {
         try container.encode(gender, forKey: .gender)
         try container.encode(smokes, forKey: .smokes)
         try container.encode(hasPets, forKey: .hasPets)
+        try homeLife.encode(into: &container) { CodingKeys(stringValue: $0.stringValue)! }
     }
 }
 

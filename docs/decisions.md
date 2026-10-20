@@ -254,6 +254,16 @@ correctness, the iPhone app) and an end-to-end run against a live server
 | Times use the listing's public point (about 150 m off) unless the renter matched and knows the exact one. | The exact address is private until a match, as everywhere else. |
 | No "under 30 min" filter yet. | Filtering fairly would mean asking Apple about every nearby listing, which its limit doesn't allow; it needs the server to store the places, which the issue left optional. A follow-up if wanted. |
 
+### Housemate lifestyle fit (issue #20, added 2026-10-20)
+
+| Decision | Reason |
+| --- | --- |
+| Five optional questions: when you sleep, how tidy, how often guests come, home during the day, quiet or social. Renters answer for themselves (Profile → Edit → Your home life); listers answer for the housemates staying (listing editor, only when someone stays in a shared home). | The issue's list. A gentler version of the "Quiet hours" field Aditi dropped: everything can be skipped. |
+| It is only ever a nice-to-have: up to 8 points on top of the score, and never hides a place. It counts only for a shared home with someone staying, and only when both sides answered at least two of the same questions. | Must-haves stay the renter's explicit choices; one shared answer is too little to call a fit. |
+| Answers compare as: the same is a full match; neighbours on a scale (tidy and relaxed, rarely and sometimes) are half; "It varies" and "Either" meet anything halfway; opposites are none. | Living with someone a little tidier is fine; early birds and night owls clash. |
+| Cards add "You'd fit in: early nights and a tidy home" (at most two shared answers); listers see "Lives like your housemates: …" on the renter's card. | The issue's "Lifestyle fit" line, in the same plain voice as the other reasons. |
+| Lifestyle answers are cleared when a listing has nobody staying or is a whole place. | There's nobody to describe. |
+
 ## Known gaps after phase 2
 
 - Photos uploaded in the editor and then abandoned (the editor closed without saving) stay in storage. Done in phase 8: deleted after a day.

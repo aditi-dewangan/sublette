@@ -91,6 +91,7 @@ final class ListingContractTests: XCTestCase {
                 "bathroom", "furnished", "laundry", "parking", "housemates_staying",
                 "housemates_note", "household_gender", "pets_allowed", "smoking_allowed", "gender_preference",
                 "same_school_only", "min_stay_days", "landlord_consent", "photo_keys",
+                "sleep_schedule", "tidiness", "guests", "home_daytime", "home_vibe",
             ]
         )
         XCTAssertEqual(body["rent_cents"] as? Int, 120_000)

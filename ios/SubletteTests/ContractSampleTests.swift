@@ -131,7 +131,11 @@ final class RequestEncodingTests: XCTestCase {
 
         XCTAssertEqual(
             Set(body.keys),
-            ["first_name", "year", "program", "bio", "gender", "smokes", "has_pets"]
+            [
+                "first_name", "year", "program", "bio", "gender", "smokes", "has_pets",
+                // Lifestyle (issue #20), sent as null when skipped.
+                "sleep_schedule", "tidiness", "guests", "home_daytime", "home_vibe",
+            ]
         )
         XCTAssertEqual(body["first_name"] as? String, "Aditi")
         XCTAssertEqual(body["year"] as? String, "junior")

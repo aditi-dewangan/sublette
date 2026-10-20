@@ -3,7 +3,7 @@ from typing import Annotated, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, StringConstraints
 
-from app.schemas.common import UtcDateTime
+from app.schemas.common import HomeVibe, HowOften, SleepSchedule, Tidiness, UtcDateTime
 
 Year = Literal["freshman", "sophomore", "junior", "senior", "graduate", "other"]
 Gender = Literal["woman", "man", "nonbinary"]
@@ -35,6 +35,12 @@ class UserOut(BaseModel):
     gender: Gender | None
     smokes: bool | None
     has_pets: bool | None
+    # Lifestyle, all optional (services/lifestyle.py).
+    sleep_schedule: SleepSchedule | None
+    tidiness: Tidiness | None
+    guests: HowOften | None
+    home_daytime: HowOften | None
+    home_vibe: HomeVibe | None
     # True once first name, year, program, smokes and has_pets are all answered.
     profile_complete: bool
     # Sublets finished through Sublette: both sides confirmed "Filled".
@@ -64,5 +70,11 @@ class UserPatch(BaseModel):
     smokes: bool | None = None
     has_pets: bool | None = None
     alert_frequency: AlertFrequency | None = None
+    # Lifestyle, all optional (services/lifestyle.py).
+    sleep_schedule: SleepSchedule | None = None
+    tidiness: Tidiness | None = None
+    guests: HowOften | None = None
+    home_daytime: HowOften | None = None
+    home_vibe: HomeVibe | None = None
     # The `key` returned by POST /v1/uploads/presign, after the upload finished.
     photo_key: str | None = Field(default=None, max_length=200)

@@ -460,6 +460,21 @@ private struct HouseholdStepView: View {
                 .pickerStyle(.segmented)
             }
         }
+        if model.housematesStaying > 0 && model.spaceType != .entireUnit {
+            DisclosureGroup {
+                HomeLifeQuestions(answers: $model.homeLife, about: .housemates)
+                    .padding(.top, 8)
+            } label: {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("How they live")
+                        .font(.headline)
+                    Text("Optional. Renters who live alike see it on your card.")
+                        .font(.footnote)
+                }
+                .foregroundStyle(Brand.ink)
+            }
+            .tint(Brand.ink)
+        }
         FormField(
             "About them",
             hint: "Optional. One line. \(ListingEditorModel.noteLimit - model.housematesNote.count) characters left.",

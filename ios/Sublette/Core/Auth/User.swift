@@ -78,6 +78,12 @@ struct User: Codable, Equatable, Identifiable {
     var gender: Gender?
     var smokes: Bool?
     var hasPets: Bool?
+    /// Lifestyle answers (issue #20), all optional.
+    var sleepSchedule: SleepSchedule?
+    var tidiness: Tidiness?
+    var guests: HowOften?
+    var homeDaytime: HowOften?
+    var homeVibe: HomeVibe?
     /// True once first name, year, program, smokes and pets are all answered.
     var profileComplete: Bool
     /// Sublets finished through Sublette. Optional so a profile saved on the

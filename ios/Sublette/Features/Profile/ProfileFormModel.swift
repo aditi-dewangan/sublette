@@ -13,6 +13,8 @@ final class ProfileFormModel {
     var gender: Gender?
     var smokes: Bool?
     var hasPets: Bool?
+    /// Optional lifestyle answers, for fitting in with housemates.
+    var homeLife: HomeLife
 
     private(set) var photoUrl: String?
     private(set) var isSaving = false
@@ -40,6 +42,7 @@ final class ProfileFormModel {
         self.gender = user.gender
         self.smokes = user.smokes
         self.hasPets = user.hasPets
+        self.homeLife = HomeLife(user: user)
         self.photoUrl = user.photoUrl
     }
 
@@ -73,7 +76,8 @@ final class ProfileFormModel {
             bio: trimmedBio.isEmpty ? nil : trimmedBio,
             gender: gender,
             smokes: smokes,
-            hasPets: hasPets
+            hasPets: hasPets,
+            homeLife: homeLife
         )
     }
 

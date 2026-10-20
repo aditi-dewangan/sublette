@@ -71,7 +71,10 @@ struct ChatView: View {
         } message: {
             Text(filledExplanation)
         }
-        .task { await model.load() }
+        .task {
+            container.analytics.used(.chat)
+            await model.load()
+        }
         .onDisappear { container.matchesModel.closeChat(model) }
     }
 
@@ -148,7 +151,7 @@ struct ChatView: View {
                             .foregroundStyle(Brand.ink)
                             .padding(.horizontal, 12)
                             .padding(.vertical, 8)
-                            .background(Color.white, in: Capsule())
+                            .background(Brand.card, in: Capsule())
                             .overlay(Capsule().stroke(Brand.ink.opacity(0.2)))
                     }
                 }
@@ -172,7 +175,7 @@ struct ChatView: View {
             } label: {
                 Image(systemName: "arrow.up.circle.fill")
                     .font(.system(size: 34))
-                    .foregroundStyle(Brand.magenta)
+                    .foregroundStyle(Brand.accentText)
             }
             .disabled(model.draft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
             .accessibilityLabel("Send")
@@ -275,7 +278,7 @@ private struct ListingSummary: View {
         .foregroundStyle(Brand.ink)
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(12)
-        .background(Color.white, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .background(Brand.card, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
     }
 }
 
@@ -289,7 +292,7 @@ private struct Bubble: View {
             .foregroundStyle(mine ? Brand.textOnMagenta : Brand.ink)
             .padding(.horizontal, 14)
             .padding(.vertical, 9)
-            .background(mine ? Brand.magenta : Color.white, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+            .background(mine ? Brand.magenta : Brand.card, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
             .frame(maxWidth: 290, alignment: mine ? .trailing : .leading)
             .frame(maxWidth: .infinity, alignment: mine ? .trailing : .leading)
             .textSelection(.enabled)
@@ -311,7 +314,7 @@ private struct PendingBubble: View {
                     Button("Delete", role: .destructive) { model.discard(message) }
                 }
                 .font(.footnote.weight(.semibold))
-                .foregroundStyle(Brand.magenta)
+                .foregroundStyle(Brand.accentText)
             }
         }
         .frame(maxWidth: .infinity, alignment: .trailing)
@@ -336,7 +339,7 @@ struct SafetyCard: View {
         .font(.subheadline)
         .foregroundStyle(Brand.ink)
         .padding(16)
-        .background(Color.white, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .background(Brand.card, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
     }
 }
 

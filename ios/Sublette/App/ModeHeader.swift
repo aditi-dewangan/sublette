@@ -24,6 +24,8 @@ struct ModeHeader: View {
         .padding(.horizontal, 16)
         .padding(.vertical, 10)
         .background(appState.mode.accent)
+        // Yellow and orange stay light in dark mode, so their controls do too.
+        .environment(\.colorScheme, .light)
         .animation(.easeInOut(duration: 0.2), value: appState.mode)
     }
 

@@ -339,6 +339,18 @@ struct PreviewChatAPI: ChatAPI {
     func unregisterDevice(token: String) async throws {}
 }
 
+/// Analytics and referrals that go nowhere.
+struct PreviewReleaseAPI: ReleaseAPI {
+    func send(_ event: EventRequest) async throws {}
+    func send(_ crash: CrashRequest) async throws {}
+
+    func useReferral(code: String) async throws -> User {
+        var user = PreviewData.aditi
+        user.referred = true
+        return user
+    }
+}
+
 /// Reports and blocks that go nowhere.
 struct PreviewSafetyAPI: SafetyAPI {
     func report(_ request: ReportRequest) async throws -> ReportReceipt {
@@ -436,6 +448,7 @@ extension AppContainer {
             mapAPI: PreviewMapAPI(),
             chatAPI: PreviewChatAPI(),
             safetyAPI: PreviewSafetyAPI(),
+            releaseAPI: PreviewReleaseAPI(),
             notificationPermissions: PreviewNotificationPermissions(),
             liveEvents: nil,
             campusLocator: PreviewCampusLocator(),

@@ -34,10 +34,13 @@ struct OnboardingPage<Content: View>: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 20) {
-                Text("Sublette")
-                    .font(.system(.headline, design: .rounded).weight(.bold))
-                    .foregroundStyle(Brand.magenta)
-                    .padding(.top, 32)
+                HStack(spacing: 8) {
+                    PinMark(width: 22)
+                    Text("Sublette")
+                        .font(.system(.headline, design: .rounded).weight(.bold))
+                        .foregroundStyle(Brand.accentText)
+                }
+                .padding(.top, 32)
                 Text(title)
                     .font(.system(.largeTitle, design: .rounded).weight(.bold))
                     .foregroundStyle(Brand.ink)

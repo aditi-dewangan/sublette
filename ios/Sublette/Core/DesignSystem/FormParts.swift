@@ -48,7 +48,7 @@ struct ErrorText: View {
     var body: some View {
         Label(message, systemImage: "exclamationmark.circle.fill")
             .font(.footnote.weight(.medium))
-            .foregroundStyle(Brand.magenta)
+            .foregroundStyle(Brand.accentText)
             .fixedSize(horizontal: false, vertical: true)
             .accessibilityLabel("Error: \(message)")
     }
@@ -60,10 +60,10 @@ extension View {
         self
             .font(.body)
             .foregroundStyle(Brand.ink)
-            .tint(Brand.magenta)
+            .tint(Brand.accentText)
             .padding(.horizontal, 14)
             .padding(.vertical, 12)
-            .background(Color.white, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+            .background(Brand.card, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
             .overlay(
                 RoundedRectangle(cornerRadius: 14, style: .continuous)
                     .stroke(Brand.ink.opacity(0.12), lineWidth: 1)
@@ -91,11 +91,11 @@ struct YesNoPicker: View {
         } label: {
             Text(title)
                 .font(.subheadline.weight(.semibold))
-                .foregroundStyle(Brand.ink)
+                .foregroundStyle(isSelected ? Brand.textOnYellow : Brand.ink)
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 11)
                 .background(
-                    isSelected ? Brand.yellow : Color.white,
+                    isSelected ? Brand.yellow : Brand.card,
                     in: RoundedRectangle(cornerRadius: 14, style: .continuous)
                 )
                 .overlay(

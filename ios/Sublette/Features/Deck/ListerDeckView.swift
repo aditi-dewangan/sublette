@@ -84,7 +84,10 @@ struct ListerDeckView: View {
                 .frame(maxHeight: .infinity)
                 HStack(spacing: 18) {
                     DeckButton(systemImage: "arrow.uturn.backward", label: "Undo", size: 48) {
-                        Task { await model.undo() }
+                        Task {
+                            container.analytics.used(.undo)
+                            await model.undo()
+                        }
                     }
                     .disabled(!model.canUndo)
                     .opacity(model.canUndo ? 1 : 0.4)
@@ -97,7 +100,7 @@ struct ListerDeckView: View {
             }
         } else if model.state == .loading || model.state == .idle {
             ProgressView()
-                .tint(Brand.magenta)
+                .tint(Brand.accentText)
                 .padding(.top, 60)
         } else {
             note(
@@ -112,7 +115,7 @@ struct ListerDeckView: View {
             VStack(spacing: 12) {
                 Image(systemName: "person.2")
                     .font(.system(size: 40, weight: .semibold))
-                    .foregroundStyle(Brand.magenta)
+                    .foregroundStyle(Brand.accentText)
                     .accessibilityHidden(true)
                 Text(title)
                     .font(.system(.title2, design: .rounded).weight(.bold))
@@ -172,7 +175,7 @@ struct RenterCardView: View {
         .foregroundStyle(Brand.ink)
         .padding(20)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-        .background(Color.white, in: RoundedRectangle(cornerRadius: 24, style: .continuous))
+        .background(Brand.card, in: RoundedRectangle(cornerRadius: 24, style: .continuous))
         .overlay(RoundedRectangle(cornerRadius: 24, style: .continuous).stroke(Brand.ink.opacity(0.08)))
         .shadow(color: Brand.ink.opacity(0.10), radius: 12, y: 6)
         .accessibilityElement(children: .contain)

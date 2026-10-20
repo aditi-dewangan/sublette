@@ -14,6 +14,7 @@ final class Preferences: @unchecked Sendable {
         static let pendingSwipes = "pendingSwipes"
         static let safetyCardSeen = "safetyCardSeen"
         static let deviceToken = "deviceToken"
+        static let pendingCrashReports = "pendingCrashReports"
     }
 
     init(defaults: UserDefaults = .standard) {
@@ -86,6 +87,23 @@ extension Preferences {
     var safetyCardSeen: Set<String> {
         get { Set(defaults.stringArray(forKey: Key.safetyCardSeen) ?? []) }
         set { defaults.set(Array(newValue).sorted(), forKey: Key.safetyCardSeen) }
+    }
+
+    /// Crash reports MetricKit handed over that haven't reached the server yet.
+    var pendingCrashReports: [CrashRequest] {
+        get {
+            guard let data = defaults.data(forKey: Key.pendingCrashReports) else {
+                return []
+            }
+            return (try? JSONDecoder().decode([CrashRequest].self, from: data)) ?? []
+        }
+        set {
+            if newValue.isEmpty {
+                defaults.removeObject(forKey: Key.pendingCrashReports)
+            } else if let data = try? JSONEncoder().encode(Array(newValue.suffix(10))) {
+                defaults.set(data, forKey: Key.pendingCrashReports)
+            }
+        }
     }
 
     /// The push token last sent to the server, so signing out can withdraw it.

@@ -9,7 +9,7 @@ struct ServerStatusCard: View {
         VStack(alignment: .leading, spacing: 12) {
             HStack(spacing: 8) {
                 Image(systemName: symbolName)
-                    .foregroundStyle(Brand.magenta)
+                    .foregroundStyle(Brand.accentText)
                     .accessibilityHidden(true)
                 Text(model.title)
                     .font(.headline)
@@ -39,7 +39,7 @@ struct ServerStatusCard: View {
         }
         .padding(16)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Color.white, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+        .background(Brand.card, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
         .accessibilityIdentifier("server-status-card")
         .task {
             // Unit tests launch the whole app as their host. It must not call a real server then.

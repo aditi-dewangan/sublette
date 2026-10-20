@@ -33,6 +33,7 @@ struct RenterHomeView: View {
             search.prepare(for: userID)
             container.outbox.prepare(for: userID)
             container.renterDeck.prepare(for: userID)
+            container.analytics.used(.deck)
             if search.profile == nil {
                 await search.load()
             }
@@ -56,7 +57,7 @@ struct RenterHomeView: View {
             setUp
         } else if search.state == .loading || search.state == .idle {
             ProgressView()
-                .tint(Brand.magenta)
+                .tint(Brand.accentText)
                 .frame(maxWidth: .infinity)
                 .padding(.top, 60)
         }
@@ -66,7 +67,7 @@ struct RenterHomeView: View {
         VStack(alignment: .leading, spacing: 14) {
             Image(systemName: "sparkle.magnifyingglass")
                 .font(.system(size: 44, weight: .semibold))
-                .foregroundStyle(Brand.magenta)
+                .foregroundStyle(Brand.accentText)
                 .accessibilityHidden(true)
             Text("What are you looking for?")
                 .font(.system(.title, design: .rounded).weight(.bold))

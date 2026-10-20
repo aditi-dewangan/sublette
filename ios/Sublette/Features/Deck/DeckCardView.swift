@@ -22,6 +22,7 @@ struct DeckCardView: View {
                             .font(.footnote.weight(.bold))
                             .padding(.horizontal, 10)
                             .padding(.vertical, 5)
+                            .foregroundStyle(item.band == .strong ? Brand.textOnYellow : Brand.ink)
                             .background(item.band == .strong ? Brand.yellow : Brand.orange.opacity(0.35), in: Capsule())
                     }
                     ListingSafetyMenu(listing: item.listing)
@@ -41,7 +42,7 @@ struct DeckCardView: View {
             .padding(18)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Color.white, in: RoundedRectangle(cornerRadius: 24, style: .continuous))
+        .background(Brand.card, in: RoundedRectangle(cornerRadius: 24, style: .continuous))
         .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
         .overlay(RoundedRectangle(cornerRadius: 24, style: .continuous).stroke(Brand.ink.opacity(0.08)))
         .shadow(color: Brand.ink.opacity(0.10), radius: 12, y: 6)
@@ -97,7 +98,7 @@ struct DeckDetailSheet: View {
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Done") { dismiss() }
-                        .tint(Brand.magenta)
+                        .tint(Brand.accentText)
                 }
             }
         }

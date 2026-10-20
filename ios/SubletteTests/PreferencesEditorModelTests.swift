@@ -319,7 +319,7 @@ final class ModeTabTests: XCTestCase {
     func testEachModeHasItsOwnAccent() {
         XCTAssertEqual(AppMode.renter.accent, Brand.yellow)
         XCTAssertEqual(AppMode.lister.accent, Brand.orange)
-        XCTAssertEqual(AppMode.renter.textOnAccent, Brand.ink)
-        XCTAssertEqual(AppMode.lister.textOnAccent, Brand.ink)
+        XCTAssertEqual(AppMode.renter.textOnAccent, Palette.ink)
+        XCTAssertEqual(AppMode.lister.textOnAccent, Palette.ink)
     }
 }

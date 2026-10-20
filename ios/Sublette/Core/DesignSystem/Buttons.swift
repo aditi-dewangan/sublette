@@ -41,7 +41,7 @@ struct LinkButtonStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
             .font(.subheadline.weight(.semibold))
-            .foregroundStyle(Brand.magenta)
+            .foregroundStyle(Brand.accentText)
             .opacity(configuration.isPressed ? 0.6 : 1)
     }
 }

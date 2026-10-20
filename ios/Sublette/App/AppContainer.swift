@@ -14,6 +14,7 @@ final class AppContainer {
     let mapAPI: MapAPI
     let chatAPI: ChatAPI
     let safetyAPI: SafetyAPI
+    let releaseAPI: ReleaseAPI
     let campusLocator: CampusLocating
     let addressLocator: AddressLocating
     let uploader: PhotoUploading
@@ -30,10 +31,13 @@ final class AppContainer {
     let renterMap: RenterMapModel
     let notifications: NotificationsModel
     let safety: SafetyModel
+    let analytics: AnalyticsModel
     /// Nil in previews and tests, which have no server to connect to.
     let liveEvents: LiveEvents?
 
     private let tokenManager: TokenManager
+    /// Kept alive while the app runs; MetricKit holds it weakly.
+    @ObservationIgnored private var crashReporter: CrashReporter?
 
     init(
         configuration: AppConfiguration,
@@ -45,6 +49,7 @@ final class AppContainer {
         mapAPI: MapAPI,
         chatAPI: ChatAPI,
         safetyAPI: SafetyAPI,
+        releaseAPI: ReleaseAPI,
         notificationPermissions: NotificationPermissions,
         liveEvents: LiveEvents?,
         campusLocator: CampusLocating,
@@ -62,6 +67,7 @@ final class AppContainer {
         self.mapAPI = mapAPI
         self.chatAPI = chatAPI
         self.safetyAPI = safetyAPI
+        self.releaseAPI = releaseAPI
         self.liveEvents = liveEvents
         self.campusLocator = campusLocator
         self.addressLocator = addressLocator
@@ -90,10 +96,13 @@ final class AppContainer {
         self.notifications = notifications
         let safety = SafetyModel(api: safetyAPI)
         self.safety = safety
+        let analytics = AnalyticsModel(api: releaseAPI, preferences: preferences)
+        analytics.isSignedIn = { [weak session] in session?.user != nil }
+        self.analytics = analytics
         session.willSignOut = { [weak notifications, weak liveEvents, weak safety] in
-            await liveEvents?.stop()
+            liveEvents?.stop()
             await notifications?.willSignOut()
-            await safety?.reset()
+            safety?.reset()
         }
         let renterMap = RenterMapModel(api: mapAPI, outbox: outbox)
         renterMap.onSwiped = { [weak renterDeck] listingID in
@@ -123,6 +132,11 @@ final class AppContainer {
         }
     }
 
+    /// The link that opens a listing's public page, for sharing.
+    func shareURL(for listing: Listing) -> URL? {
+        pageURL(.listingShare(listing.id))
+    }
+
     /// A web page on the server, such as the terms of service.
     func pageURL(_ endpoint: Endpoint) -> URL? {
         APIClient(baseURL: configuration.apiBaseURL).url(for: endpoint)
@@ -144,6 +158,7 @@ final class AppContainer {
         }
         liveEvents?.start()
         await notifications.didSignIn()
+        await analytics.appOpened()
     }
 
     func appWentToBackground() {
@@ -183,6 +198,7 @@ final class AppContainer {
             mapAPI: LiveMapAPI(client: signedInClient),
             chatAPI: LiveChatAPI(client: signedInClient),
             safetyAPI: LiveSafetyAPI(client: signedInClient),
+            releaseAPI: LiveReleaseAPI(client: signedInClient),
             notificationPermissions: SystemNotificationPermissions(),
             liveEvents: LiveEvents(client: signedInClient, tokens: tokenManager),
             campusLocator: AppleCampusLocator(),
@@ -200,6 +216,11 @@ final class AppContainer {
         guard !Runtime.isRunningUnitTests else {
             return
         }
+        let reporter = CrashReporter { [weak self] reports in
+            Task { @MainActor in await self?.analytics.received(reports) }
+        }
+        reporter.start()
+        crashReporter = reporter
         await tokenManager.prepare(preferences: preferences)
         await tokenManager.setSessionEndedHandler { [weak session] in
             await session?.sessionEnded()

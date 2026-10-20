@@ -96,7 +96,7 @@ struct RenterDeckView: View {
             }
         } else {
             ProgressView()
-                .tint(Brand.magenta)
+                .tint(Brand.accentText)
                 .padding(.top, 60)
         }
     }
@@ -104,7 +104,10 @@ struct RenterDeckView: View {
     private var buttons: some View {
         HStack(spacing: 18) {
             DeckButton(systemImage: "arrow.uturn.backward", label: "Undo", size: 48) {
-                Task { await model.undo() }
+                Task {
+                    container.analytics.used(.undo)
+                    await model.undo()
+                }
             }
             .disabled(!model.canUndo)
             .opacity(model.canUndo ? 1 : 0.4)
@@ -136,7 +139,7 @@ struct OfflineBanner: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
             Button("Retry", action: onRetry)
                 .font(.footnote.weight(.semibold))
-                .tint(Brand.magenta)
+                .tint(Brand.accentText)
         }
         .foregroundStyle(Brand.ink)
         .padding(12)
@@ -186,6 +189,7 @@ struct EmptyDeckView: View {
             paragraph("You only see places with everything you marked as a must-have. \(blocker.message)")
             notifyButton
             Button("Search a bigger area") {
+                container.analytics.used(.biggerArea)
                 change { await search.widenArea() }
             }
             .buttonStyle(SecondaryButtonStyle())
@@ -203,6 +207,7 @@ struct EmptyDeckView: View {
             heading("You've seen everything near your pin")
             paragraph("New listings show up here as soon as they're posted. Saved ones are in Matches.")
             Button("Search a bigger area") {
+                container.analytics.used(.biggerArea)
                 change { await search.widenArea() }
             }
             .buttonStyle(PrimaryButtonStyle())
@@ -215,6 +220,7 @@ struct EmptyDeckView: View {
         paragraph(blocker.message)
         notifyButton
         Button("Search a bigger area") {
+            container.analytics.used(.biggerArea)
             change { await search.widenArea() }
         }
         .buttonStyle(SecondaryButtonStyle())
@@ -232,6 +238,7 @@ struct EmptyDeckView: View {
                 .foregroundStyle(Brand.ink)
         } else {
             Button("Notify me when a place that fits is listed") {
+                container.analytics.used(.notifyMe)
                 change(reload: false) { await search.setNotifyNewListings(true) }
             }
             .buttonStyle(PrimaryButtonStyle())

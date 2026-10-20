@@ -90,7 +90,7 @@ private struct StampLabel: View {
             .foregroundStyle(color)
             .padding(.horizontal, 12)
             .padding(.vertical, 4)
-            .background(Color.white.opacity(0.9), in: RoundedRectangle(cornerRadius: 8))
+            .background(Brand.card.opacity(0.9), in: RoundedRectangle(cornerRadius: 8))
             .overlay(RoundedRectangle(cornerRadius: 8).stroke(color, lineWidth: 4))
             .accessibilityHidden(true)
     }
@@ -110,7 +110,7 @@ struct DeckButton: View {
                 .font(.system(size: size * 0.4, weight: .bold))
                 .foregroundStyle(color)
                 .frame(width: size, height: size)
-                .background(Color.white, in: Circle())
+                .background(Brand.card, in: Circle())
                 .overlay(Circle().stroke(Brand.ink.opacity(0.12), lineWidth: 1))
                 .shadow(color: Brand.ink.opacity(0.08), radius: 6, y: 3)
         }

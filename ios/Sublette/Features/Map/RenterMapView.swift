@@ -26,7 +26,7 @@ struct RenterMapView: View {
             if let pin = search.profile?.pin, search.profile?.complete == true {
                 map(pin)
             } else if search.state == .loading || search.profile == nil {
-                ProgressView().tint(Brand.magenta)
+                ProgressView().tint(Brand.accentText)
             } else {
                 PlaceholderScreen(
                     title: "Map",
@@ -44,6 +44,7 @@ struct RenterMapView: View {
             search.prepare(for: userID)
             container.outbox.prepare(for: userID)
             model.prepare(for: userID)
+            container.analytics.used(.map)
             if search.profile == nil {
                 await search.load()
             }
@@ -118,19 +119,19 @@ struct RenterMapView: View {
             if case .failed(let message) = model.state {
                 ErrorText(message)
                     .padding(10)
-                    .background(Color.white, in: RoundedRectangle(cornerRadius: 10))
+                    .background(Brand.card, in: RoundedRectangle(cornerRadius: 10))
             }
             if let message = model.cardMessage ?? areaMessage {
                 ErrorText(message)
                     .padding(10)
-                    .background(Color.white, in: RoundedRectangle(cornerRadius: 10))
+                    .background(Brand.card, in: RoundedRectangle(cornerRadius: 10))
             }
             if model.truncated {
                 Text("Showing the best 500. Zoom in to see more.")
                     .font(.footnote.weight(.semibold))
                     .foregroundStyle(Brand.ink)
                     .padding(8)
-                    .background(Color.white, in: Capsule())
+                    .background(Brand.card, in: Capsule())
             }
         }
         .padding(12)
@@ -143,7 +144,7 @@ struct RenterMapView: View {
                     Text("Search \(Distance.miles(Int(draftRadius))) around the middle of the map")
                         .font(.subheadline.weight(.semibold))
                     Slider(value: $draftRadius, in: Double(SearchPin.minRadiusM)...Double(SearchPin.maxRadiusM), step: 250)
-                        .tint(Brand.magenta)
+                        .tint(Brand.accentText)
                     HStack {
                         Button("Cancel") {
                             isEditingArea = false
@@ -203,7 +204,7 @@ struct PinGroupView: View {
                 .foregroundStyle(Brand.ink)
                 .frame(minWidth: 34, minHeight: 34)
                 .padding(.horizontal, 4)
-                .background(Color.white, in: Capsule())
+                .background(Brand.card, in: Capsule())
                 .overlay(Capsule().stroke(Brand.ink.opacity(0.6), lineWidth: 2))
                 .accessibilityLabel("\(group.pins.count) listings. Tap to zoom in.")
         } else if let pin = group.pins.first {
@@ -244,7 +245,7 @@ struct ListingPinView: View {
         switch pin.band {
         case .strong: return Brand.yellow
         case .partial: return Brand.orange
-        case .other: return Color.white
+        case .other: return Brand.card
         }
     }
 
@@ -253,7 +254,10 @@ struct ListingPinView: View {
             return Brand.textOnMagenta
         }
         // A new listing is a plain dot in its band's color.
-        return pin.state == .new ? background(for: pin) : Brand.ink
+        if pin.state == .new {
+            return background(for: pin)
+        }
+        return pin.band == .other ? Brand.ink : Brand.textOnYellow
     }
 
     static func outline(for pin: MapPin) -> Color {

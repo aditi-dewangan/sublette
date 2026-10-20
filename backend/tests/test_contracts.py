@@ -204,5 +204,6 @@ def test_forbidden_text_pairs_really_do_fail_wcag(pair: dict) -> None:
 def test_ios_never_puts_white_text_on_yellow_or_orange() -> None:
     source = BRAND_SWIFT.read_text()
 
-    assert re.search(r"static let textOnYellow = ink\b", source)
-    assert re.search(r"static let textOnOrange = ink\b", source)
+    # Palette.ink, not Brand.ink, which turns cream in dark mode.
+    assert re.search(r"static let textOnYellow = Palette\.ink\b", source)
+    assert re.search(r"static let textOnOrange = Palette\.ink\b", source)

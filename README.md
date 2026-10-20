@@ -21,7 +21,7 @@ students who need someone to take over their lease. Any `.edu` email can join.
 | 7 | Chat, checklist and notifications | Done |
 | 8 | Trust, safety and admin | Done |
 | 9 | Polish, offline, analytics and release prep | Done. TestFlight and the App Store need the $99 Apple account |
-| 10 | AI recommender (the Assistant) | Built on `phase-10`; see its pull request |
+| 10 | AI recommender (the Assistant) | Done. Runs on Sublette's own rules; a language model is optional |
 
 ## Set up (once)
 

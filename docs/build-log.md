@@ -18,7 +18,8 @@ Spec" doc; its Build plan tab defines phases 0 to 10 and each phase's
 | 7 Chat, checklist and notifications | Merged (#9). |
 | 8 Trust, safety and admin | Merged (#10). |
 | 9 Polish, offline and release prep | Merged (#11). TestFlight and App Store wait for the Apple account. |
-| 10 AI recommender | Pull request (`phase-10`). |
+| 10 AI recommender | Merged (#12). |
+| Final review | Fixes from three code read-throughs and an end-to-end run, merged (#13). |
 
 ## How each phase is delivered
 
@@ -39,4 +40,8 @@ Steps are in `README.md`, "Staging, for $0".
 - Trying the admin page (README, "Reviewing reports"), and having the draft
   terms of service and privacy policy (`/terms`, `/privacy`) read before launch.
 - Deciding whether to buy the Apple Developer membership ($99/year), needed
-  for notifications on real iPhones and for TestFlight in phase 9.
+  for notifications on real iPhones, TestFlight and the App Store
+  (`docs/app-store.md` has every step).
+- Deciding whether the Assistant should use a language model: Claude (paid)
+  or Ollama (free, on her Mac). It works on Sublette's own rules until then.
+- Confirming the minimum age of 18 in the terms, and the referral reward.

@@ -116,4 +116,5 @@ enum CacheKey {
     static func saved(_ account: String) -> String { "\(account):saved" }
     static func chat(_ account: String, match: String) -> String { "\(account):chat:\(match)" }
     static func outbox(_ account: String) -> String { "\(account):outbox" }
+    static func commute(_ account: String) -> String { "\(account):commute" }
 }

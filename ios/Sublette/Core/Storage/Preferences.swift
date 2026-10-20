@@ -15,6 +15,7 @@ final class Preferences: @unchecked Sendable {
         static let safetyCardSeen = "safetyCardSeen"
         static let deviceToken = "deviceToken"
         static let pendingCrashReports = "pendingCrashReports"
+        static let savedPlaces = "savedPlaces"
     }
 
     init(defaults: UserDefaults = .standard) {
@@ -103,6 +104,24 @@ extension Preferences {
             } else if let data = try? JSONEncoder().encode(Array(newValue.suffix(10))) {
                 defaults.set(data, forKey: Key.pendingCrashReports)
             }
+        }
+    }
+
+    /// Each account's places for commute times, kept only on this phone.
+    func savedPlaces(for accountID: String) -> [SavedPlace] {
+        guard let data = defaults.data(forKey: Key.savedPlaces),
+              let all = try? JSONDecoder().decode([String: [SavedPlace]].self, from: data) else {
+            return []
+        }
+        return all[accountID] ?? []
+    }
+
+    func setSavedPlaces(_ places: [SavedPlace], for accountID: String) {
+        var all = (defaults.data(forKey: Key.savedPlaces))
+            .flatMap { try? JSONDecoder().decode([String: [SavedPlace]].self, from: $0) } ?? [:]
+        all[accountID] = places.isEmpty ? nil : places
+        if let data = try? JSONEncoder().encode(all) {
+            defaults.set(data, forKey: Key.savedPlaces)
         }
     }
 

@@ -34,6 +34,7 @@ final class AppContainer {
     let safety: SafetyModel
     let analytics: AnalyticsModel
     let assistant: AssistantModel
+    let commute: CommuteModel
     /// Deck cards, matches, saved listings and chats kept for offline use.
     let offlineCache: OfflineStoring
     let messageOutbox: MessageOutbox
@@ -63,7 +64,8 @@ final class AppContainer {
         uploader: PhotoUploading,
         tokenManager: TokenManager,
         health: HealthChecking,
-        offlineCache: OfflineStoring? = nil
+        offlineCache: OfflineStoring? = nil,
+        commuteEstimator: CommuteEstimating = AppleCommuteEstimator()
     ) {
         self.configuration = configuration
         self.preferences = preferences
@@ -136,10 +138,13 @@ final class AppContainer {
             renterDeck?.forget(listingID: listingID)
         }
         self.assistant = assistant
+        let commute = CommuteModel(estimator: commuteEstimator, preferences: preferences, cache: cache)
+        self.commute = commute
         let signOutSoFar = session.willSignOut
-        session.willSignOut = { [weak assistant, weak matchesModel, weak listerHome] in
+        session.willSignOut = { [weak assistant, weak matchesModel, weak listerHome, weak commute] in
             await signOutSoFar?()
             assistant?.reset()
+            commute?.reset()
             matchesModel?.reset()
             listerHome?.reset()
         }

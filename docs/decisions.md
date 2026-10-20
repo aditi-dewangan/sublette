@@ -245,6 +245,15 @@ correctness, the iPhone app) and an end-to-end run against a live server
 | The digest clock moved from the renter profile to the account (`last_digest_at`). | Alerts about saved listings don't need a renter search. Logged in `docs/renames.toml`. |
 | Tapping a price-drop or closing-soon alert opens that listing's card on the renter's map; a digest opens the deck; the weekly summary opens the lister's Renters tab. | The map card is the one screen that shows any single listing with like and pass. |
 
+### Commute times (issue #21, added 2026-10-20)
+
+| Decision | Reason |
+| --- | --- |
+| A renter saves up to two places (campus, work) under "Your search → Places you go". Cards show "Campus: 18 min by transit · 25 min walk"; with no transit and a walk over 45 minutes, the drive. | The issue's card line. Two places covers campus and an internship. |
+| Everything happens on the phone with Apple Maps (`MKDirections`), and the places never leave it. | Free, and where someone spends their days is private. Apple limits requests per app, so only cards on screen are asked about, one trip at a time, and every answer is remembered (offline too). |
+| Times use the listing's public point (about 150 m off) unless the renter matched and knows the exact one. | The exact address is private until a match, as everywhere else. |
+| No "under 30 min" filter yet. | Filtering fairly would mean asking Apple about every nearby listing, which its limit doesn't allow; it needs the server to store the places, which the issue left optional. A follow-up if wanted. |
+
 ## Known gaps after phase 2
 
 - Photos uploaded in the editor and then abandoned (the editor closed without saving) stay in storage. Done in phase 8: deleted after a day.

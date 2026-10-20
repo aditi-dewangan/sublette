@@ -34,6 +34,7 @@ struct DeckCardView: View {
                 Text(item.summary)
                     .font(.subheadline.weight(.medium))
                     .fixedSize(horizontal: false, vertical: true)
+                CommuteLines(listing: item.listing)
                 Button("See everything", action: onDetails)
                     .buttonStyle(LinkButtonStyle())
                     .accessibilityIdentifier("deck-card-details")

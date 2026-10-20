@@ -162,6 +162,19 @@ final class StubAccountAPI: AccountAPI, @unchecked Sendable {
         return try setPhotoResult.get()
     }
 
+    var alertFrequencyResult: Result<User, Error>?
+    private(set) var alertFrequencies: [AlertFrequency] = []
+
+    func setAlertFrequency(_ frequency: AlertFrequency) async throws -> User {
+        alertFrequencies.append(frequency)
+        if let alertFrequencyResult {
+            return try alertFrequencyResult.get()
+        }
+        var user = Fixture.completeUser
+        user.alertFrequency = frequency
+        return user
+    }
+
     func deleteAccount() async throws {
         deleteCalls += 1
         try deleteResult.get()

@@ -67,3 +67,51 @@ final class ReviewFixesTests: XCTestCase {
         XCTAssertFalse(events.isConnected)
     }
 }
+
+/// Alerts (issue #22) on the phone.
+@MainActor
+final class AlertsTests: XCTestCase {
+    func testAlertTapsOpenTheRightPlace() {
+        XCTAssertEqual(NotificationTarget(userInfo: ["kind": "price_drop", "listing_id": "l1", "role": "renter"]), .listing(id: "l1"))
+        XCTAssertEqual(NotificationTarget(userInfo: ["kind": "expiring", "listing_id": "l2", "role": "renter"]), .listing(id: "l2"))
+        XCTAssertEqual(NotificationTarget(userInfo: ["kind": "digest", "role": "renter"]), .deck)
+        XCTAssertEqual(NotificationTarget(userInfo: ["kind": "likes", "role": "lister"]), .renters)
+        XCTAssertNil(NotificationTarget(userInfo: ["kind": "price_drop"]), "no listing, nothing to open")
+    }
+
+    func testOpeningAListingFromAnAlertGoesToTheRentersMap() {
+        let state = AppState(preferences: .ephemeral(), mode: .lister)
+
+        state.openListing("l1")
+
+        XCTAssertEqual(state.mode, .renter)
+        XCTAssertEqual(state.tab, .map)
+        XCTAssertEqual(state.listingToOpen, "l1")
+        state.listingOpened()
+        XCTAssertNil(state.listingToOpen)
+    }
+
+    func testTheWeeklySummaryOpensTheRentersTab() {
+        let state = AppState(preferences: .ephemeral(), mode: .renter)
+
+        state.openRenters()
+
+        XCTAssertEqual(state.mode, .lister)
+        XCTAssertEqual(state.tab, .renters)
+    }
+
+    func testTheFrequencyIsSentInTheServersWords() throws {
+        let body = try JSONSerialization.jsonObject(
+            with: APIClient.makeEncoder().encode(AlertFrequencyUpdate(alertFrequency: .instant))
+        ) as? [String: String]
+
+        XCTAssertEqual(body, ["alert_frequency": "instant"])
+        XCTAssertEqual(AlertFrequency.allCases.map(\.rawValue), ["instant", "daily", "off"])
+    }
+
+    func testTheServersUserCarriesTheFrequency() throws {
+        let user = try APIClient.makeDecoder().decode(User.self, from: Fixture.sample("user_complete"))
+
+        XCTAssertEqual(user.alertFrequency, .daily)
+    }
+}

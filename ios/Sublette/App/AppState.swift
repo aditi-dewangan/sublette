@@ -52,6 +52,25 @@ final class AppState {
         tab = .deck
     }
 
+    /// A listing to show on the renter's map, as when an alert is tapped.
+    private(set) var listingToOpen: String?
+
+    func openListing(_ id: String) {
+        setMode(.renter)
+        tab = .map
+        listingToOpen = id
+    }
+
+    func listingOpened() {
+        listingToOpen = nil
+    }
+
+    /// "N renters liked your place this week".
+    func openRenters() {
+        setMode(.lister)
+        tab = .renters
+    }
+
     /// "Your listing expired": the lister's own listings.
     func openListings() {
         setMode(.lister)

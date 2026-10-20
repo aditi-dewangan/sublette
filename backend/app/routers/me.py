@@ -15,7 +15,7 @@ from app.services.storage import KEY_PATTERN, PhotoStorage, owner_prefix
 router = APIRouter(tags=["me"])
 
 # A profile needs these, so once set they can be changed but not emptied.
-REQUIRED_ONCE_SET = ("first_name", "year", "program", "smokes", "has_pets")
+REQUIRED_ONCE_SET = ("first_name", "year", "program", "smokes", "has_pets", "alert_frequency")
 
 
 def user_out(user: User, storage: PhotoStorage, settings: Settings) -> UserOut:
@@ -38,6 +38,7 @@ def user_out(user: User, storage: PhotoStorage, settings: Settings) -> UserOut:
         terms_accepted=user.terms_version == settings.terms_version,
         referral_code=user.referral_code,
         referred=user.referred_by_id is not None,
+        alert_frequency=user.alert_frequency,
         created_at=user.created_at,
     )
 

@@ -44,6 +44,14 @@ class User(Base):
     referred_by_id: Mapped[uuid.UUID | None] = mapped_column(
         ForeignKey("users.id", ondelete="SET NULL"), index=True
     )
+    # How often alerts come: "instant", "daily" (one digest a day) or "off".
+    alert_frequency: Mapped[str] = mapped_column(
+        String(10), default="daily", server_default="daily"
+    )
+    # When the last alert or daily digest went out.
+    last_digest_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    # When the lister last got "N renters liked your place this week".
+    last_lister_summary_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     # When the referrer's reward for this account was paid (admin page).
     referral_paid_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     # Sublets both sides confirmed as filled through a match. Shown on the profile.

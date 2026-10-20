@@ -44,6 +44,8 @@ struct RootView: View {
             case .chat(let matchID, let role): appState.openChat(matchID: matchID, role: role)
             case .deck: appState.openDeck()
             case .listings: appState.openListings()
+            case .listing(let id): appState.openListing(id)
+            case .renters: appState.openRenters()
             }
         }
     }

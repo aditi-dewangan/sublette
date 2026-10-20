@@ -13,6 +13,7 @@ from app.errors import ApiError
 from app.models import Listing
 from app.schemas.listings import ListingFields, ListingOut, ListingPage, StatusChange
 from app.services import analytics
+from app.services.alerts import alert_price_drop
 from app.services.listings import (
     apply_fields,
     expiry_date,
@@ -131,12 +132,15 @@ def update_listing(
     user: CurrentUser,
     session: DbSession,
     storage: Storage,
+    push: Push,
     now: Now,
 ) -> ListingOut:
-    """Change any answers. A listing renters can see must stay complete."""
+    """Change any answers. A listing renters can see must stay complete. A
+    lower rent on a live listing tells renters who liked or saved it."""
     listing = _own_listing(session, listing_id, user)
     if listing.status in CLOSED:
         raise ApiError(409, *CLOSED[listing.status])
+    old_rent = listing.rent_cents
     removed = apply_fields(session, listing, user, fields, storage)
     if listing.status in ("active", "paused"):
         require_publishable(listing, local_today(now))
@@ -145,6 +149,13 @@ def update_listing(
     session.commit()
     session.refresh(listing)
     _delete_photos(storage, removed)
+    if (
+        listing.status == "active"
+        and old_rent
+        and listing.rent_cents
+        and listing.rent_cents < old_rent
+    ):
+        alert_price_drop(push, listing.id, old_rent, listing.rent_cents, now)
     return listing_out(listing, user, storage)
 
 

@@ -185,10 +185,43 @@ struct SettingsView: View {
     @State private var confirmingDelete = false
     @State private var deleting = false
     @State private var deleteProblem: String?
+    @State private var alertProblem: String?
+
+    /// Saved as soon as it changes; shown as the server has it.
+    private var alertFrequency: Binding<AlertFrequency> {
+        Binding(
+            get: { session.user?.alertFrequency ?? .daily },
+            set: { chosen in
+                alertProblem = nil
+                Task {
+                    do {
+                        session.update(try await container.api.setAlertFrequency(chosen))
+                    } catch {
+                        alertProblem = SafetyModel.message(for: error)
+                    }
+                }
+            }
+        )
+    }
 
     var body: some View {
         NavigationStack {
             List {
+                Section {
+                    Picker("Alerts", selection: alertFrequency) {
+                        ForEach(AlertFrequency.allCases) { option in
+                            Text(option.title).tag(option)
+                        }
+                    }
+                    .accessibilityIdentifier("alert-frequency")
+                    if let alertProblem {
+                        ErrorText(alertProblem)
+                    }
+                } header: {
+                    Text("Alerts")
+                } footer: {
+                    Text("Price drops and closing-soon reminders for places you liked or saved, new places that fit your search, and a weekly note to listers about new likes.")
+                }
                 Section("Safety") {
                     NavigationLink("Blocked people") { BlockedPeopleView() }
                         .accessibilityIdentifier("blocked-people")

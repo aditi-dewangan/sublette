@@ -4,19 +4,21 @@ Every change goes as a live event to each phone with the app open (see
 services/live.py). A push notification goes too when:
 * a match is made: to the renter, whose phone didn't make it;
 * a message arrives and the recipient has no phone connected;
-* a new listing fits a renter who tapped "Notify me" (at most one a day).
+* a new listing fits a renter who tapped "Notify me" (services/alerts.py
+  decides how often).
 
 Events carry the match as the recipient sees it, so the app can update the
 Matches list, the unread count and an open chat from the event alone.
 """
 
 import uuid
-from datetime import datetime, timedelta
+from datetime import datetime
 
-from sqlalchemy import func, or_, select, update
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.models import Listing, Match, Message, RenterProfile, Swipe, User
+from app.services.alerts import raise_alert
 from app.services.chat import activity_for, message_out, other_side
 from app.services.live import LiveHub
 from app.services.matching import Renter, failures, summary
@@ -24,8 +26,6 @@ from app.services.push import PushDispatcher, PushNote, preview
 from app.services.safety import blocked_with
 from app.services.storage import PhotoStorage
 from app.services.swipes import match_out
-
-ALERT_EVERY = timedelta(days=1)
 
 
 def _match_json(session: Session, match: Match, viewer: User, storage: PhotoStorage) -> dict:
@@ -111,8 +111,9 @@ def announce_match_change(
 
 
 def alert_new_listing(push: PushDispatcher, listing_id: uuid.UUID, now: datetime) -> None:
-    """After a listing is first published: a push to each renter who asked to
-    hear about new places, if it fits their search. Runs in the background."""
+    """After a listing is first published: an alert for each renter who asked
+    to hear about new places, if it fits their search. Sent as each renter
+    chose (services/alerts.py). Runs in the background."""
 
     def job(session: Session) -> None:
         listing = session.get(Listing, listing_id)
@@ -131,20 +132,16 @@ def alert_new_listing(push: PushDispatcher, listing_id: uuid.UUID, now: datetime
         swiped = select(Swipe.renter_id).where(
             Swipe.side == "renter", Swipe.listing_id == listing.id
         )
-        recently_alerted_not = or_(
-            RenterProfile.last_alerted_at.is_(None),
-            RenterProfile.last_alerted_at < now - ALERT_EVERY,
-        )
         rows = session.execute(
             select(User, RenterProfile)
             .join(RenterProfile, RenterProfile.user_id == User.id)
             .where(
                 RenterProfile.notify_new_listings.is_(True),
-                recently_alerted_not,
                 RenterProfile.pin_latitude.is_not(None),
                 func.ST_DWithin(pin, point, RenterProfile.radius_m),
                 User.id != listing.owner_id,
                 User.status == "active",
+                User.alert_frequency != "off",
                 User.id.not_in(swiped),
                 User.id.not_in(blocked_with(listing.owner_id)),
             )
@@ -158,22 +155,6 @@ def alert_new_listing(push: PushDispatcher, listing_id: uuid.UUID, now: datetime
             renter = Renter.from_models(user, profile)
             if failures(renter, listing, listing.owner.school_id):
                 continue
-            # Claim today's alert first, so two listings published at once
-            # can't both send one.
-            claimed = session.execute(
-                update(RenterProfile)
-                .where(RenterProfile.user_id == user.id, recently_alerted_not)
-                .values(last_alerted_at=now)
-                .returning(RenterProfile.user_id)
-            ).scalar()
-            session.commit()
-            if claimed is None:
-                continue
-            note = PushNote(
-                title="A new place fits your search",
-                body=summary(renter, listing),
-                data={"kind": "listing", "listing_id": str(listing.id), "role": "renter"},
-            )
-            push.deliver(session, user.id, note)
+            raise_alert(session, push, user, "new_listing", listing, summary(renter, listing), now)
 
     push.run(job)

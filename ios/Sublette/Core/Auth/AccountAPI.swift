@@ -81,6 +81,10 @@ struct ProfileUpdate: Encodable, Equatable {
     }
 }
 
+struct AlertFrequencyUpdate: Encodable, Equatable {
+    let alertFrequency: AlertFrequency
+}
+
 struct PhotoKeyUpdate: Encodable, Equatable {
     /// The uploaded photo's key, or nil to remove the photo.
     var photoKey: String?
@@ -105,6 +109,7 @@ protocol AccountAPI: Sendable {
     func me() async throws -> User
     func updateProfile(_ update: ProfileUpdate) async throws -> User
     func setPhoto(key: String?) async throws -> User
+    func setAlertFrequency(_ frequency: AlertFrequency) async throws -> User
     func deleteAccount() async throws
     func presignProfilePhoto(contentType: String) async throws -> PresignedUpload
     func presignListingPhoto(contentType: String) async throws -> PresignedUpload
@@ -139,6 +144,10 @@ struct LiveAccountAPI: AccountAPI, TokenRefreshing {
 
     func updateProfile(_ update: ProfileUpdate) async throws -> User {
         try await signedInClient.send(.updateMe, body: update)
+    }
+
+    func setAlertFrequency(_ frequency: AlertFrequency) async throws -> User {
+        try await signedInClient.send(.updateMe, body: AlertFrequencyUpdate(alertFrequency: frequency))
     }
 
     func setPhoto(key: String?) async throws -> User {

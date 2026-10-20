@@ -28,6 +28,23 @@ enum Year: String, Codable, CaseIterable, Identifiable {
     }
 }
 
+/// How often alerts about listings come.
+enum AlertFrequency: String, Codable, CaseIterable, Identifiable {
+    case instant
+    case daily
+    case off
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .instant: return "As they happen"
+        case .daily: return "One a day"
+        case .off: return "Off"
+        }
+    }
+}
+
 enum Gender: String, Codable, CaseIterable, Identifiable {
     case woman
     case man
@@ -73,6 +90,8 @@ struct User: Codable, Equatable, Identifiable {
     /// This account's code to give friends, and whether it used someone's.
     var referralCode: String?
     var referred: Bool?
+    /// How often alerts come. Optional for profiles saved by an older version.
+    var alertFrequency: AlertFrequency?
 
     /// True when the server says the current terms still need accepting.
     var needsToAcceptTerms: Bool { termsAccepted == false }

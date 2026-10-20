@@ -7,6 +7,7 @@ from app.schemas.common import UtcDateTime
 
 Year = Literal["freshman", "sophomore", "junior", "senior", "graduate", "other"]
 Gender = Literal["woman", "man", "nonbinary"]
+AlertFrequency = Literal["instant", "daily", "off"]
 
 FirstName = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=50)]
 Program = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=100)]
@@ -45,6 +46,8 @@ class UserOut(BaseModel):
     # This account's code to give friends, and whether it used someone's.
     referral_code: str
     referred: bool
+    # How often alerts come: instant, daily (one digest a day) or off.
+    alert_frequency: AlertFrequency
     created_at: UtcDateTime
 
 
@@ -60,5 +63,6 @@ class UserPatch(BaseModel):
     gender: Gender | None = None
     smokes: bool | None = None
     has_pets: bool | None = None
+    alert_frequency: AlertFrequency | None = None
     # The `key` returned by POST /v1/uploads/presign, after the upload finished.
     photo_key: str | None = Field(default=None, max_length=200)

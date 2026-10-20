@@ -8,6 +8,7 @@ import SwiftUI
 /// into a number; tap it to zoom in.
 @MainActor
 struct RenterMapView: View {
+    @Environment(AppState.self) private var appState
     @Environment(AppContainer.self) private var container
     @Environment(SessionModel.self) private var session
 
@@ -53,6 +54,14 @@ struct RenterMapView: View {
         .sheet(item: $bindableMap.card) { card in
             MapCardSheet(card: card)
                 .presentationDetents([.medium, .large])
+        }
+        // An alert about one listing (a price drop, closing soon) opens its card.
+        .task(id: appState.listingToOpen) {
+            guard let listingID = appState.listingToOpen else {
+                return
+            }
+            await model.open(listingID)
+            appState.listingOpened()
         }
     }
 

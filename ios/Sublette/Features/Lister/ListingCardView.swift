@@ -177,7 +177,7 @@ struct StatusChip: View {
         case .active: return Brand.yellow
         case .paused: return Brand.orange
         case .filled: return Brand.magenta
-        case .draft, .expired: return Color.white
+        case .draft, .expired, .removed: return Color.white
         }
     }
 

@@ -24,6 +24,7 @@ struct DeckCardView: View {
                             .padding(.vertical, 5)
                             .background(item.band == .strong ? Brand.yellow : Brand.orange.opacity(0.35), in: Capsule())
                     }
+                    ListingSafetyMenu(listing: item.listing)
                 }
                 Text([item.listing.spaceSummary, item.listing.dateSummary ?? ""]
                     .filter { !$0.isEmpty }
@@ -46,6 +47,21 @@ struct DeckCardView: View {
         .shadow(color: Brand.ink.opacity(0.10), radius: 12, y: 6)
         .accessibilityElement(children: .contain)
         .accessibilityHint("Swipe right to like, left to pass")
+    }
+}
+
+/// Report the listing, or block its lister.
+@MainActor
+struct ListingSafetyMenu: View {
+    let listing: Listing
+    var onBlocked: () -> Void = {}
+
+    var body: some View {
+        SafetyMenu(
+            reports: [.listing(id: listing.id)],
+            block: .listerOf(listingID: listing.id, name: listing.lister.firstName),
+            onBlocked: onBlocked
+        )
     }
 }
 
@@ -76,6 +92,9 @@ struct DeckDetailSheet: View {
             .navigationTitle(item.listing.spaceType?.title ?? "Listing")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
+                ToolbarItem(placement: .topBarLeading) {
+                    ListingSafetyMenu(listing: item.listing) { dismiss() }
+                }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Done") { dismiss() }
                         .tint(Brand.magenta)
@@ -89,8 +108,10 @@ struct DeckDetailSheet: View {
     DeckCardView(item: PreviewData.deckItem, onDetails: {})
         .padding()
         .background(Brand.cream)
+        .previewEnvironment()
 }
 
 #Preview("Details") {
     DeckDetailSheet(item: PreviewData.deckItem)
+        .previewEnvironment()
 }

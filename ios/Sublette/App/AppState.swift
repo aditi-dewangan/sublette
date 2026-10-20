@@ -52,6 +52,12 @@ final class AppState {
         tab = .deck
     }
 
+    /// "Your listing expired": the lister's own listings.
+    func openListings() {
+        setMode(.lister)
+        tab = .listings
+    }
+
     func toggleMode() {
         setMode(mode == .renter ? .lister : .renter)
     }

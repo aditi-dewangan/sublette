@@ -28,6 +28,8 @@ final class ChatModel {
     /// Something that went wrong with the last action, shown above the composer.
     private(set) var problem: String?
     private(set) var safetyAcknowledged: Bool
+    /// One of the two blocked the other: the chat closes.
+    private(set) var isGone = false
     var draft = ""
 
     /// Tells the Matches list that this match changed (read, checklist, filled).
@@ -111,10 +113,17 @@ final class ChatModel {
             await markRead()
         } catch let error as APIError where error == .cancelled {
             state = messages.isEmpty ? .idle : .loaded
+        } catch let error as APIError where error.serverCode == "chat_unavailable" {
+            isGone = true
         } catch {
             // Offline: what was loaded stays on screen.
             state = .failed(Self.message(for: error))
         }
+    }
+
+    /// Called after the student blocked the other person from this chat.
+    func closeAfterBlock() {
+        isGone = true
     }
 
     func loadOlder() async {
@@ -189,6 +198,8 @@ final class ChatModel {
             }
         case .match(let changed, _) where changed.id == match.id:
             update(changed)
+        case .matchRemoved(let id) where id == match.id:
+            isGone = true
         case .ready:
             // Back online: fetch anything missed.
             Task { await load() }
@@ -209,6 +220,9 @@ final class ChatModel {
                 pending[index].failed = true
             }
             problem = Self.message(for: error)
+            if (error as? APIError)?.serverCode == "chat_unavailable" {
+                isGone = true
+            }
         }
     }
 

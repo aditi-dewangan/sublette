@@ -97,6 +97,8 @@ final class MatchesModel {
             upsert(match, toTop: true)
         case .match(let match, _):
             upsert(match, toTop: false)
+        case .matchRemoved(let id):
+            matches.removeAll { $0.id == id }
         case .unknown:
             break
         }

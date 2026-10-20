@@ -611,3 +611,39 @@ extension Fixture {
         )
     }
 }
+
+final class StubSafetyAPI: SafetyAPI, @unchecked Sendable {
+    var reportResult: Result<Void, Error> = .success(())
+    var blockResult: Result<Void, Error> = .success(())
+    var blockedResult: Result<BlockPage, Error> = .success(BlockPage(items: []))
+    var termsResult: Result<User, Error> = .success(Fixture.completeUser)
+
+    private(set) var reports: [ReportRequest] = []
+    private(set) var blocks: [BlockSubject] = []
+    private(set) var unblocked: [String] = []
+    private(set) var acceptedVersions: [String] = []
+
+    func report(_ request: ReportRequest) async throws -> ReportReceipt {
+        reports.append(request)
+        try reportResult.get()
+        return ReportReceipt(id: "r1", target: request.target, reason: request.reason, status: "open", createdAt: Fixture.now)
+    }
+
+    func block(_ subject: BlockSubject) async throws {
+        blocks.append(subject)
+        try blockResult.get()
+    }
+
+    func blocked() async throws -> BlockPage {
+        try blockedResult.get()
+    }
+
+    func unblock(userID: String) async throws {
+        unblocked.append(userID)
+    }
+
+    func acceptTerms(version: String) async throws -> User {
+        acceptedVersions.append(version)
+        return try termsResult.get()
+    }
+}

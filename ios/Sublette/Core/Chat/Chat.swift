@@ -91,11 +91,13 @@ enum LiveEvent: Decodable, Equatable {
     case message(ChatMessage, Match)
     /// A match is new or changed (checklist, "Filled").
     case match(Match, isNew: Bool)
+    /// One of the two blocked the other: the chat is gone for both.
+    case matchRemoved(id: String)
     /// A kind this version of the app doesn't know yet.
     case unknown
 
     private enum CodingKeys: String, CodingKey {
-        case type, message, match, newMatch
+        case type, message, match, newMatch, matchId
     }
 
     init(from decoder: Decoder) throws {
@@ -113,6 +115,8 @@ enum LiveEvent: Decodable, Equatable {
                 try container.decode(Match.self, forKey: .match),
                 isNew: try container.decodeIfPresent(Bool.self, forKey: .newMatch) ?? false
             )
+        case "match_removed":
+            self = .matchRemoved(id: try container.decode(String.self, forKey: .matchId))
         default:
             self = .unknown
         }

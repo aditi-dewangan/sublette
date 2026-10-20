@@ -152,7 +152,11 @@ final class APIClient: @unchecked Sendable {
         }
 
         guard (200..<300).contains(answer.response.statusCode) else {
-            throw serverError(status: answer.response.statusCode, data: answer.data)
+            let error = serverError(status: answer.response.statusCode, data: answer.data)
+            if endpoint.requiresAuth, error.serverCode == "account_suspended" {
+                await tokens.accountSuspended(message: error.userMessage)
+            }
+            throw error
         }
         return answer.data
     }

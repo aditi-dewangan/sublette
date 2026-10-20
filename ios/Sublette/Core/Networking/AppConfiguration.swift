@@ -79,4 +79,19 @@ struct AppConfiguration: Equatable {
     static func load(from bundle: Bundle = .main) -> AppConfiguration {
         AppConfiguration(infoDictionary: bundle.infoDictionary)
     }
+
+    /// Where students write to us, and appeal a suspension. The server names
+    /// the same address in its messages (SUBLETTE_SUPPORT_EMAIL).
+    static let supportEmail = "subletteofficial@gmail.com"
+
+    /// A mailto link to `supportEmail`, with a subject if given.
+    static func contactURL(subject: String? = nil) -> URL? {
+        var components = URLComponents()
+        components.scheme = "mailto"
+        components.path = supportEmail
+        if let subject {
+            components.queryItems = [URLQueryItem(name: "subject", value: subject)]
+        }
+        return components.url
+    }
 }

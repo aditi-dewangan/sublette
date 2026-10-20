@@ -7,7 +7,9 @@ struct ChatView: View {
     let model: ChatModel
 
     @Environment(AppContainer.self) private var container
+    @Environment(\.dismiss) private var dismiss
     @State private var confirmingFilled = false
+    @State private var reportingMessage: ReportSubject?
     @FocusState private var composing: Bool
 
     var body: some View {
@@ -41,6 +43,25 @@ struct ChatView: View {
                 }
                 .accessibilityElement(children: .combine)
             }
+            ToolbarItem(placement: .topBarTrailing) {
+                SafetyMenu(
+                    reports: reportSubjects,
+                    block: .person(id: model.other.id, name: model.other.firstName),
+                    onBlocked: { model.closeAfterBlock() }
+                )
+            }
+        }
+        .sheet(item: $reportingMessage) { subject in
+            ReportSheet(
+                subject: subject,
+                block: .person(id: model.other.id, name: model.other.firstName),
+                onBlocked: { model.closeAfterBlock() }
+            )
+        }
+        .onChange(of: model.isGone) { _, gone in
+            if gone {
+                dismiss()
+            }
         }
         .confirmationDialog(filledQuestion, isPresented: $confirmingFilled, titleVisibility: .visible) {
             Button(model.role == .lister ? "Mark filled" : "Yes, I'm taking it") {
@@ -52,6 +73,14 @@ struct ChatView: View {
         }
         .task { await model.load() }
         .onDisappear { container.matchesModel.closeChat(model) }
+    }
+
+    private var reportSubjects: [ReportSubject] {
+        var subjects: [ReportSubject] = [.person(id: model.other.id, name: model.other.firstName)]
+        if model.role == .renter {
+            subjects.append(.listing(id: model.match.listing.id))
+        }
+        return subjects
     }
 
     private var filledQuestion: String {
@@ -84,6 +113,13 @@ struct ChatView: View {
                     ForEach(model.messages) { message in
                         Bubble(text: message.body, mine: message.mine)
                             .id(message.id)
+                            .contextMenu {
+                                if !message.mine {
+                                    Button("Report this message", systemImage: "flag") {
+                                        reportingMessage = .message(id: message.id, senderName: model.other.firstName)
+                                    }
+                                }
+                            }
                     }
                     ForEach(model.pending) { message in
                         PendingBubble(message: message, model: model)

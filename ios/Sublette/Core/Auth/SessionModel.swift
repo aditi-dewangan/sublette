@@ -12,6 +12,8 @@ final class SessionModel {
         case signedIn(User)
         /// There are tokens, but no profile has ever loaded and the server can't be reached.
         case unreachable
+        /// The account is suspended: the server's explanation, with how to appeal.
+        case suspended(String)
     }
 
     private(set) var state: State = .restoring
@@ -31,6 +33,13 @@ final class SessionModel {
         self.tokens = tokens
         self.preferences = preferences
         self.now = now
+    }
+
+    var isSuspended: Bool {
+        if case .suspended = state {
+            return true
+        }
+        return false
     }
 
     var user: User? {
@@ -78,7 +87,7 @@ final class SessionModel {
     /// Called after the profile was saved.
     func update(_ user: User) {
         // A save that finishes after sign-out must not sign the student back in.
-        guard state != .signedOut else {
+        guard state != .signedOut, !isSuspended else {
             return
         }
         setSignedIn(user)
@@ -104,9 +113,22 @@ final class SessionModel {
     }
 
     /// The server ended the session: the refresh token expired, or the account
-    /// was deleted or suspended.
+    /// was deleted.
     func sessionEnded() async {
         await signOut()
+    }
+
+    /// The account was suspended. The tokens are already gone; the one screen
+    /// left says why and how to appeal, until the student signs out.
+    func showSuspended(_ message: String) async {
+        if case .suspended = state {
+            return
+        }
+        // Set first, so a second report of the same suspension changes nothing.
+        state = .suspended(message)
+        await willSignOut?()
+        await tokens.clear()
+        preferences.cachedUser = nil
     }
 
     // MARK: - Private
@@ -128,7 +150,9 @@ final class SessionModel {
             guard state != .signedOut else {
                 return
             }
-            if await serverEndedTheSession(error) {
+            if error.serverCode == "account_suspended" {
+                await showSuspended(error.userMessage)
+            } else if await serverEndedTheSession(error) {
                 await signOut()
             } else if user == nil {
                 // Offline or the server is down, and nothing saved to show.

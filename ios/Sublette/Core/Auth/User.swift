@@ -66,4 +66,11 @@ struct User: Codable, Equatable, Identifiable {
     /// Sublets finished through Sublette. Optional so a profile saved on the
     /// phone by an older version still loads.
     var completedSublets: Int?
+    /// The current terms of service and privacy policy, and whether this
+    /// account accepted them. Optional for the same reason.
+    var termsVersion: String?
+    var termsAccepted: Bool?
+
+    /// True when the server says the current terms still need accepting.
+    var needsToAcceptTerms: Bool { termsAccepted == false }
 }

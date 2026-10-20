@@ -166,6 +166,15 @@ struct ListingRow: View {
 @MainActor
 struct ListingDetailView: View {
     let listingID: String
+
+    /// "Live until Feb 3. Renew it any time to keep it up longer."
+    static func liveUntil(_ listing: Listing) -> String? {
+        guard let date = CalendarDate.date(from: listing.expiresOn) else {
+            return nil
+        }
+        let day = date.formatted(Date.FormatStyle().month(.abbreviated).day())
+        return "Live until \(day). Edit or renew it any time to keep it up longer."
+    }
     @Environment(AppContainer.self) private var container
     @State private var editor: EditorRequest?
     @State private var isConfirmingFilled = false
@@ -232,16 +241,31 @@ struct ListingDetailView: View {
                 Button("Continue editing") { editor = .edit(listing) }
                     .buttonStyle(PrimaryButtonStyle())
             case .active:
+                if let until = Self.liveUntil(listing) {
+                    Text(until)
+                        .font(.footnote)
+                        .foregroundStyle(Brand.ink.opacity(0.75))
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                }
                 Button("Edit") { editor = .edit(listing) }
                     .buttonStyle(PrimaryButtonStyle())
                 Button("Pause") { Task { await model.setStatus(.paused, for: listing) } }
                     .buttonStyle(SecondaryButtonStyle())
                     .disabled(busy)
+                Button("Renew for two more weeks") { Task { await model.setStatus(.active, for: listing) } }
+                    .buttonStyle(LinkButtonStyle())
+                    .disabled(busy)
                 Button("Mark as filled") { isConfirmingFilled = true }
                     .buttonStyle(LinkButtonStyle())
                     .disabled(busy)
             case .paused, .expired:
-                Button(listing.status == .paused ? "Make it live again" : "Publish again") {
+                if listing.status == .expired {
+                    Text("It expired after its move-in date. Still available? Renew it to put it back in decks for two more weeks.")
+                        .font(.footnote)
+                        .foregroundStyle(Brand.ink.opacity(0.75))
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                }
+                Button(listing.status == .paused ? "Make it live again" : "Renew") {
                     Task { await model.setStatus(.active, for: listing) }
                 }
                 .buttonStyle(PrimaryButtonStyle())
@@ -255,6 +279,22 @@ struct ListingDetailView: View {
                 Text("Filled. Nice work.")
                     .font(.headline)
                     .foregroundStyle(Brand.ink)
+            case .removed:
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("Sublette removed this listing")
+                        .font(.headline)
+                    if let reason = listing.removedReason {
+                        Text("Why: \(reason)")
+                            .font(.subheadline)
+                    }
+                    if let contact = AppConfiguration.contactURL(subject: "My removed listing") {
+                        Link("Think this is a mistake? Email us", destination: contact)
+                            .font(.subheadline.weight(.semibold))
+                            .tint(Brand.magenta)
+                    }
+                }
+                .foregroundStyle(Brand.ink)
+                .frame(maxWidth: .infinity, alignment: .leading)
             }
         }
     }

@@ -133,4 +133,19 @@ extension Endpoint {
 
     /// The live connection: a WebSocket, opened with the same token as any request.
     static let liveEvents = Endpoint(method: .get, path: "/v1/ws")
+
+    // Trust and safety (phase 8).
+    static let report = Endpoint(method: .post, path: "/v1/reports")
+    static let block = Endpoint(method: .post, path: "/v1/blocks")
+    static let blocks = Endpoint(method: .get, path: "/v1/blocks")
+
+    static func unblock(userID: String) -> Endpoint {
+        Endpoint(method: .delete, path: "/v1/blocks/\(userID)")
+    }
+
+    static let acceptTerms = Endpoint(method: .post, path: "/v1/me/terms")
+
+    /// Web pages the app opens in the browser.
+    static let termsPage = Endpoint(method: .get, path: "/terms", requiresAuth: false)
+    static let privacyPage = Endpoint(method: .get, path: "/privacy", requiresAuth: false)
 }

@@ -17,6 +17,8 @@ final class LiveEvents {
 
     /// Called on the main actor for every event.
     @ObservationIgnored var onEvent: ((LiveEvent) -> Void)?
+    /// Called when the server closes the connection because the account was suspended.
+    @ObservationIgnored var onSuspended: (() -> Void)?
 
     @ObservationIgnored private let url: URL?
     @ObservationIgnored private let tokens: AccessTokenProviding
@@ -71,6 +73,7 @@ final class LiveEvents {
             switch await connectOnce(token: token) {
             case .suspended:
                 loop = nil
+                onSuspended?()
                 return
             case .tokenRejected:
                 failures += 1

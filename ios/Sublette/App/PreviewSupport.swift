@@ -339,6 +339,28 @@ struct PreviewChatAPI: ChatAPI {
     func unregisterDevice(token: String) async throws {}
 }
 
+/// Reports and blocks that go nowhere.
+struct PreviewSafetyAPI: SafetyAPI {
+    func report(_ request: ReportRequest) async throws -> ReportReceipt {
+        ReportReceipt(id: "r1", target: request.target, reason: request.reason, status: "open", createdAt: Date())
+    }
+
+    func block(_ subject: BlockSubject) async throws {}
+
+    func blocked() async throws -> BlockPage {
+        BlockPage(items: [BlockedPerson(userId: "user-9", firstName: "Jordan", photoUrl: nil, blockedAt: Date())])
+    }
+
+    func unblock(userID: String) async throws {}
+
+    func acceptTerms(version: String) async throws -> User {
+        var user = PreviewData.aditi
+        user.termsVersion = version
+        user.termsAccepted = true
+        return user
+    }
+}
+
 struct PreviewNotificationPermissions: NotificationPermissions {
     func status() async -> UNAuthorizationStatus { .denied }
     func request() async -> Bool { false }
@@ -413,6 +435,7 @@ extension AppContainer {
             deckAPI: PreviewDeckAPI(),
             mapAPI: PreviewMapAPI(),
             chatAPI: PreviewChatAPI(),
+            safetyAPI: PreviewSafetyAPI(),
             notificationPermissions: PreviewNotificationPermissions(),
             liveEvents: nil,
             campusLocator: PreviewCampusLocator(),

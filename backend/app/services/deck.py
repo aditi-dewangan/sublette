@@ -4,7 +4,7 @@ from collections import Counter
 from dataclasses import dataclass
 from datetime import date
 
-from sqlalchemy import func, select
+from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session
 
 from app.errors import ApiError
@@ -22,6 +22,7 @@ from app.services.matching import (
     score_band,
     summary,
 )
+from app.services.safety import blocked_with
 from app.services.storage import PhotoStorage
 
 DEFAULT_LIMIT = 20
@@ -53,8 +54,9 @@ def renter_for(session: Session, user: User) -> Renter:
 def candidates(
     session: Session, renter: Renter, today: date, include_seen: bool = False
 ) -> list[Listing]:
-    """Live listings inside the renter's circle, from active accounts, not the
-    renter's own, and not over yet. Nothing about fit is decided here.
+    """Live listings inside the renter's circle, from active accounts the
+    renter hasn't blocked (or been blocked by), not the renter's own, and not
+    over or expired yet. Nothing about fit is decided here.
 
     Listings the renter already swiped on or saved are left out unless
     `include_seen`."""
@@ -66,10 +68,12 @@ def candidates(
         Listing.status == "active",
         Listing.owner_id != renter.user_id,
         Listing.owner_id.in_(owner),
+        Listing.owner_id.not_in(blocked_with(renter.user_id)),
         Listing.end_date >= today,
+        # Housekeeping marks it expired soon after; this hides it on the day.
+        or_(Listing.expires_on.is_(None), Listing.expires_on >= today),
         Listing.public_latitude.is_not(None),
         func.ST_DWithin(public_point(), pin, renter.radius_m),
-        # Phase 8 also leaves out blocked users.
     )
     if not include_seen:
         swiped = select(Swipe.listing_id).where(

@@ -21,6 +21,7 @@ from app.services.chat import activity_for, message_out, other_side
 from app.services.live import LiveHub
 from app.services.matching import Renter, failures, summary
 from app.services.push import PushDispatcher, PushNote, preview
+from app.services.safety import blocked_with
 from app.services.storage import PhotoStorage
 from app.services.swipes import match_out
 
@@ -145,6 +146,7 @@ def alert_new_listing(push: PushDispatcher, listing_id: uuid.UUID, now: datetime
                 User.id != listing.owner_id,
                 User.status == "active",
                 User.id.not_in(swiped),
+                User.id.not_in(blocked_with(listing.owner_id)),
             )
         ).all()
 

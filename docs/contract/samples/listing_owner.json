@@ -53,5 +53,7 @@
     "verified": true
   },
   "created_at": "2027-01-04T17:00:00Z",
-  "published_at": "2027-01-04T17:00:00Z"
+  "published_at": "2027-01-04T17:00:00Z",
+  "expires_on": "2027-01-18",
+  "removed_reason": null
 }

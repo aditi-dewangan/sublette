@@ -29,7 +29,7 @@ from sqlalchemy import Engine, delete, select
 from sqlalchemy.orm import Session
 
 from app.config import Settings
-from app.models import DeviceToken
+from app.models import DeviceToken, User
 
 logger = logging.getLogger("sublette.push")
 
@@ -252,8 +252,13 @@ class PushDispatcher:
             logger.exception("A push job failed")
 
     def deliver(self, session: Session, user_id: uuid.UUID, note: PushNote) -> int:
-        """Send `note` to every phone of `user_id`. Returns how many took it."""
-        devices = session.scalars(select(DeviceToken).where(DeviceToken.user_id == user_id)).all()
+        """Send `note` to every phone of `user_id`. Returns how many took it.
+        A suspended account gets nothing."""
+        devices = session.scalars(
+            select(DeviceToken)
+            .join(User, User.id == DeviceToken.user_id)
+            .where(DeviceToken.user_id == user_id, User.status == "active")
+        ).all()
         sent = 0
         for device in devices:
             try:

@@ -338,3 +338,59 @@ def test_chat_samples(client: TestClient, mailer: RecordingMailer, clock, db) ->
 
     stranger = sign_in(client, mailer, "stranger@uw.edu")
     check("error_not_your_match", client.get(path, headers=bearer(stranger)).json())
+
+
+def test_safety_samples(client: TestClient, mailer: RecordingMailer, clock, db) -> None:
+    import uuid as uuid_module
+
+    from sqlalchemy import update
+
+    from app.models import User
+    from tests.test_chat import live, receive
+    from tests.test_deck import make_searching_renter, put_listing
+
+    renter = make_searching_renter(client, mailer, clock)
+    lister = sign_in(client, mailer, "lister@uw.edu")
+    client.patch("/v1/me", headers=bearer(lister), json=COMPLETE_PROFILE)
+    listing = put_listing(db, clock, db.get(User, uuid_module.UUID(lister["user"]["id"])))
+    client.post(
+        "/v1/swipes", headers=bearer(renter), json={"listing_id": str(listing.id), "action": "like"}
+    )
+    client.post(
+        "/v1/swipes",
+        headers=bearer(lister),
+        json={"listing_id": str(listing.id), "renter_id": renter["user"]["id"], "action": "like"},
+    )
+
+    report = client.post(
+        "/v1/reports",
+        headers=bearer(renter),
+        json={
+            "target": "listing",
+            "id": str(listing.id),
+            "reason": "scam",
+            "details": "Asked for the deposit by wire.",
+        },
+    )
+    check("report", report.json())
+    with live(client, renter) as phone:
+        receive(phone)
+        client.post("/v1/blocks", headers=bearer(renter), json={"listing_id": str(listing.id)})
+        check("ws_match_removed_event", receive(phone))
+    check("blocks", client.get("/v1/blocks", headers=bearer(renter)).json())
+    check(
+        "user_terms_accepted",
+        client.post(
+            "/v1/me/terms",
+            headers=bearer(renter),
+            json={"version": renter["user"]["terms_version"]},
+        ).json(),
+    )
+
+    db.execute(
+        update(User)
+        .where(User.id == uuid_module.UUID(lister["user"]["id"]))
+        .values(status="suspended", suspended_reason="asking renters to pay before a tour")
+    )
+    db.commit()
+    check("error_account_suspended", client.get("/v1/me", headers=bearer(lister)).json())

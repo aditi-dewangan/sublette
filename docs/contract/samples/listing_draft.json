@@ -36,5 +36,7 @@
     "verified": true
   },
   "created_at": "2027-01-04T17:00:00Z",
-  "published_at": null
+  "published_at": null,
+  "expires_on": null,
+  "removed_reason": null
 }

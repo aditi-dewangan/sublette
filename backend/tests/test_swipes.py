@@ -183,7 +183,7 @@ def test_the_opposite_swipe_is_refused_until_undone(
 
 
 def test_swiping_fast_from_many_threads_makes_one_swipe_and_one_match(
-    app, client: TestClient, renter: dict, lister: dict, listing, db: Session
+    app, client: TestClient, renter: dict, lister: dict, listing, db: Session, clock: Clock
 ) -> None:
     """Ten copies of the lister's like arrive at once, each with its own swipe id."""
     ok(swipe(client, renter, listing.id))
@@ -201,7 +201,9 @@ def test_swiping_fast_from_many_threads_makes_one_swipe_and_one_match(
                 body = SwipeIn(
                     listing_id=listing.id, renter_id=renter_id, action="like", swipe_id=uuid.uuid4()
                 )
-                results.append(record_swipe(session, user, body, storage))
+                results.append(
+                    record_swipe(session, app.state.settings, user, body, storage, clock.now)
+                )
             except Exception as error:
                 errors.append(error)
 

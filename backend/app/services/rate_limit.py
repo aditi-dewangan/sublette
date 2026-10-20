@@ -38,3 +38,12 @@ def hit(session: Session, bucket: str, *, limit: int, window: timedelta, now: da
         )
     session.add(RateLimitHit(bucket=bucket, created_at=now))
     session.flush()
+
+
+def count(session: Session, bucket: str, *, window: timedelta, now: datetime) -> int:
+    """How many actions `bucket` has in `window`, without counting a new one."""
+    return session.scalar(
+        select(func.count()).where(
+            RateLimitHit.bucket == bucket, RateLimitHit.created_at > now - window
+        )
+    )

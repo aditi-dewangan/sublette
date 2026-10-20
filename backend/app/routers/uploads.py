@@ -2,8 +2,9 @@
 
 from fastapi import APIRouter
 
-from app.deps import CurrentUser, Now, Storage
+from app.deps import CurrentUser, DbSession, Now, Storage
 from app.errors import ApiError
+from app.models import Upload
 from app.schemas.uploads import PresignIn, PresignOut
 from app.services.storage import StorageUnavailable, new_key
 
@@ -11,9 +12,12 @@ router = APIRouter(prefix="/uploads", tags=["uploads"])
 
 
 @router.post("/presign", response_model=PresignOut)
-def presign(body: PresignIn, user: CurrentUser, storage: Storage, now: Now) -> PresignOut:
+def presign(
+    body: PresignIn, user: CurrentUser, session: DbSession, storage: Storage, now: Now
+) -> PresignOut:
     """A link to PUT one profile or listing photo to. The key is under the
-    caller's own folder, so nobody can overwrite another user's photo."""
+    caller's own folder, so nobody can overwrite another user's photo. A key
+    never attached to the profile or a listing is deleted after a day."""
     key = new_key(body.purpose, user.id, body.content_type)
     try:
         upload = storage.presign_upload(key, body.content_type, now)
@@ -23,6 +27,8 @@ def presign(body: PresignIn, user: CurrentUser, storage: Storage, now: Now) -> P
             "uploads_unavailable",
             "Photo uploads aren't available right now. You can add a photo later.",
         ) from error
+    session.add(Upload(key=upload.key, user_id=user.id, created_at=now))
+    session.commit()
     return PresignOut(
         key=upload.key,
         upload_url=upload.upload_url,

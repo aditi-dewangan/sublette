@@ -3,9 +3,10 @@
 from fastapi import APIRouter, Response
 from sqlalchemy import delete, select
 
-from app.deps import CurrentUser, DbSession, Storage
+from app.config import Settings
+from app.deps import AppSettings, CurrentUser, DbSession, Storage
 from app.errors import ApiError
-from app.models import EmailCode, Listing, ListingPhoto, User
+from app.models import EmailCode, Listing, ListingPhoto, Upload, User
 from app.schemas.errors import FieldError
 from app.schemas.user import SchoolOut, UserOut, UserPatch
 from app.services.storage import KEY_PATTERN, PhotoStorage, owner_prefix
@@ -16,7 +17,7 @@ router = APIRouter(tags=["me"])
 REQUIRED_ONCE_SET = ("first_name", "year", "program", "smokes", "has_pets")
 
 
-def user_out(user: User, storage: PhotoStorage) -> UserOut:
+def user_out(user: User, storage: PhotoStorage, settings: Settings) -> UserOut:
     return UserOut(
         id=user.id,
         email=user.email,
@@ -32,6 +33,8 @@ def user_out(user: User, storage: PhotoStorage) -> UserOut:
         has_pets=user.has_pets,
         profile_complete=user.profile_complete,
         completed_sublets=user.completed_sublets,
+        terms_version=settings.terms_version,
+        terms_accepted=user.terms_version == settings.terms_version,
         created_at=user.created_at,
     )
 
@@ -46,12 +49,18 @@ def _field_error(field: str, message: str) -> ApiError:
 
 
 @router.get("/me", response_model=UserOut)
-def read_me(user: CurrentUser, storage: Storage) -> UserOut:
-    return user_out(user, storage)
+def read_me(user: CurrentUser, storage: Storage, settings: AppSettings) -> UserOut:
+    return user_out(user, storage, settings)
 
 
 @router.patch("/me", response_model=UserOut)
-def update_me(patch: UserPatch, user: CurrentUser, session: DbSession, storage: Storage) -> UserOut:
+def update_me(
+    patch: UserPatch,
+    user: CurrentUser,
+    session: DbSession,
+    storage: Storage,
+    settings: AppSettings,
+) -> UserOut:
     """Change any of the profile fields. Fields left out are not touched."""
     changes = patch.model_dump(include=patch.model_fields_set)
 
@@ -78,7 +87,7 @@ def update_me(patch: UserPatch, user: CurrentUser, session: DbSession, storage: 
 
     if old_photo:
         storage.delete(old_photo)
-    return user_out(user, storage)
+    return user_out(user, storage, settings)
 
 
 @router.delete("/me", status_code=204, response_class=Response)
@@ -88,10 +97,14 @@ def delete_me(user: CurrentUser, session: DbSession, storage: Storage) -> Respon
     photos += session.scalars(
         select(ListingPhoto.key).join(Listing).where(Listing.owner_id == user.id)
     ).all()
+    # Photos uploaded but never attached to anything.
+    photos += session.scalars(select(Upload.key).where(Upload.user_id == user.id)).all()
     session.execute(delete(EmailCode).where(EmailCode.email == user.email))
-    # Listings and their photo rows go with the user (ON DELETE CASCADE).
+    # Listings, photo rows, swipes, matches, messages, blocks and reports about
+    # the user go with them (ON DELETE CASCADE). Reports they made stay, with
+    # no reporter.
     session.delete(user)
     session.commit()
-    for key in photos:
+    for key in set(photos):
         storage.delete(key)
     return Response(status_code=204)

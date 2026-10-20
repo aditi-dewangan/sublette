@@ -10,7 +10,8 @@ sends:
 
 It closes the socket with
   4401 when the token is missing, invalid or expires: refresh it, reconnect;
-  4403 when the account is suspended: don't reconnect;
+  4403 when the account is suspended, at once if it happens while
+       connected: don't reconnect;
   1013 when the phone falls too far behind: reconnect and reload.
 """
 
@@ -87,14 +88,19 @@ async def _relay(websocket: WebSocket, connection: Connection, seconds: float) -
     sender = asyncio.create_task(send())
     receiver = asyncio.create_task(receive())
     overflow = asyncio.create_task(connection.overflowed.wait())
+    suspended = asyncio.create_task(connection.suspended.wait())
     done, pending = await asyncio.wait(
-        {sender, receiver, overflow}, timeout=max(seconds, 0), return_when=asyncio.FIRST_COMPLETED
+        {sender, receiver, overflow, suspended},
+        timeout=max(seconds, 0),
+        return_when=asyncio.FIRST_COMPLETED,
     )
     for task in pending:
         task.cancel()
     if receiver in done or sender in done:
         return  # the phone went away
-    if overflow in done:
+    if suspended in done:
+        code, reason = CLOSE_SUSPENDED, "account_suspended"
+    elif overflow in done:
         code, reason = CLOSE_TOO_SLOW, "too_slow"
     else:
         code, reason = CLOSE_NOT_SIGNED_IN, "token_expired"

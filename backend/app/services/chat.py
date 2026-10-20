@@ -3,6 +3,8 @@
 The rules:
 * Only the two people in a match can read or write anything here. Anyone else
   gets 403, whether or not the match exists, so ids can't be probed.
+* Once either of the two blocks the other, the chat is gone for both (404)
+  and leaves both Matches lists.
 * There is no other way to message someone: no match, no chat.
 * A message sent twice with the same `message_id` is stored once.
 * Either side can tick the checklist. The lister's "Filled" closes the listing
@@ -18,9 +20,11 @@ from sqlalchemy import case, func, or_, select, update
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.orm import Session
 
+from app.config import Settings
 from app.errors import ApiError
 from app.models import Match, Message, User
 from app.schemas.chat import Checklist, ChecklistPatch, Filled, MessageOut, MessagePage
+from app.services.safety import blocked_with, flag_message, is_blocked, limit_messages
 
 CHECKLIST_STEPS = ("tour_done", "landlord_consent_confirmed", "dates_agreed", "sublease_signed")
 # A listing in any of these can still be marked filled from its chat.
@@ -44,6 +48,8 @@ def member_match(session: Session, user: User, match_id: uuid.UUID, lock: bool =
     match = session.get(Match, match_id)
     if match is None or user.id not in (match.renter_id, match.lister_id):
         raise forbidden()
+    if is_blocked(session, match.renter_id, match.lister_id):
+        raise ApiError(404, "chat_unavailable", "This chat isn't available any more.")
     return match
 
 
@@ -125,6 +131,7 @@ def activity_for(session: Session, user: User, match_ids: list[uuid.UUID]) -> di
 
 def send_message(
     session: Session,
+    settings: Settings,
     user: User,
     match: Match,
     body: str,
@@ -142,6 +149,7 @@ def send_message(
                 raise ApiError(409, "message_id_taken", "That message id was already used.")
             return resent, False
 
+    limit_messages(session, settings, user, now)
     message_id = session.execute(
         insert(Message)
         .values(
@@ -164,6 +172,7 @@ def send_message(
     match.last_message_at = now
     # Your own message is read.
     _set_read(match, user, message.seq)
+    flag_message(session, match, message, now)
     session.commit()
     return message, True
 
@@ -250,7 +259,11 @@ def matches_newest_activity_first(session: Session, user: User) -> list[Match]:
     return list(
         session.scalars(
             select(Match)
-            .where(or_(Match.renter_id == user.id, Match.lister_id == user.id))
+            .where(
+                or_(Match.renter_id == user.id, Match.lister_id == user.id),
+                Match.renter_id.not_in(blocked_with(user.id)),
+                Match.lister_id.not_in(blocked_with(user.id)),
+            )
             .order_by(
                 func.coalesce(Match.last_message_at, Match.created_at).desc(), Match.id.desc()
             )

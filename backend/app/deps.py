@@ -63,6 +63,17 @@ Live = Annotated[LiveHub, Depends(get_live)]
 Push = Annotated[PushDispatcher, Depends(get_push)]
 
 
+def suspended(user: User, settings: Settings) -> ApiError:
+    """The answer to every request from a suspended account: why, and how to appeal."""
+    why = f" for {user.suspended_reason.rstrip('.')}" if user.suspended_reason else ""
+    return ApiError(
+        403,
+        "account_suspended",
+        f"This account has been suspended{why}. "
+        f"To appeal, email {settings.support_email} from your school address.",
+    )
+
+
 def get_current_user(request: Request, session: DbSession, settings: AppSettings, now: Now) -> User:
     """The verified, active account behind the request's access token.
 
@@ -82,11 +93,7 @@ def get_current_user(request: Request, session: DbSession, settings: AppSettings
         # The account was deleted, or never finished verifying.
         raise ApiError(401, "token_invalid", "Please sign in again.")
     if user.status != "active":
-        raise ApiError(
-            403,
-            "account_suspended",
-            "This account has been suspended. Contact support to appeal.",
-        )
+        raise suspended(user, settings)
     return user
 
 

@@ -23,6 +23,7 @@ from app.services.matching import (
     score_band,
     summary,
 )
+from app.services.safety import blocked_with, is_blocked
 from app.services.storage import PhotoStorage
 
 MAX_PINS = 500
@@ -118,7 +119,11 @@ def map_pins(session: Session, renter: Renter, box: BBox, today: date) -> tuple[
     shown = [listing_id for listing_id, state in states.items() if state != "passed"]
     if shown:
         for listing in session.scalars(
-            select(Listing).where(Listing.id.in_(shown), Listing.status.in_(SHOWN_STATUSES))
+            select(Listing).where(
+                Listing.id.in_(shown),
+                Listing.status.in_(SHOWN_STATUSES),
+                Listing.owner_id.not_in(blocked_with(renter.user_id)),
+            )
         ).unique():
             pin = _pin(renter, listing, states[listing.id])
             if box.contains(pin.latitude, pin.longitude):
@@ -135,6 +140,8 @@ def map_card(
     listing = session.get(Listing, listing_id)
     state = _states(session, renter.user_id).get(listing_id, "new")
     if listing is None or listing.owner_id == viewer.id or state == "passed":
+        raise not_found()
+    if is_blocked(session, viewer.id, listing.owner_id):
         raise not_found()
     if state == "new":
         if listing.status != "active" or failures(renter, listing, listing.owner.school_id):

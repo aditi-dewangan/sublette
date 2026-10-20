@@ -54,6 +54,26 @@ class Settings(BaseSettings):
     # Generous, because a whole campus can share one address.
     code_requests_per_ip_per_hour: int = 100
     verify_attempts_per_ip_per_hour: int = 200
+    # Per account. High enough that nobody using the app normally meets them.
+    swipes_per_hour: int = 600
+    messages_per_minute: int = 30
+    messages_per_day: int = 1000
+    listings_per_day: int = 10
+    reports_per_day: int = 20
+
+    # --- Trust and safety ---
+    # The password for the admin page at /admin (user name "admin"). Unset
+    # turns the page off. Hosted servers need 16 characters or more.
+    admin_password: str = ""
+    # Where suspended students appeal and anyone can write to us.
+    support_email: str = "subletteofficial@gmail.com"
+    # Bump when the terms of service or privacy policy change; everyone is
+    # asked to accept the new version.
+    terms_version: str = "2026-10-20"
+    # Seconds between the server's own clean-up runs: expiring listings,
+    # checking photos, deleting abandoned uploads. 0 turns it off. Unset means
+    # every 10 minutes, except in tests, which run it by hand.
+    housekeeping_interval_s: int | None = None
 
     # --- Email ---
     # "console" prints the code in the server log instead of sending it.
@@ -137,6 +157,12 @@ class Settings(BaseSettings):
         return value.rstrip("/")
 
     @property
+    def housekeeping_every_s(self) -> int:
+        if self.housekeeping_interval_s is None:
+            return 0 if self.env == "test" else 600
+        return max(0, self.housekeeping_interval_s)
+
+    @property
     def echo_codes(self) -> bool:
         """True when sign-in codes are also printed in the terminal."""
         if self.email_echo_codes is None:
@@ -178,6 +204,8 @@ class Settings(BaseSettings):
                     "SUBLETTE_EMAIL_FROM must be a sender Brevo has verified, "
                     'such as "Sublette <you@example.com>"'
                 )
+        if hosted and self.admin_password and len(self.admin_password) < 16:
+            problems.append("SUBLETTE_ADMIN_PASSWORD must be 16 characters or more")
         if self.push_backend == "apns":
             missing = [name for name in ("apns_team_id", "apns_key_id") if not getattr(self, name)]
             if not (self.apns_private_key or self.apns_private_key_path):

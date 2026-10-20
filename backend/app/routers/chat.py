@@ -4,7 +4,7 @@ import uuid
 
 from fastapi import APIRouter, Query, Response
 
-from app.deps import CurrentUser, DbSession, Live, Now, Push, Storage
+from app.deps import AppSettings, CurrentUser, DbSession, Live, Now, Push, Storage
 from app.schemas.chat import ChecklistPatch, MessageIn, MessageOut, MessagePage
 from app.schemas.swipes import MatchOut, MatchPage
 from app.services.chat import (
@@ -68,12 +68,13 @@ def post_message(
     storage: Storage,
     live: Live,
     push: Push,
+    settings: AppSettings,
     now: Now,
 ) -> MessageOut:
     """Send a message. The same `message_id` again answers 200 with the
     first copy and sends nothing new."""
     match = member_match(session, user, match_id)
-    message, created = send_message(session, user, match, body.body, body.message_id, now)
+    message, created = send_message(session, settings, user, match, body.body, body.message_id, now)
     if created:
         announce_message(session, live, push, storage, match, message)
     else:

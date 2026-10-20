@@ -4,7 +4,7 @@ import uuid
 
 from fastapi import APIRouter, Query, Response
 
-from app.deps import CurrentUser, DbSession, Live, Push, Storage
+from app.deps import AppSettings, CurrentUser, DbSession, Live, Now, Push, Storage
 from app.models import Match
 from app.schemas.swipes import (
     InterestedRenterPage,
@@ -37,11 +37,13 @@ def swipe(
     storage: Storage,
     live: Live,
     push: Push,
+    settings: AppSettings,
+    now: Now,
 ) -> SwipeResult:
     """Like or pass. A lister's like on a renter who liked the listing makes a
     match, and the renter is told. The same swipe sent again changes nothing
     (`created` is false)."""
-    result = record_swipe(session, user, body, storage)
+    result = record_swipe(session, settings, user, body, storage, now)
     if result.created and result.match is not None:
         # Only the swipe that made the match can be new and carry one.
         announce_match(session, live, push, storage, session.get(Match, result.match.id))

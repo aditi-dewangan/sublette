@@ -66,7 +66,7 @@ jobs pass; then go straight on to the next phase. Send her questions as a
 notification instead of stopping. After the last phase, check every test and
 the code again end to end. The $0 rule still holds.
 
-## Where the build stands (2026-10-20, after phase 10)
+## Where the build stands (2026-10-20): every phase in the plan is built
 
 | Phase | State |
 | --- | --- |
@@ -80,7 +80,8 @@ the code again end to end. The $0 rule still holds.
 | 7 Chat, checklist and notifications | Merged (#9) |
 | 8 Trust, safety and admin | Merged (#10) |
 | 9 UI/UX polish, beta and release | Merged (#11); beta and App Store need the $99 Apple account |
-| 10 AI recommender | Pull request (`phase-10`). The last phase in the plan |
+| 10 AI recommender | Merged (#12) |
+| Final review | Merged (#13); see decisions, "Final review of phases 7 to 10" |
 
 ### Changes Aditi asked for after trying phases 5 and 6 (merged in #8)
 

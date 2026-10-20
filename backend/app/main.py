@@ -13,6 +13,7 @@ from app.errors import install_error_handlers
 from app.routers import (
     API_V1_PREFIX,
     admin,
+    assistant,
     auth,
     chat,
     deck,
@@ -32,6 +33,7 @@ from app.routers import (
 )
 from app.services.email_sender import make_email_sender
 from app.services.housekeeping import Housekeeper
+from app.services.language_model import make_language_model
 from app.services.live import LiveHub
 from app.services.push import PushDispatcher, make_push_sender
 from app.services.storage import ServerStorage, make_storage
@@ -71,6 +73,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.state.storage = make_storage(settings, app.state.engine)
     app.state.live = LiveHub()
     app.state.push = PushDispatcher(app.state.engine, make_push_sender(settings))
+    app.state.language_model = make_language_model(settings)
 
     install_error_handlers(app)
     app.include_router(health.router)
@@ -91,6 +94,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     v1.include_router(live.router)
     v1.include_router(safety.router)
     v1.include_router(release.router)
+    v1.include_router(assistant.router)
     app.include_router(v1)
 
     if isinstance(app.state.storage, ServerStorage):

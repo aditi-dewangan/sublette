@@ -3,6 +3,7 @@ import SwiftUI
 /// The renter's deck: the card stack, its buttons, and what to do when it's empty.
 @MainActor
 struct RenterDeckView: View {
+    @State private var showsAssistant = false
     @Environment(AppContainer.self) private var container
     let onEditSearch: (PreferencesEditorModel.Step) -> Void
 
@@ -30,6 +31,11 @@ struct RenterDeckView: View {
             if model.state == .idle {
                 await model.load()
             }
+            // The server decides whether the assistant shows.
+            await container.assistant.refreshStatus()
+        }
+        .sheet(isPresented: $showsAssistant) {
+            AssistantView()
         }
         .sheet(item: $details) { item in
             DeckDetailSheet(item: item)
@@ -42,6 +48,17 @@ struct RenterDeckView: View {
                 .font(.system(.title2, design: .rounded).weight(.bold))
                 .foregroundStyle(Brand.ink)
             Spacer()
+            if container.assistant.isEnabled {
+                Button {
+                    showsAssistant = true
+                } label: {
+                    Label("Ask", systemImage: "sparkles")
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(Brand.ink)
+                }
+                .accessibilityLabel("Ask Sublette for places")
+                .accessibilityIdentifier("open-assistant")
+            }
             Menu {
                 Button("Dates and budget") { onEditSearch(.dates) }
                 Button("What matters") { onEditSearch(.preferences) }

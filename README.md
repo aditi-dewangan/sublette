@@ -20,8 +20,8 @@ students who need someone to take over their lease. Any `.edu` email can join.
 | 6 | Map and pins | Done |
 | 7 | Chat, checklist and notifications | Done |
 | 8 | Trust, safety and admin | Done |
-| 9 | Polish, offline, analytics and release prep | Built on `phase-9`; see its pull request. TestFlight and the App Store need the $99 Apple account |
-| 10 | AI recommender | Not started |
+| 9 | Polish, offline, analytics and release prep | Done. TestFlight and the App Store need the $99 Apple account |
+| 10 | AI recommender (the Assistant) | Built on `phase-10`; see its pull request |
 
 ## Set up (once)
 
@@ -197,6 +197,7 @@ Each dependency has tests for the day it is down. So far:
 | Server, when sending a message (iPhone app) | A message written offline waits ("Sends when you're back online"), survives a relaunch, and goes out in order when the connection is back, stored once. One the server refuses is marked "Not sent". | `ios/SubletteTests/ReleaseTests.swift` (`MessageOutboxTests`) |
 | MetricKit crash reports (iPhone app, Apple's built-in) | Reports are kept on the phone until they reach the server; one the server refuses is dropped. Nothing else waits on them. | `ios/SubletteTests/ReleaseTests.swift` (`AnalyticsTests`), `backend/tests/test_release.py` |
 | Analytics (`POST /v1/events`) | Fire and forget: a failure is dropped and never shown. Funnel steps are recorded by the server itself, inside the request, so they can't be lost. | `backend/tests/test_release.py`, `ios/SubletteTests/ReleaseTests.swift` |
+| Language model for the Assistant (Anthropic's API or a local Ollama, optional; `httpx2`) | Down, slow (over 20 seconds), refusing, or answering garbage or made-up listings: the assistant falls back to Sublette's own rules and the matching score, the answer says `generated_by: "sublette"`, and the admin page's Assistant log shows what went wrong. Ids it wasn't sent never reach the app. Off by default: the rules need no model. | `backend/tests/test_assistant.py` |
 | Server, when reporting or blocking (iPhone app) | The report sheet stays open with the reason, and nothing is lost; a block that fails changes nothing and says why. | `ios/SubletteTests/SafetyTests.swift` |
 
 When a phase adds a dependency (email sending, photo storage, push, the language
@@ -317,6 +318,27 @@ this listing", and refresh the admin page.
   TestFlight steps are in `docs/app-store.md`.
 - **Icon:** `swift scripts/make-brand-images.swift` redraws the app icon and
   launch mark if the logo changes.
+
+## The Assistant
+
+In Renter mode, **Ask** (top of the deck) opens a box where a renter
+describes what they want ("furnished room for the summer under $1,200") and
+gets up to 10 listings with a reason for each, plus a button to save what it
+understood to their search.
+
+By default it uses Sublette's own rules: free, no account needed. To try a
+language model, in `backend/.env` (in the `sublette` folder):
+
+- **Free, on your Mac:** install Ollama from ollama.com, run
+  `ollama pull llama3.1`, then add `SUBLETTE_ASSISTANT_BACKEND=ollama`.
+- **Claude (paid, a few cents a day at beta size):** add
+  `SUBLETTE_ASSISTANT_BACKEND=anthropic` and `SUBLETTE_ANTHROPIC_API_KEY=...`
+  from console.anthropic.com. Ask before turning this on anywhere.
+
+Check how well it understands with `make eval-assistant` (30 sample
+requests; the bar is 27). Turn the whole feature off with
+`SUBLETTE_ASSISTANT_ENABLED=false`: the app hides it at the next check, with
+no app update. Every question is logged at http://localhost:8000/admin/assistant.
 
 ## Push notifications on a real iPhone
 

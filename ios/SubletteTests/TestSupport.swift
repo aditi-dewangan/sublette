@@ -676,3 +676,20 @@ final class StubReleaseAPI: ReleaseAPI, @unchecked Sendable {
         try referralResult.get()
     }
 }
+
+final class StubAssistantAPI: AssistantAPI, @unchecked Sendable {
+    var statusResult: Result<AssistantStatus, Error> = .success(AssistantStatus(enabled: true, label: "Generated automatically."))
+    var answerResult: Result<AssistantAnswer, Error> = .success(
+        AssistantAnswer(understood: PreferenceChanges(), summary: "Your current search", items: [], generatedBy: "sublette", label: "Generated automatically.")
+    )
+    private(set) var asked: [String] = []
+
+    func status() async throws -> AssistantStatus {
+        try statusResult.get()
+    }
+
+    func ask(_ message: String) async throws -> AssistantAnswer {
+        asked.append(message)
+        return try answerResult.get()
+    }
+}

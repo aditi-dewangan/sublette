@@ -7,7 +7,7 @@ HOST   ?= 127.0.0.1
 PORT   ?= 8000
 
 .DEFAULT_GOAL := help
-.PHONY: help setup dev db db-stop db-reset migrate seed-fake run test lint fmt check find-refs ios ios-test
+.PHONY: help setup dev db db-stop db-reset migrate seed-fake run test lint fmt check find-refs ios ios-test eval-assistant
 
 help: ## List the commands
 	@grep -E '^[a-z-]+:.*## ' $(MAKEFILE_LIST) | awk -F ':.*## ' '{printf "  make %-10s %s\n", $$1, $$2}'
@@ -52,6 +52,9 @@ fmt: ## Format the Python code
 	$(BIN)/ruff format backend scripts
 
 check: lint test ## Everything CI runs for the server
+
+eval-assistant: ## Score the assistant on its 30 sample requests (SUBLETTE_ASSISTANT_BACKEND picks the model)
+	cd backend && .venv/bin/python -m app.assistant_eval
 
 find-refs: ## List every place a name appears: make find-refs VALUE=/v1/deck
 	@test -n "$(VALUE)" || (echo "Usage: make find-refs VALUE=the_old_name" && exit 1)

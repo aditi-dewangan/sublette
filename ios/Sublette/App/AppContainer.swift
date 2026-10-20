@@ -15,6 +15,7 @@ final class AppContainer {
     let chatAPI: ChatAPI
     let safetyAPI: SafetyAPI
     let releaseAPI: ReleaseAPI
+    let assistantAPI: AssistantAPI
     let campusLocator: CampusLocating
     let addressLocator: AddressLocating
     let uploader: PhotoUploading
@@ -32,6 +33,7 @@ final class AppContainer {
     let notifications: NotificationsModel
     let safety: SafetyModel
     let analytics: AnalyticsModel
+    let assistant: AssistantModel
     /// Deck cards, matches, saved listings and chats kept for offline use.
     let offlineCache: OfflineStoring
     let messageOutbox: MessageOutbox
@@ -53,6 +55,7 @@ final class AppContainer {
         chatAPI: ChatAPI,
         safetyAPI: SafetyAPI,
         releaseAPI: ReleaseAPI,
+        assistantAPI: AssistantAPI,
         notificationPermissions: NotificationPermissions,
         liveEvents: LiveEvents?,
         campusLocator: CampusLocating,
@@ -72,6 +75,7 @@ final class AppContainer {
         self.chatAPI = chatAPI
         self.safetyAPI = safetyAPI
         self.releaseAPI = releaseAPI
+        self.assistantAPI = assistantAPI
         self.liveEvents = liveEvents
         self.campusLocator = campusLocator
         self.addressLocator = addressLocator
@@ -123,6 +127,20 @@ final class AppContainer {
             renterDeck?.forget(listingID: listingID)
         }
         self.renterMap = renterMap
+        let assistant = AssistantModel(api: assistantAPI, outbox: outbox)
+        let renterSearch = self.renterSearch
+        assistant.saveChanges = { [weak renterSearch] changes in
+            await renterSearch?.apply(changes) ?? false
+        }
+        assistant.onLiked = { [weak renterDeck] listingID in
+            renterDeck?.forget(listingID: listingID)
+        }
+        self.assistant = assistant
+        let signOutSoFar = session.willSignOut
+        session.willSignOut = { [weak assistant] in
+            await signOutSoFar?()
+            assistant?.reset()
+        }
         liveEvents?.onEvent = { [weak self] event in
             self?.handle(event)
         }
@@ -214,6 +232,7 @@ final class AppContainer {
             chatAPI: LiveChatAPI(client: signedInClient),
             safetyAPI: LiveSafetyAPI(client: signedInClient),
             releaseAPI: LiveReleaseAPI(client: signedInClient),
+            assistantAPI: LiveAssistantAPI(client: signedInClient),
             notificationPermissions: SystemNotificationPermissions(),
             liveEvents: LiveEvents(client: signedInClient, tokens: tokenManager),
             campusLocator: AppleCampusLocator(),

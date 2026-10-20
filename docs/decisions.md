@@ -205,6 +205,17 @@ Choices made while building, with the reason. Add to the bottom; do not rewrite 
 | The privacy manifest declares no tracking, the data types in `docs/app-store.md`, and UserDefaults (reason CA92.1). The renter's pin counts as precise location. | Required for App Store submission. The pin is user-chosen, but it's latitude and longitude, so the conservative answer. |
 | TestFlight, the beta and App Store submission are written up in `docs/app-store.md` but not done. | They need the paid Apple Developer account, which is Aditi's decision. |
 
+### Phase 10: the AI recommender (added 2026-10-20)
+
+| Decision | Reason |
+| --- | --- |
+| The assistant runs on Sublette's own rules by default (`services/understand.py`): dates, seasons, budgets, radius, type of space and every preference, with "must" or "nice" from words like "ideally". A language model is a setting: Anthropic's Claude (`claude-haiku-5-5`, the cheapest current model) or Ollama on the developer's own computer. | Everything stays $0 until Aditi decides to pay for a model. The rules also make the fallback when a model fails. |
+| The three steps follow the plan exactly. The model never decides eligibility: it only sees listings the matching engine already found eligible, and any id it returns that wasn't sent (made up, or repeated) is dropped. If it returns nothing usable, the matching score ranks them and `summary` explains. | "The model can never add a listing, a price or a fact." |
+| The model sees, per listing: rent, deposit, utilities, dates, minimum stay, type of space, bedrooms, bathroom, furnished, laundry, parking, housemates staying and who they are, pets, smoking, miles from the pin, and the public point. Not the address, the exact point, the lister, photos, or the free-text housemates note (it could hold a name or a phone number). It sees the renter's message, never their name, email, pin or chats. | "Listing attributes and public_location only." |
+| Results leave out listings the renter passed on; liked and saved ones may appear. Up to 20 are retrieved and up to 10 shown. Nothing is saved to the profile unless the renter taps "Save these preferences to my search". | A renter asking again shouldn't see what they already turned down. |
+| The evaluation set (30 requests, `app/data/assistant_eval.json`) was written together with the rules, which get all 30; it guards against regressions. Real quality is judged from the query log at `/admin/assistant`, and any model can be scored with `make eval-assistant`. | Honest about what 30/30 means. |
+| The on/off switch is `SUBLETTE_ASSISTANT_ENABLED`; the app asks `GET /v1/assistant` each time the deck opens and hides the Ask button when it's off. 20 questions an hour per renter. | "Turning the setting off hides the screen without an app update." |
+
 ## Known gaps after phase 2
 
 - Photos uploaded in the editor and then abandoned (the editor closed without saving) stay in storage. Done in phase 8: deleted after a day.

@@ -88,6 +88,14 @@ final class RenterSearchModel {
         return await save(form)
     }
 
+    /// Saves what the assistant understood into the search.
+    func apply(_ changes: PreferenceChanges) async -> Bool {
+        guard let form = profile?.form else {
+            return false
+        }
+        return await save(form.applying(changes))
+    }
+
     private func save(_ form: RenterProfileForm) async -> Bool {
         changeMessage = nil
         do {

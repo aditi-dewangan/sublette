@@ -154,6 +154,10 @@ extension Endpoint {
     static let diagnostics = Endpoint(method: .post, path: "/v1/diagnostics")
     static let useReferral = Endpoint(method: .post, path: "/v1/me/referral")
 
+    // The assistant (phase 10).
+    static let assistantStatus = Endpoint(method: .get, path: "/v1/assistant")
+    static let assistantQuery = Endpoint(method: .post, path: "/v1/assistant/query")
+
     /// The public page a shared listing link opens.
     static func listingShare(_ id: String) -> Endpoint {
         Endpoint(method: .get, path: "/l/\(id)", requiresAuth: false)

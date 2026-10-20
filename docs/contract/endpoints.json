@@ -57,6 +57,9 @@
     { "method": "POST", "path": "/v1/me/referral", "auth": true, "phase": 9 },
     { "method": "GET", "path": "/l/{listing_id}", "auth": false, "phase": 9, "page": true },
 
+    { "method": "GET", "path": "/v1/assistant", "auth": true, "phase": 10 },
+    { "method": "POST", "path": "/v1/assistant/query", "auth": true, "phase": 10 },
+
     { "method": "PUT", "path": "/files/{key}", "auth": false, "phase": 1, "own_storage_only": true },
     { "method": "GET", "path": "/files/{key}", "auth": false, "phase": 1, "own_storage_only": true }
   ]

@@ -117,6 +117,21 @@ class Settings(BaseSettings):
     apns_topic: str = "app.sublette.Sublette"
     push_timeout_s: int = 10
 
+    # --- Assistant (phase 10) ---
+    # Off hides the Assistant screen in the app, with no app update.
+    assistant_enabled: bool = True
+    # "rules" is Sublette's own understanding of plain words: free, and always
+    # there to fall back on. "anthropic" uses Claude (needs a paid API key).
+    # "ollama" uses a model running on your own computer (free).
+    assistant_backend: Literal["rules", "anthropic", "ollama"] = "rules"
+    anthropic_api_key: str = ""
+    anthropic_model: str = "claude-haiku-5-5"
+    anthropic_api_url: str = "https://api.anthropic.com/v1/messages"
+    ollama_url: str = "http://localhost:11434"
+    ollama_model: str = "llama3.1"
+    assistant_timeout_s: int = 20
+    assistant_queries_per_hour: int = 20
+
     # --- Photo storage ---
     # "local" keeps photos in a folder and serves them from this server.
     # "database" keeps them in a database table and serves them from this
@@ -208,6 +223,10 @@ class Settings(BaseSettings):
                 )
         if hosted and self.admin_password and len(self.admin_password) < 16:
             problems.append("SUBLETTE_ADMIN_PASSWORD must be 16 characters or more")
+        if self.assistant_backend == "anthropic" and not self.anthropic_api_key:
+            problems.append(
+                "SUBLETTE_ANTHROPIC_API_KEY is required when SUBLETTE_ASSISTANT_BACKEND=anthropic"
+            )
         if self.push_backend == "apns":
             missing = [name for name in ("apns_team_id", "apns_key_id") if not getattr(self, name)]
             if not (self.apns_private_key or self.apns_private_key_path):

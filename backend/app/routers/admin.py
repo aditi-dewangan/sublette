@@ -11,6 +11,7 @@ Plain HTML from the server: nothing to build or host separately.
 
 import hashlib
 import hmac
+import json
 import logging
 import secrets
 import uuid
@@ -26,7 +27,7 @@ from sqlalchemy import func, select, update
 
 from app.deps import AppSettings, ClientIp, DbSession, Live, Now, Storage
 from app.errors import ApiError
-from app.models import CrashReport, Listing, Message, Report, User
+from app.models import AssistantQuery, CrashReport, Listing, Message, Report, User
 from app.services import analytics, rate_limit
 
 logger = logging.getLogger("sublette.admin")
@@ -112,6 +113,7 @@ def page(title: str, body: str) -> HTMLResponse:
         f"<title>{escape(title)} · Sublette admin</title><style>{STYLE}</style></head><body>"
         "<nav><a href='/admin'>Open reports</a><a href='/admin?status=closed'>Closed</a>"
         "<a href='/admin/metrics'>Numbers</a><a href='/admin/referrals'>Referrals</a>"
+        "<a href='/admin/assistant'>Assistant</a>"
         "<form class='inline' action='/admin/find'><input type='text' name='q' "
         "placeholder='Find a person by email'> <button>Find</button></form></nav>"
         f"<h1>{escape(title)}</h1>{body}</body></html>",
@@ -572,3 +574,22 @@ def referral_paid(
     person.referral_paid_at = person.referral_paid_at or now
     session.commit()
     return _back(request)
+
+
+@router.get("/assistant", response_class=HTMLResponse)
+def assistant_log(_: Admin, session: DbSession):
+    """The latest questions to the assistant, what it understood, and
+    whether the language model failed and Sublette's rules answered."""
+    rows = session.scalars(
+        select(AssistantQuery).order_by(AssistantQuery.created_at.desc()).limit(100)
+    ).all()
+    cards = [
+        f"<div class='card'><div class='meta'>{when(row.created_at)} · {escape(row.backend)}"
+        f"{' · fell back to rules' if row.fell_back else ''}"
+        f"{' · ' + escape(row.problem) if row.problem else ''}</div>"
+        f"<div class='excerpt'>{escape(row.message)}</div>"
+        f"<div class='meta'>Understood: {escape(json.dumps(row.understood))}</div>"
+        f"<div class='meta'>{len(row.listing_ids)} listings returned</div></div>"
+        for row in rows
+    ]
+    return page("Assistant questions", "".join(cards) or "<p class='meta'>None yet.</p>")

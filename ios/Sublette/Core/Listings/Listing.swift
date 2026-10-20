@@ -6,6 +6,8 @@ enum ListingStatus: String, Codable, CaseIterable {
     case paused
     case filled
     case expired
+    /// Taken down by Sublette after a review.
+    case removed
 
     var title: String {
         switch self {
@@ -14,6 +16,7 @@ enum ListingStatus: String, Codable, CaseIterable {
         case .paused: return "Paused"
         case .filled: return "Filled"
         case .expired: return "Expired"
+        case .removed: return "Removed"
         }
     }
 }
@@ -157,6 +160,10 @@ struct Listing: Codable, Equatable, Identifiable {
     var landlordConsent: Bool?
     var photos: [ListingPhoto]
     let lister: Lister
+    /// Owner only: the last day it stays live unless renewed, such as "2027-02-03".
+    var expiresOn: String?
+    /// Owner only: why Sublette removed it.
+    var removedReason: String?
 }
 
 struct ListingPage: Decodable, Equatable {

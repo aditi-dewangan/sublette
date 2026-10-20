@@ -13,6 +13,7 @@ final class AppContainer {
     let deckAPI: DeckAPI
     let mapAPI: MapAPI
     let chatAPI: ChatAPI
+    let safetyAPI: SafetyAPI
     let campusLocator: CampusLocating
     let addressLocator: AddressLocating
     let uploader: PhotoUploading
@@ -28,6 +29,7 @@ final class AppContainer {
     let matchesModel: MatchesModel
     let renterMap: RenterMapModel
     let notifications: NotificationsModel
+    let safety: SafetyModel
     /// Nil in previews and tests, which have no server to connect to.
     let liveEvents: LiveEvents?
 
@@ -42,6 +44,7 @@ final class AppContainer {
         deckAPI: DeckAPI,
         mapAPI: MapAPI,
         chatAPI: ChatAPI,
+        safetyAPI: SafetyAPI,
         notificationPermissions: NotificationPermissions,
         liveEvents: LiveEvents?,
         campusLocator: CampusLocating,
@@ -58,6 +61,7 @@ final class AppContainer {
         self.deckAPI = deckAPI
         self.mapAPI = mapAPI
         self.chatAPI = chatAPI
+        self.safetyAPI = safetyAPI
         self.liveEvents = liveEvents
         self.campusLocator = campusLocator
         self.addressLocator = addressLocator
@@ -84,9 +88,12 @@ final class AppContainer {
             simulatorID: Runtime.isRunningUnitTests ? nil : NotificationsModel.currentSimulatorID
         )
         self.notifications = notifications
-        session.willSignOut = { [weak notifications, weak liveEvents] in
+        let safety = SafetyModel(api: safetyAPI)
+        self.safety = safety
+        session.willSignOut = { [weak notifications, weak liveEvents, weak safety] in
             await liveEvents?.stop()
             await notifications?.willSignOut()
+            await safety?.reset()
         }
         let renterMap = RenterMapModel(api: mapAPI, outbox: outbox)
         renterMap.onSwiped = { [weak renterDeck] listingID in
@@ -96,6 +103,29 @@ final class AppContainer {
         liveEvents?.onEvent = { [weak self] event in
             self?.handle(event)
         }
+        liveEvents?.onSuspended = { [weak self] in
+            // Ask the server why; its answer puts up the suspended screen.
+            Task { _ = try? await self?.api.me() }
+        }
+        safety.onBlocksChanged = { [weak self] in
+            await self?.blocksChanged()
+        }
+    }
+
+    /// After a block or unblock: every list that shows people catches up.
+    private func blocksChanged() async {
+        await matchesModel.load()
+        if appState.mode == .renter {
+            await renterDeck.reload()
+            await renterMap.load()
+        } else {
+            await listerDeck.load()
+        }
+    }
+
+    /// A web page on the server, such as the terms of service.
+    func pageURL(_ endpoint: Endpoint) -> URL? {
+        APIClient(baseURL: configuration.apiBaseURL).url(for: endpoint)
     }
 
     /// One live event, to every screen that shows it.
@@ -152,6 +182,7 @@ final class AppContainer {
             deckAPI: LiveDeckAPI(client: signedInClient),
             mapAPI: LiveMapAPI(client: signedInClient),
             chatAPI: LiveChatAPI(client: signedInClient),
+            safetyAPI: LiveSafetyAPI(client: signedInClient),
             notificationPermissions: SystemNotificationPermissions(),
             liveEvents: LiveEvents(client: signedInClient, tokens: tokenManager),
             campusLocator: AppleCampusLocator(),
@@ -172,6 +203,9 @@ final class AppContainer {
         await tokenManager.prepare(preferences: preferences)
         await tokenManager.setSessionEndedHandler { [weak session] in
             await session?.sessionEnded()
+        }
+        await tokenManager.setSuspendedHandler { [weak session] message in
+            await session?.showSuspended(message)
         }
         await session.restore()
     }

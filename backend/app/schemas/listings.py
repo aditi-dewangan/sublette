@@ -11,7 +11,9 @@ Bathroom = Literal["private", "shared"]
 GenderPreference = Literal["any", "women", "men"]
 # Who lives in the home now: the housemates who are staying.
 HouseholdGender = Literal["women", "men", "mixed"]
-Status = Literal["draft", "active", "paused", "filled", "expired"]
+# "expired": the move-in date passed without a renewal. "removed": taken
+# down by Sublette after a review.
+Status = Literal["draft", "active", "paused", "filled", "expired", "removed"]
 
 Address = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=300)]
 Note = Annotated[str, StringConstraints(strip_whitespace=True, max_length=140)]
@@ -111,6 +113,10 @@ class ListingOut(BaseModel):
     lister: ListerOut
     created_at: UtcDateTime
     published_at: UtcDateTime | None
+    # Owner only: the last day it stays live unless renewed (publish it again).
+    expires_on: date | None
+    # Owner only: why Sublette removed it.
+    removed_reason: str | None
 
 
 class ListingPage(BaseModel):

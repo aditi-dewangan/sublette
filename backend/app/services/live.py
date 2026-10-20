@@ -28,6 +28,8 @@ class Connection:
     events: asyncio.Queue = field(default_factory=lambda: asyncio.Queue(MAX_WAITING))
     # Set when the phone falls too far behind; the socket then closes.
     overflowed: asyncio.Event = field(default_factory=asyncio.Event)
+    # Set when the account is suspended; the socket closes with 4403.
+    suspended: asyncio.Event = field(default_factory=asyncio.Event)
 
     def deliver(self, event: dict) -> None:
         """Runs on the connection's own loop."""
@@ -72,3 +74,13 @@ class LiveHub:
                 # That loop has shut down; the socket is gone.
                 self.disconnect(connection)
         return bool(targets)
+
+    def suspend(self, user_id: uuid.UUID) -> None:
+        """Close every socket of a suspended account. Any thread."""
+        with self._lock:
+            targets = list(self._connections.get(user_id, ()))
+        for connection in targets:
+            try:
+                connection.loop.call_soon_threadsafe(connection.suspended.set)
+            except RuntimeError:
+                self.disconnect(connection)

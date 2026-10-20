@@ -11,11 +11,13 @@ The rules:
 """
 
 import uuid
+from datetime import datetime
 
 from sqlalchemy import delete, or_, select
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.orm import Session
 
+from app.config import Settings
 from app.errors import ApiError
 from app.models import Listing, Match, RenterProfile, SavedListing, Swipe, User
 from app.schemas.swipes import (
@@ -31,6 +33,7 @@ from app.services.chat import Activity, checklist_out, filled_out, message_out
 from app.services.deck import renter_for
 from app.services.listings import listing_out, not_found
 from app.services.matching import Renter, failures, lister_fits
+from app.services.safety import blocked_with, is_blocked, limit_swipes
 from app.services.storage import PhotoStorage
 
 LISTER_SWIPE_STATUSES = ("active", "paused")
@@ -108,7 +111,14 @@ def _already(swipe: Swipe) -> ApiError:
     )
 
 
-def record_swipe(session: Session, user: User, body: SwipeIn, storage: PhotoStorage) -> SwipeResult:
+def record_swipe(
+    session: Session,
+    settings: Settings,
+    user: User,
+    body: SwipeIn,
+    storage: PhotoStorage,
+    now: datetime,
+) -> SwipeResult:
     """Record a like or pass, and make the match when it is the second like.
 
     Commits. Safe to call with the same swipe any number of times, at once.
@@ -120,6 +130,7 @@ def record_swipe(session: Session, user: User, body: SwipeIn, storage: PhotoStor
                 raise ApiError(409, "swipe_id_taken", "That swipe id was already used.")
             return _result(session, resent, user, storage, created=False)
 
+    limit_swipes(session, settings, user, now)
     listing = session.get(Listing, body.listing_id)
     if body.renter_id is None:
         side, renter_id = "renter", user.id
@@ -177,6 +188,8 @@ def _check_renter_swipe(
         raise not_found()
     if listing.owner_id == user.id:
         raise ApiError(409, "own_listing", "That's your own listing.")
+    if is_blocked(session, user.id, listing.owner_id):
+        raise not_found()
     renter = renter_for(session, user)
     if body.action == "like" and failures(renter, listing, listing.owner.school_id):
         raise ApiError(
@@ -199,7 +212,7 @@ def _check_lister_swipe(
             Swipe.renter_id == body.renter_id,
         )
     )
-    if liked is None:
+    if liked is None or is_blocked(session, user.id, body.renter_id):
         raise ApiError(409, "renter_has_not_liked", "This renter hasn't liked your listing.")
     if body.action == "like" and _renter_if_eligible(session, body.renter_id, listing) is None:
         raise ApiError(409, "renter_not_eligible", "This renter no longer fits your listing.")
@@ -268,7 +281,11 @@ def saved_listings(session: Session, user: User) -> list[Listing]:
     rows = session.scalars(
         select(SavedListing)
         .join(Listing, Listing.id == SavedListing.listing_id)
-        .where(SavedListing.user_id == user.id, Listing.status == "active")
+        .where(
+            SavedListing.user_id == user.id,
+            Listing.status == "active",
+            Listing.owner_id.not_in(blocked_with(user.id)),
+        )
         .order_by(SavedListing.created_at.desc())
     ).unique()
     return [row.listing for row in rows]
@@ -289,6 +306,7 @@ def interested_renters(
             Swipe.action == "like",
             Swipe.listing_id == listing_id,
             Swipe.renter_id.not_in(swiped),
+            Swipe.renter_id.not_in(blocked_with(owner.id)),
         )
         .order_by(Swipe.created_at.desc(), Swipe.id.desc())
     ).all()

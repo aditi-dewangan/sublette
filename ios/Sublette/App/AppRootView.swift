@@ -14,10 +14,14 @@ struct AppRootView: View {
                 LaunchView()
             case .unreachable:
                 UnreachableView()
+            case .suspended(let message):
+                SuspendedView(message: message)
             case .signedOut:
                 OnboardingFlowView(model: container.onboarding)
             case .signedIn(let user):
-                if !user.profileComplete {
+                if user.needsToAcceptTerms {
+                    TermsView(user: user)
+                } else if !user.profileComplete {
                     ProfileSetupView(container: container, user: user)
                 } else if !appState.hasChosenStartingMode(userID: user.id) {
                     StartingModeView(user: user)

@@ -72,7 +72,7 @@ final class ListingContractTests: XCTestCase {
         XCTAssertEqual(GenderPreference.allCases.map(\.rawValue), ["any", "women", "men"])
         XCTAssertEqual(
             ListingStatus.allCases.map(\.rawValue),
-            ["draft", "active", "paused", "filled", "expired"]
+            ["draft", "active", "paused", "filled", "expired", "removed"]
         )
     }
 

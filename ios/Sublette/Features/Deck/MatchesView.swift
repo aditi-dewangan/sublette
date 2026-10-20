@@ -104,6 +104,9 @@ struct MatchesView: View {
                 .navigationTitle(listing.spaceType?.title ?? "Listing")
                 .navigationBarTitleDisplayMode(.inline)
                 .toolbar {
+                    ToolbarItem(placement: .topBarLeading) {
+                        ListingSafetyMenu(listing: listing) { openListing = nil }
+                    }
                     ToolbarItem(placement: .confirmationAction) {
                         Button("Done") { openListing = nil }
                             .tint(Brand.magenta)

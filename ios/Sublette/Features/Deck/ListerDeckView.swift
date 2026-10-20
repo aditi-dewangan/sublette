@@ -146,6 +146,11 @@ struct RenterCardView: View {
                             .font(.subheadline)
                     }
                 }
+                Spacer(minLength: 0)
+                SafetyMenu(
+                    reports: [.person(id: item.renter.id, name: item.renter.firstName)],
+                    block: .person(id: item.renter.id, name: item.renter.firstName)
+                )
             }
             if let dates = Self.dates(item) {
                 Label(dates, systemImage: "calendar")
@@ -195,4 +200,5 @@ struct RenterCardView: View {
         .frame(height: 420)
         .padding()
         .background(Brand.cream)
+        .previewEnvironment()
 }

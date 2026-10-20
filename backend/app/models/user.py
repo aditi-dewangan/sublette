@@ -32,6 +32,12 @@ class User(Base):
     has_pets: Mapped[bool | None]
 
     status: Mapped[str] = mapped_column(String(20), default="active", server_default="active")
+    # Why the account was suspended, shown to its owner with how to appeal.
+    suspended_reason: Mapped[str | None] = mapped_column(String(300))
+    suspended_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    # The version of the terms of service and privacy policy last accepted.
+    terms_version: Mapped[str | None] = mapped_column(String(20))
+    terms_accepted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     # Sublets both sides confirmed as filled through a match. Shown on the profile.
     completed_sublets: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

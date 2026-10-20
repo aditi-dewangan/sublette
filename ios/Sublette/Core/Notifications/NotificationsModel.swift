@@ -7,6 +7,8 @@ enum NotificationTarget: Equatable {
     case chat(matchID: String, role: SwipeSide)
     /// "A new place fits your search": the renter's deck.
     case deck
+    /// "Your listing expired": the lister's listings, to renew it.
+    case listings
 
     /// Reads the fields the server puts in every push: kind, match_id, role.
     init?(userInfo: [AnyHashable: Any]) {
@@ -19,6 +21,8 @@ enum NotificationTarget: Equatable {
             self = .chat(matchID: matchID, role: role)
         case "listing":
             self = .deck
+        case "listing_expired":
+            self = .listings
         default:
             return nil
         }

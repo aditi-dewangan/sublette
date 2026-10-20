@@ -15,7 +15,8 @@ Spec" doc; its Build plan tab defines phases 0 to 10 and each phase's
 | 4 Matching engine | Merged (#6; #5 had landed on `phase-3` by mistake). |
 | 5 Swipe decks and matches | Merged (#7). |
 | 6 Map and pins | Merged (#8). |
-| 7 Chat, checklist and notifications | Pull request (`phase-7`). |
+| 7 Chat, checklist and notifications | Merged (#9). |
+| 8 Trust, safety and admin | Pull request (`phase-8`). |
 
 ## How each phase is delivered
 
@@ -33,6 +34,7 @@ Steps are in `README.md`, "Staging, for $0".
 ## Waiting on Aditi
 
 - Trying phase 7 on two simulators: README, "Chat between two simulators".
-  Then merge the phase 7 pull request.
+- Trying the admin page (README, "Reviewing reports"), and having the draft
+  terms of service and privacy policy (`/terms`, `/privacy`) read before launch.
 - Deciding whether to buy the Apple Developer membership ($99/year), needed
   for notifications on real iPhones and for TestFlight in phase 9.

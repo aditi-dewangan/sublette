@@ -105,6 +105,12 @@ final class OnboardingModel {
             if case .cancelled = error {
                 return
             }
+            if error.serverCode == "account_suspended" {
+                // The code was right, but the account can't be used: say why on its own screen.
+                reset()
+                await session.showSuspended(error.userMessage)
+                return
+            }
             errorMessage = error.userMessage
         } catch {
             code = ""

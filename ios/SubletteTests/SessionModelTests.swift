@@ -129,15 +129,19 @@ final class SessionModelTests: XCTestCase {
         XCTAssertNotNil(test.store.load())
     }
 
-    func testASuspendedAccountIsSignedOut() async {
+    func testASuspendedAccountSeesWhyAndItsTokensAreGone() async {
         let test = TestSession(savedTokens: Fixture.tokens(expiresIn: 600))
         test.preferences.cachedUser = Fixture.completeUser
-        test.api.meResult = .failure(Fixture.serverError(403, "account_suspended", "Suspended"))
+        test.api.meResult = .failure(Fixture.serverError(403, "account_suspended", "Suspended for spam."))
 
         await test.session.restore()
 
-        XCTAssertEqual(test.session.state, .signedOut)
+        XCTAssertEqual(test.session.state, .suspended("Suspended for spam."))
         XCTAssertNil(test.store.load())
+        XCTAssertNil(test.preferences.cachedUser)
+
+        await test.session.signOut()
+        XCTAssertEqual(test.session.state, .signedOut)
     }
 
     func testSessionEndedByTheServerSignsOut() async {

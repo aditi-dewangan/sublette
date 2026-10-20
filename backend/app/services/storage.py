@@ -82,6 +82,10 @@ class PhotoStorage(Protocol):
     def delete(self, key: str) -> None:
         """Remove a photo. Best effort: failures are logged, never raised."""
 
+    def read(self, key: str) -> bytes | None:
+        """The photo's bytes, or None if it is missing or can't be read now.
+        Used to spot one photo on two listings; never raises."""
+
 
 class NoStorage:
     def presign_upload(self, key: str, content_type: str, now: datetime) -> PresignedUpload:
@@ -91,6 +95,9 @@ class NoStorage:
         return ""
 
     def delete(self, key: str) -> None:
+        return None
+
+    def read(self, key: str) -> bytes | None:
         return None
 
 
@@ -211,6 +218,14 @@ class ServerStorage:
         except (OSError, ValueError, SQLAlchemyError) as error:
             logger.warning("Could not delete photo: %s", type(error).__name__)
 
+    def read(self, key: str) -> bytes | None:
+        try:
+            found = self.store.get(key)
+        except (OSError, ValueError, SQLAlchemyError) as error:
+            logger.warning("Could not read photo: %s", type(error).__name__)
+            return None
+        return found[0] if found else None
+
 
 class S3Storage:
     """Any S3-compatible store: Amazon S3, Cloudflare R2, Backblaze B2 and others."""
@@ -277,6 +292,14 @@ class S3Storage:
         except Exception as error:
             # The account is still deleted. The orphaned file is logged for cleanup.
             logger.warning("Could not delete photo %s: %s", key, type(error).__name__)
+
+    def read(self, key: str) -> bytes | None:
+        try:
+            reply = self._s3().get_object(Bucket=self._settings.s3_bucket, Key=key)
+            return reply["Body"].read(self._settings.upload_max_bytes + 1)
+        except Exception as error:
+            logger.warning("Could not read photo %s: %s", key, type(error).__name__)
+            return None
 
 
 def make_storage(settings: Settings, engine: Engine) -> PhotoStorage:

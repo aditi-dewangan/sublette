@@ -17,6 +17,7 @@ actor TokenManager: AccessTokenProviding {
     private var tokens: AuthTokens?
     private var refreshInFlight: Task<AuthTokens?, Never>?
     private var onSessionEnded: (@Sendable () async -> Void)?
+    private var onSuspended: (@Sendable (String) async -> Void)?
 
     init(
         store: TokenStore,
@@ -36,6 +37,23 @@ actor TokenManager: AccessTokenProviding {
     /// Called when the server ends the session, so the app can show sign-in.
     func setSessionEndedHandler(_ handler: @escaping @Sendable () async -> Void) {
         onSessionEnded = handler
+    }
+
+    /// Called when the account is suspended, with the server's explanation.
+    func setSuspendedHandler(_ handler: @escaping @Sendable (String) async -> Void) {
+        onSuspended = handler
+    }
+
+    func accountSuspended(message: String) async {
+        guard tokens != nil else {
+            return
+        }
+        clear()
+        if let onSuspended {
+            await onSuspended(message)
+        } else {
+            await onSessionEnded?()
+        }
     }
 
     /// Called once the first screen is up. Only then are the Keychain and
@@ -119,9 +137,11 @@ actor TokenManager: AccessTokenProviding {
             setTokens(fresh)
             return fresh
         } catch let error as APIError {
-            if let status = error.status, status == 401 || status == 403,
-               tokens?.refreshToken == refreshToken {
-                // The refresh token is expired, or the account is gone or suspended.
+            if error.serverCode == "account_suspended", tokens?.refreshToken == refreshToken {
+                await accountSuspended(message: error.userMessage)
+            } else if let status = error.status, status == 401 || status == 403,
+                      tokens?.refreshToken == refreshToken {
+                // The refresh token is expired, or the account is gone.
                 clear()
                 await onSessionEnded?()
             }

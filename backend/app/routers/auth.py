@@ -9,7 +9,7 @@ from datetime import timedelta
 from fastapi import APIRouter
 from sqlalchemy import select
 
-from app.deps import AppSettings, ClientIp, DbSession, Mailer, Now, Storage
+from app.deps import AppSettings, ClientIp, DbSession, Mailer, Now, Storage, suspended
 from app.errors import ApiError
 from app.models import User
 from app.routers.me import user_out
@@ -130,11 +130,7 @@ def verify(
         session.add(user)
     if user.status != "active":
         session.commit()
-        raise ApiError(
-            403,
-            "account_suspended",
-            "This account has been suspended. Contact support to appeal.",
-        )
+        raise suspended(user, settings)
     if user.verified_at is None:
         user.verified_at = now
     session.commit()
@@ -145,7 +141,7 @@ def verify(
         access_token=tokens.access_token,
         refresh_token=tokens.refresh_token,
         expires_in=tokens.expires_in,
-        user=user_out(user, storage),
+        user=user_out(user, storage, settings),
     )
 
 
@@ -157,11 +153,7 @@ def refresh(body: RefreshIn, session: DbSession, settings: AppSettings, now: Now
     if user is None or user.verified_at is None:
         raise ApiError(401, "token_invalid", "Please sign in again.")
     if user.status != "active":
-        raise ApiError(
-            403,
-            "account_suspended",
-            "This account has been suspended. Contact support to appeal.",
-        )
+        raise suspended(user, settings)
     tokens = issue_pair(settings, user.id, now)
     return TokensOut(
         access_token=tokens.access_token,

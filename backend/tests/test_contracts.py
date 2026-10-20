@@ -84,7 +84,7 @@ def test_websockets_exist_and_refuse_a_connection_with_no_token(item: dict, clie
 
 def test_every_path_except_health_is_under_v1() -> None:
     for item in contract_entries():
-        if item.get("own_storage_only"):
+        if item.get("own_storage_only") or item.get("page"):
             continue
         assert item["path"] == "/health" or item["path"].startswith("/v1/"), item["path"]
 
@@ -93,7 +93,7 @@ def test_only_sign_in_and_health_are_open_to_everyone() -> None:
     open_paths = {
         item["path"]
         for item in contract_entries()
-        if not item["auth"] and not item.get("own_storage_only")
+        if not item["auth"] and not item.get("own_storage_only") and not item.get("page")
     }
 
     assert open_paths == {

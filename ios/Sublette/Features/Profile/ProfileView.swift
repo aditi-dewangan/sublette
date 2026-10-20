@@ -7,9 +7,7 @@ struct ProfileView: View {
     @Environment(SessionModel.self) private var session
 
     @State private var isEditing = false
-    @State private var isConfirmingDelete = false
-    @State private var isDeleting = false
-    @State private var accountMessage: String?
+    @State private var showsSettings = false
 
     var body: some View {
         ScrollView {
@@ -32,15 +30,8 @@ struct ProfileView: View {
                 ProfileEditView(container: container, user: user)
             }
         }
-        .confirmationDialog(
-            "Delete your account?",
-            isPresented: $isConfirmingDelete,
-            titleVisibility: .visible
-        ) {
-            Button("Delete account", role: .destructive) { deleteAccount() }
-            Button("Cancel", role: .cancel) {}
-        } message: {
-            Text("This removes your profile, listings, swipes and messages. It can't be undone.")
+        .sheet(isPresented: $showsSettings) {
+            SettingsView()
         }
     }
 
@@ -113,32 +104,14 @@ struct ProfileView: View {
             .buttonStyle(SecondaryButtonStyle())
             .accessibilityIdentifier("sign-out-button")
 
-            if let accountMessage {
-                ErrorText(accountMessage)
-            }
-            Button(isDeleting ? "Deleting…" : "Delete account") {
-                isConfirmingDelete = true
-            }
-            .buttonStyle(LinkButtonStyle())
-            .disabled(isDeleting)
-            .padding(.top, 8)
-            .accessibilityIdentifier("delete-account-button")
-        }
-    }
-
-    private func deleteAccount() {
-        isDeleting = true
-        accountMessage = nil
-        Task {
-            do {
-                try await session.deleteAccount()
-            } catch let error as APIError {
-                // Nothing was deleted. Say so, and leave the student signed in.
-                accountMessage = "Your account was not deleted. \(error.userMessage)"
-            } catch {
-                accountMessage = "Your account was not deleted. Try again."
-            }
-            isDeleting = false
+            Button("Settings") { showsSettings = true }
+                .buttonStyle(LinkButtonStyle())
+                .padding(.top, 8)
+                .accessibilityIdentifier("settings-button")
+            Text("Blocked people, terms, contact us, and deleting your account.")
+                .font(.footnote)
+                .foregroundStyle(Brand.ink.opacity(0.7))
+                .multilineTextAlignment(.center)
         }
     }
 }

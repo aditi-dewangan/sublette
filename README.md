@@ -18,8 +18,9 @@ students who need someone to take over their lease. Any `.edu` email can join.
 | 4 | Matching engine: who sees which listing, scored and explained | Done |
 | 5 | Swipe decks and matches | Done |
 | 6 | Map and pins | Done |
-| 7 | Chat, checklist and notifications | Built on `phase-7`; see its pull request |
-| 8 to 10 | Trust and safety through the AI recommender | Not started |
+| 7 | Chat, checklist and notifications | Done |
+| 8 | Trust, safety and admin | Built on `phase-8`; see its pull request |
+| 9 and 10 | Polish and release, then the AI recommender | Not started |
 
 ## Set up (once)
 
@@ -190,6 +191,8 @@ Each dependency has tests for the day it is down. So far:
 | `xcrun simctl push` (local server, simulator pushes) | No Xcode, a slow or stopped simulator, or garbage output: logged in the `make dev` window, nothing else changes. Hosted servers never run it and refuse simulator registrations. | `backend/tests/test_push.py`, `test_chat.py` |
 | Live connection (iPhone app, WebSocket `/v1/ws`) | Chat still works without it: sending is a normal request, and each chat reloads when opened. The app reconnects on its own (1, 2, 4… up to 30 seconds apart), refreshes the token when the server asks (close code 4401), and reloads anything missed when it is back. A message that fails to send stays on screen with "Not sent. Try again", and a retry is stored once. | `ios/SubletteTests/ChatTests.swift`, `backend/tests/test_chat.py` |
 | Notification permission (iPhone app) | Asked once, at the first match. Declining changes nothing else; chat works while the app is open. | `ios/SubletteTests/ChatTests.swift` (`NotificationsTests`) |
+| Housekeeping thread (server: expiry, photo checks, clean-up) | A failed run (database or photo storage down) is logged and tried again 10 minutes later; requests are unaffected. The deck hides expired listings by date on its own, so a late run changes nothing students see. A photo storage can't read is checked next time. Two server processes never run it at once. | `backend/tests/test_housekeeping.py` |
+| Server, when reporting or blocking (iPhone app) | The report sheet stays open with the reason, and nothing is lost; a block that fails changes nothing and says why. | `ios/SubletteTests/SafetyTests.swift` |
 
 When a phase adds a dependency (email sending, photo storage, push, the language
 model), it adds a row here and the tests behind it.
@@ -273,6 +276,25 @@ docs/
 scripts/          check_renames.py  ios-test.sh
 ```
 
+## Reviewing reports: the admin page
+
+Reports from the app and the server's scam flags wait at `/admin`. To use it
+on your Mac, add a password to `backend/.env` (in the `sublette` folder):
+
+```
+echo 'SUBLETTE_ADMIN_PASSWORD=pick-a-long-password-here' >> backend/.env
+make dev
+```
+
+Then open http://localhost:8000/admin in Safari, sign in as `admin` with that
+password, and you'll see the open reports, oldest first. From there you can
+dismiss a report, suspend someone (they see your reason and how to appeal),
+lift a suspension, or remove a listing. On staging, set the same variable in
+Render's dashboard (16 characters or more).
+
+To try it: sign in on a simulator, open a listing's "…" menu, tap "Report
+this listing", and refresh the admin page.
+
 ## Push notifications on a real iPhone
 
 Locally, pushes go to simulators (above) and are printed in the terminal.
@@ -305,3 +327,5 @@ Developer account ($99 a year). Nothing is set up for that yet. When it is:
 | A real iPhone can't reach the server | `localhost` on a phone is the phone. Run `HOST=0.0.0.0 make run`, set `SUBLETTE_PUBLIC_BASE_URL=http://<your-mac-name>.local:8000` in `backend/.env`, and use the same address for Debug in `ios/project.yml`. |
 | No notification in the simulator | Allow notifications when the app asks (at the first match), check the `make dev` window shows "Push to phone", and that the other simulator is on its Home screen. Messages to an open app arrive live, not as a push. |
 | A new Swift file is missing in Xcode | Run `make ios` again. The project is generated from the folders. |
+| http://localhost:8000/admin says "Not Found" | Set `SUBLETTE_ADMIN_PASSWORD` in `backend/.env` and restart `make dev`. |
+| The app shows "Before you start" | Each new version of the terms asks once. Tap "I agree". |

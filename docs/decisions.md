@@ -171,10 +171,29 @@ Choices made while building, with the reason. Add to the bottom; do not rewrite 
 | The safety card replaces the composer in each chat until "Got it" is tapped or you've written there; remembered per account and chat on the phone. Suggested first questions differ for renters and listers and disappear once anyone has written. | "A safety card before the first message." |
 | Tests ignore `backend/.env`. | The Brevo key in Aditi's `.env` made a "key required" test fail on her Mac only. |
 
+### Phase 8: trust, safety and admin (added 2026-10-20)
+
+| Decision | Reason |
+| --- | --- |
+| One `reports` table holds both students' reports and the server's own scam flags (`source` "user" or "automatic"). Each names the person responsible (`subject_id`) and keeps a copy of what was reported (`excerpt`). The same open report from the same student is filed once. | One review queue. The copy means an edited listing or a deleted message can still be reviewed. |
+| Reports a student made are kept, without their name, when they delete their account; reports about a deleted account go with it. | The plan: deleting an account removes the user's data. A report about someone else isn't the reporter's data, and the review should be able to finish. |
+| A block hides the pair from each other whichever of them made it: decks, the map and its cards, saved listings, the listing itself (404), interested renters, matches, chats (404 `chat_unavailable`), swipes and "Notify me" alerts. Both apps drop the pair's chat at once (`match_removed` event). Unblocking brings the chat back with its history. The blocked person isn't told. | The plan's rule, applied in every query that shows people or listings (`blocked_with` in `services/safety.py`). Keeping the chat means a report can still be reviewed. |
+| Blocking from a listing card sends the listing id, not the lister's id. | Listing cards don't carry the lister's id, and don't need to. |
+| Scam flags: a payment app, wire transfer, gift card or deposit request, or a link to another site, in one of a chat's first three messages; and one photo (same bytes, SHA-256) on two different people's listings. Flags go to the review queue only; the message is still delivered. | The plan's two flags. Holding messages back would make false alarms (a renter asking "Do you take Venmo?") break chats. Reusing your own photos is fine. Exact matching misses an edited copy of a photo; that needs image analysis, which can come later. |
+| Listings expire the day after their move-in date, but stay up at least 14 days after each publish, renewal or edit, and never past the move-out date. Renewing is "Renew" on the listing (publishing it again). The lister gets a push when it expires. The deck hides an expired listing on the day; a background job then marks it "expired". | "Expire automatically after their start date unless renewed." A listing published the day before move-in shouldn't vanish overnight. An edit shows the lister is still there. |
+| A background thread in the server (every 10 minutes) expires listings, fingerprints photos, deletes photos uploaded but never attached after a day, and prunes old rate-limit rows. A PostgreSQL lock keeps it to one process. | $0: no separate scheduler. On Render's free plan it runs whenever the server is awake, and nothing depends on it running on time. |
+| Rate limits per account: 600 swipes an hour, 30 messages a minute and 1,000 a day, 10 new listings a day, 20 reports a day (all settings). A resent message or swipe isn't refused. Sign-in limits are unchanged. | High enough that nobody using the app normally meets them; low enough to stop a script. |
+| The admin page is `/admin`, plain HTML from the server, behind a password (`SUBLETTE_ADMIN_PASSWORD`, user name "admin"; 16+ characters on hosted servers; off when unset). Wrong passwords are limited to 20 an hour per address; forms carry a token. It shows the open queue oldest first, each person's page and each listing's page, and can dismiss, mark handled, suspend (with a reason the student sees), lift a suspension, and remove a listing (with a reason the lister sees). | Nothing extra to host or pay for. One shared password is enough for one reviewer; named admin accounts can come when there's a team. |
+| A suspension takes effect on the student's next request: every endpoint answers 403 `account_suspended` with the reason and the appeal address, an open live connection closes at once (4403), pushes stop and their listings leave decks. The app shows one screen with the reason and an "Email us to appeal" link. | The plan's "Done when". |
+| Appeals and "Contact us" go to `subletteofficial@gmail.com` (`SUBLETTE_SUPPORT_EMAIL`). | The address Aditi already uses for Sublette. |
+| The terms of service and privacy policy are pages on the server (`/terms`, `/privacy`), versioned by `SUBLETTE_TERMS_VERSION`. The app asks for "I agree" once per version before anything else, and the server records the version and time per account. The server doesn't refuse requests from someone who hasn't accepted. | Free to host and always in step with the version the API asks for. Refusing requests would sign out everyone on older app versions when the terms change. |
+| The terms and privacy text is a plain-language draft, not legal advice. It sets a minimum age of 18. | Needed for App Store review; Aditi should have it read before launch. |
+| Settings (from the Profile tab): blocked people with "Unblock", terms, privacy policy, contact us, and delete account (moved here from the Profile tab). | The plan's Settings list. |
+
 ## Known gaps after phase 2
 
-- Photos uploaded in the editor and then abandoned (the editor closed without saving) stay in storage. A clean-up job belongs with phase 8's expiry job.
-- Listings do not expire yet (phase 8).
+- Photos uploaded in the editor and then abandoned (the editor closed without saving) stay in storage. Done in phase 8: deleted after a day.
+- Listings do not expire yet. Done in phase 8.
 
 ## Known gaps after phase 1
 

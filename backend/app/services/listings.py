@@ -1,7 +1,7 @@
 """Rules for listings: what a draft may hold, what publishing requires, who sees what."""
 
 import uuid
-from datetime import date
+from datetime import date, timedelta
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -14,6 +14,9 @@ from app.services.geo import offset_point
 from app.services.storage import KEY_PATTERN, PhotoStorage, owner_prefix
 
 MIN_PHOTOS = 4
+# A live listing stays up until its move-in date, and at least this many days
+# after each publish, renewal or edit, but never past its move-out date.
+RENEW_DAYS = 14
 
 # Fields that always have a value; they can be changed but not cleared.
 NOT_NULL = (
@@ -206,6 +209,11 @@ def require_publishable(listing: Listing, today: date) -> None:
         )
 
 
+def expiry_date(listing: Listing, today: date) -> date:
+    """The last day a listing published, renewed or edited `today` stays live."""
+    return min(listing.end_date, max(listing.start_date, today + timedelta(days=RENEW_DAYS)))
+
+
 def new_listing(owner: User) -> Listing:
     return Listing(id=uuid.uuid4(), owner_id=owner.id, owner=owner, status="draft", **DEFAULTS)
 
@@ -266,4 +274,6 @@ def listing_out(
         ),
         created_at=listing.created_at,
         published_at=listing.published_at,
+        expires_on=listing.expires_on if is_owner else None,
+        removed_reason=listing.removed_reason if is_owner else None,
     )

@@ -12,6 +12,7 @@ from app.db import make_engine
 from app.errors import install_error_handlers
 from app.routers import (
     API_V1_PREFIX,
+    admin,
     auth,
     chat,
     deck,
@@ -22,11 +23,14 @@ from app.routers import (
     live,
     maps,
     me,
+    pages,
     renter_profile,
+    safety,
     swipes,
     uploads,
 )
 from app.services.email_sender import make_email_sender
+from app.services.housekeeping import Housekeeper
 from app.services.live import LiveHub
 from app.services.push import PushDispatcher, make_push_sender
 from app.services.storage import ServerStorage, make_storage
@@ -38,7 +42,15 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     @asynccontextmanager
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:
+        housekeeper = None
+        if settings.housekeeping_every_s:
+            housekeeper = Housekeeper(
+                app.state.engine, app.state.storage, app.state.push, settings.housekeeping_every_s
+            )
+            housekeeper.start()
         yield
+        if housekeeper is not None:
+            housekeeper.stop()
         app.state.push.shutdown()
         app.state.engine.dispose()
 
@@ -61,6 +73,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     install_error_handlers(app)
     app.include_router(health.router)
+    app.include_router(pages.router)
+    app.include_router(admin.router)
 
     v1 = APIRouter(prefix=API_V1_PREFIX)
     v1.include_router(auth.router)
@@ -74,6 +88,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     v1.include_router(chat.router)
     v1.include_router(devices.router)
     v1.include_router(live.router)
+    v1.include_router(safety.router)
     app.include_router(v1)
 
     if isinstance(app.state.storage, ServerStorage):

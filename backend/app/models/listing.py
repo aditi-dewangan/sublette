@@ -7,7 +7,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.db import Base
 from app.models.user import User
 
-STATUSES = ("draft", "active", "paused", "filled", "expired")
+STATUSES = ("draft", "active", "paused", "filled", "expired", "removed")
 SPACE_TYPES = ("entire_unit", "private_room", "shared_room")
 BATHROOMS = ("private", "shared")
 GENDER_PREFERENCES = ("any", "women", "men")
@@ -78,6 +78,11 @@ class Listing(Base):
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
     )
     published_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    # The last day the listing is live. It then expires unless the lister
+    # renews it (services/listings.py, expiry_date).
+    expires_on: Mapped[date | None] = mapped_column(Date)
+    # Set when Sublette removed the listing (status "removed"), shown to its owner.
+    removed_reason: Mapped[str | None] = mapped_column(String(300))
 
     owner: Mapped[User] = relationship(lazy="joined")
     photos: Mapped[list["ListingPhoto"]] = relationship(
@@ -97,5 +102,7 @@ class ListingPhoto(Base):
     )
     key: Mapped[str] = mapped_column(String(200), unique=True)
     position: Mapped[int] = mapped_column(Integer)
+    # SHA-256 of the photo, filled in by housekeeping; finds one photo on two listings.
+    content_hash: Mapped[str | None] = mapped_column(String(64), index=True)
 
     listing: Mapped[Listing] = relationship(back_populates="photos")

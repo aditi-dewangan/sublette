@@ -7,12 +7,13 @@ from datetime import datetime
 from fastapi import APIRouter, Query
 from sqlalchemy import and_, or_, select
 
-from app.deps import CurrentUser, DbSession, Now, Push, Storage
+from app.deps import AppSettings, CurrentUser, DbSession, Now, Push, Storage
 from app.errors import ApiError
 from app.models import Listing
 from app.schemas.listings import ListingFields, ListingOut, ListingPage, StatusChange
 from app.services.listings import (
     apply_fields,
+    expiry_date,
     listing_out,
     matched_listing_ids,
     new_listing,
@@ -20,16 +21,23 @@ from app.services.listings import (
     require_publishable,
 )
 from app.services.notify import alert_new_listing
+from app.services.safety import is_blocked, limit_listings
 
 router = APIRouter(tags=["listings"])
 
-# What a listing may change to from each status. Expiry (phase 8) is set by the server.
+# What a listing may change to from each status. Expiry and removal are set
+# by the server. Publishing an active listing again renews it.
 TRANSITIONS = {
     "draft": {"active"},
-    "active": {"paused", "filled"},
+    "active": {"active", "paused", "filled"},
     "paused": {"active", "filled"},
     "filled": set(),
     "expired": {"active"},
+    "removed": set(),
+}
+CLOSED = {
+    "filled": ("listing_filled", "This listing is filled and can't be changed."),
+    "removed": ("listing_removed", "Sublette removed this listing, so it can't be changed."),
 }
 
 
@@ -49,9 +57,15 @@ def _delete_photos(storage: Storage, keys: list[str]) -> None:
 
 @router.post("/listings", status_code=201, response_model=ListingOut)
 def create_listing(
-    fields: ListingFields, user: CurrentUser, session: DbSession, storage: Storage
+    fields: ListingFields,
+    user: CurrentUser,
+    session: DbSession,
+    storage: Storage,
+    settings: AppSettings,
+    now: Now,
 ) -> ListingOut:
     """Start a listing as a draft. Any answers may be filled in later."""
+    limit_listings(session, settings, user, now)
     listing = new_listing(user)
     session.add(listing)
     apply_fields(session, listing, user, fields, storage)
@@ -101,6 +115,8 @@ def read_listing(
     matched = listing.id in matched_listing_ids(session, user)
     if listing.owner_id != user.id and listing.status != "active" and not matched:
         raise not_found()
+    if listing.owner_id != user.id and is_blocked(session, user.id, listing.owner_id):
+        raise not_found()
     return listing_out(listing, user, storage, matched=matched)
 
 
@@ -115,11 +131,13 @@ def update_listing(
 ) -> ListingOut:
     """Change any answers. A listing renters can see must stay complete."""
     listing = _own_listing(session, listing_id, user)
-    if listing.status == "filled":
-        raise ApiError(409, "listing_filled", "This listing is filled and can't be changed.")
+    if listing.status in CLOSED:
+        raise ApiError(409, *CLOSED[listing.status])
     removed = apply_fields(session, listing, user, fields, storage)
     if listing.status in ("active", "paused"):
         require_publishable(listing, now.date())
+        # An edit shows the listing is current, so it counts as a renewal.
+        listing.expires_on = expiry_date(listing, now.date())
     session.commit()
     session.refresh(listing)
     _delete_photos(storage, removed)
@@ -136,28 +154,33 @@ def change_status(
     push: Push,
     now: Now,
 ) -> ListingOut:
-    """Publish (active), pause, or mark filled. The first publish tells
-    renters who asked to hear about new places that fit them."""
+    """Publish (active), pause, or mark filled. Publishing an active or
+    expired listing renews it: it stays live for at least two more weeks. The
+    first publish tells renters who asked to hear about new places that fit
+    them."""
     listing = _own_listing(session, listing_id, user)
     target = change.status
+    if target == listing.status and target != "active":
+        return listing_out(listing, user, storage)
+    if target not in TRANSITIONS[listing.status]:
+        if listing.status in CLOSED:
+            raise ApiError(409, "invalid_status_change", CLOSED[listing.status][1])
+        message = {
+            "draft": "Publish the listing before pausing it or marking it filled.",
+        }.get(listing.status, f"A {listing.status} listing can't become {target}.")
+        raise ApiError(409, "invalid_status_change", message)
     first_publish = False
-    if target != listing.status:
-        if target not in TRANSITIONS[listing.status]:
-            message = {
-                "filled": "This listing is filled and can't be changed.",
-                "draft": "Publish the listing before pausing it or marking it filled.",
-            }.get(listing.status, f"A {listing.status} listing can't become {target}.")
-            raise ApiError(409, "invalid_status_change", message)
-        if target == "active":
-            require_publishable(listing, now.date())
-            if listing.published_at is None:
-                listing.published_at = now
-                first_publish = True
-        listing.status = target
-        session.commit()
-        session.refresh(listing)
-        if first_publish:
-            alert_new_listing(push, listing.id, now)
+    if target == "active":
+        require_publishable(listing, now.date())
+        listing.expires_on = expiry_date(listing, now.date())
+        if listing.published_at is None:
+            listing.published_at = now
+            first_publish = True
+    listing.status = target
+    session.commit()
+    session.refresh(listing)
+    if first_publish:
+        alert_new_listing(push, listing.id, now)
     return listing_out(listing, user, storage)
 
 

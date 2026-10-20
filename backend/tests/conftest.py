@@ -37,8 +37,9 @@ TEST_DATABASE_URL = os.environ.get(
 UNREACHABLE_DATABASE_URL = "postgresql+psycopg://sublette:sublette@127.0.0.1:1/sublette_test"
 
 DATA_TABLES = (
-    "messages, device_tokens, matches, swipes, saved_listings, renter_profiles, listing_photos, "
-    "listings, stored_files, users, email_codes, rate_limit_hits, school_domains, schools"
+    "reports, blocks, uploads, messages, device_tokens, matches, swipes, saved_listings, "
+    "renter_profiles, listing_photos, listings, stored_files, users, email_codes, "
+    "rate_limit_hits, school_domains, schools"
 )
 
 

@@ -38,6 +38,10 @@ class UserOut(BaseModel):
     profile_complete: bool
     # Sublets finished through Sublette: both sides confirmed "Filled".
     completed_sublets: int
+    # The current terms of service and privacy policy, and whether this
+    # account accepted them. Accept with POST /v1/me/terms.
+    terms_version: str
+    terms_accepted: bool
     created_at: UtcDateTime
 
 

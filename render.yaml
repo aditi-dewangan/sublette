@@ -34,3 +34,6 @@ services:
       # SUBLETTE_PUBLIC_BASE_URL is filled from Render's RENDER_EXTERNAL_URL.
       - key: SUBLETTE_STORAGE_BACKEND
         value: database
+      # The admin page at /admin. Set it in the dashboard, 16+ characters.
+      - key: SUBLETTE_ADMIN_PASSWORD
+        sync: false

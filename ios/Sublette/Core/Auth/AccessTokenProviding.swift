@@ -8,10 +8,15 @@ protocol AccessTokenProviding: Sendable {
     /// Called when the server answered 401 to a request that carried `rejected`.
     /// Returns a newer token to retry with, or nil if there is none.
     func refreshedAccessToken(afterRejecting rejected: String) async -> String?
+
+    /// Called when the server answered 403 `account_suspended`. `message`
+    /// says why and how to appeal.
+    func accountSuspended(message: String) async
 }
 
 extension AccessTokenProviding {
     func refreshedAccessToken(afterRejecting rejected: String) async -> String? { nil }
+    func accountSuspended(message: String) async {}
 }
 
 /// For requests made while signed out: there is never a token.

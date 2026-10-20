@@ -38,7 +38,9 @@
         "verified": true
       },
       "created_at": "2027-01-04T17:00:00Z",
-      "published_at": "2027-01-04T17:00:00Z"
+      "published_at": "2027-01-04T17:00:00Z",
+      "expires_on": null,
+      "removed_reason": null
     },
     "score": 94,
     "band": "strong",

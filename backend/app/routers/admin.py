@@ -26,8 +26,8 @@ from sqlalchemy import func, select, update
 
 from app.deps import AppSettings, ClientIp, DbSession, Live, Now, Storage
 from app.errors import ApiError
-from app.models import Listing, Message, Report, User
-from app.services import rate_limit
+from app.models import CrashReport, Listing, Message, Report, User
+from app.services import analytics, rate_limit
 
 logger = logging.getLogger("sublette.admin")
 
@@ -111,6 +111,7 @@ def page(title: str, body: str) -> HTMLResponse:
         "<meta name='robots' content='noindex'>"
         f"<title>{escape(title)} · Sublette admin</title><style>{STYLE}</style></head><body>"
         "<nav><a href='/admin'>Open reports</a><a href='/admin?status=closed'>Closed</a>"
+        "<a href='/admin/metrics'>Numbers</a><a href='/admin/referrals'>Referrals</a>"
         "<form class='inline' action='/admin/find'><input type='text' name='q' "
         "placeholder='Find a person by email'> <button>Find</button></form></nav>"
         f"<h1>{escape(title)}</h1>{body}</body></html>",
@@ -437,5 +438,137 @@ def remove_listing(
         f"Listing removed: {reason}",
         now,
     )
+    session.commit()
+    return _back(request)
+
+
+# --- Numbers and referrals --------------------------------------------------------------
+
+FUNNEL_NAMES = {
+    "signed_up": "Signed up",
+    "profile_completed": "Finished their profile",
+    "first_swipe": "Swiped at least once",
+    "first_match": "Matched at least once",
+    "listing_filled": "Listings marked filled",
+}
+REFERRAL_WAIT = timedelta(days=7)
+
+
+def shown(value, unit: str = "") -> str:
+    return "not enough data yet" if value is None else f"{value}{unit}"
+
+
+def _table(rows: list[tuple[str, object]]) -> str:
+    cells = "".join(
+        f"<tr><td>{escape(str(label))}</td><td><strong>{escape(str(value))}</strong></td></tr>"
+        for label, value in rows
+    )
+    return f"<table class='card'>{cells}</table>"
+
+
+@router.get("/metrics", response_class=HTMLResponse)
+def numbers(_: Admin, session: DbSession, now: Now, days: int = 30):
+    days = max(1, min(days, 365))
+    found = analytics.metrics(session, now, days)
+    body = [
+        f"<p class='meta'>The last {days} days. "
+        f"<a href='/admin/metrics?days=7'>7</a> · <a href='/admin/metrics?days=30'>30</a> · "
+        f"<a href='/admin/metrics?days=90'>90</a> days</p>",
+        "<h2>Funnel</h2>",
+        _table([(FUNNEL_NAMES[name], count) for name, count in found["funnel"]]),
+        "<h2>Listings</h2>",
+        _table(
+            [
+                ("Published", found["listings_published"]),
+                (
+                    "Days from publishing to first match (median)",
+                    shown(found["median_days_to_first_match"]),
+                ),
+                ("Days from publishing to filled (median)", shown(found["median_days_to_filled"])),
+                (
+                    "Likes with no answer after a week",
+                    f"{found['likes_without_response']} of {found['likes_old_enough']}",
+                ),
+            ]
+        ),
+        "<h2>Features used</h2>",
+        _table(found["features"]) if found["features"] else "<p class='meta'>None yet.</p>",
+        "<h2>Stability</h2>",
+        _table(
+            [
+                ("App opens", found["sessions"]),
+                ("Crashes", found["crashes"]),
+                ("Crash-free sessions", shown(found["crash_free_percent"], "%")),
+            ]
+        ),
+    ]
+    crashes = session.scalars(
+        select(CrashReport).order_by(CrashReport.created_at.desc()).limit(20)
+    ).all()
+    if crashes:
+        body.append("<h2>Latest crash and hang reports</h2>")
+        body += [
+            f"<details class='card'><summary>{escape(item.kind)} · {when(item.created_at)} · "
+            f"app {escape(item.app_version)} · {escape(item.os_version)}</summary>"
+            f"<pre class='excerpt'>{escape(item.payload[:20000])}</pre></details>"
+            for item in crashes
+        ]
+    return page("Numbers", "".join(body))
+
+
+@router.get("/referrals", response_class=HTMLResponse)
+def referrals(_: Admin, session: DbSession, settings: AppSettings, now: Now):
+    """Listers who signed up with a friend's code and whose first listing has
+    been live for 7 days: their friend has earned the reward."""
+    referred = session.scalars(
+        select(User).where(User.referred_by_id.is_not(None)).order_by(User.created_at)
+    ).unique()
+    due, waiting = [], []
+    for person in referred:
+        first = session.scalar(
+            select(Listing)
+            .where(Listing.owner_id == person.id, Listing.published_at.is_not(None))
+            .order_by(Listing.published_at)
+            .limit(1)
+        )
+        if first is None:
+            continue
+        referrer = session.get(User, person.referred_by_id)
+        line = (
+            f"{person_link(person)} listed "
+            f"<a href='/admin/listings/{first.id}'>a place</a> on {when(first.published_at)}; "
+            f"referred by {person_link(referrer)}"
+        )
+        passed = first.published_at <= now - REFERRAL_WAIT and first.status != "removed"
+        if person.referral_paid_at:
+            waiting.append(f"<div class='card'>{line} · paid {when(person.referral_paid_at)}</div>")
+        elif passed:
+            due.append(
+                f"<div class='card'>{line}"
+                + button(settings, f"/admin/referrals/{person.id}/paid", "Mark reward paid")
+                + "</div>"
+            )
+        else:
+            waiting.append(f"<div class='card'>{line} · not 7 days yet</div>")
+    body = "<h2>Passed the 7-day check</h2>" + ("".join(due) or "<p class='meta'>None.</p>")
+    body += "<h2>Others</h2>" + ("".join(waiting) or "<p class='meta'>None.</p>")
+    return page("Referrals", body)
+
+
+@router.post("/referrals/{user_id}/paid")
+def referral_paid(
+    user_id: uuid.UUID,
+    request: Request,
+    fields: Fields,
+    _: Admin,
+    session: DbSession,
+    settings: AppSettings,
+    now: Now,
+):
+    checked(settings, fields)
+    person = session.get(User, user_id)
+    if person is None or person.referred_by_id is None:
+        raise ApiError(404, "not_found", "Not Found")
+    person.referral_paid_at = person.referral_paid_at or now
     session.commit()
     return _back(request)

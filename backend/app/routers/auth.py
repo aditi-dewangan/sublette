@@ -4,6 +4,7 @@ These three endpoints are the only ones under /v1 that need no account.
 """
 
 import logging
+import uuid
 from datetime import timedelta
 
 from fastapi import APIRouter
@@ -21,7 +22,7 @@ from app.schemas.auth import (
     TokensOut,
     VerifyIn,
 )
-from app.services import rate_limit
+from app.services import analytics, rate_limit
 from app.services.codes import check_code, issue_code
 from app.services.email_sender import EmailUnavailable
 from app.services.emails import domain_of, require_school_email
@@ -126,8 +127,10 @@ def verify(
     user = session.scalars(select(User).where(User.email == email)).one_or_none()
     if user is None:
         school = school_for_domain(session, domain_of(email))
-        user = User(email=email, school_id=school.id, status="active")
+        user = User(id=uuid.uuid4(), email=email, school_id=school.id, status="active")
         session.add(user)
+        session.flush()
+        analytics.record(session, "signed_up", now, user_id=user.id)
     if user.status != "active":
         session.commit()
         raise suspended(user, settings)

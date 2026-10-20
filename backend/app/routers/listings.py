@@ -11,6 +11,7 @@ from app.deps import AppSettings, CurrentUser, DbSession, Now, Push, Storage
 from app.errors import ApiError
 from app.models import Listing
 from app.schemas.listings import ListingFields, ListingOut, ListingPage, StatusChange
+from app.services import analytics
 from app.services.listings import (
     apply_fields,
     expiry_date,
@@ -176,6 +177,18 @@ def change_status(
         if listing.published_at is None:
             listing.published_at = now
             first_publish = True
+            analytics.record(
+                session, "listing_published", now, user_id=user.id, listing_id=listing.id
+            )
+    if target == "filled":
+        analytics.record(
+            session,
+            "listing_filled",
+            now,
+            user_id=user.id,
+            listing_id=listing.id,
+            value=analytics.days_since_published(listing, now),
+        )
     listing.status = target
     session.commit()
     session.refresh(listing)

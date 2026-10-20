@@ -4,11 +4,12 @@ from fastapi import APIRouter, Response
 from sqlalchemy import delete, select
 
 from app.config import Settings
-from app.deps import AppSettings, CurrentUser, DbSession, Storage
+from app.deps import AppSettings, CurrentUser, DbSession, Now, Storage
 from app.errors import ApiError
 from app.models import EmailCode, Listing, ListingPhoto, Upload, User
 from app.schemas.errors import FieldError
 from app.schemas.user import SchoolOut, UserOut, UserPatch
+from app.services import analytics
 from app.services.storage import KEY_PATTERN, PhotoStorage, owner_prefix
 
 router = APIRouter(tags=["me"])
@@ -35,6 +36,8 @@ def user_out(user: User, storage: PhotoStorage, settings: Settings) -> UserOut:
         completed_sublets=user.completed_sublets,
         terms_version=settings.terms_version,
         terms_accepted=user.terms_version == settings.terms_version,
+        referral_code=user.referral_code,
+        referred=user.referred_by_id is not None,
         created_at=user.created_at,
     )
 
@@ -60,6 +63,7 @@ def update_me(
     session: DbSession,
     storage: Storage,
     settings: AppSettings,
+    now: Now,
 ) -> UserOut:
     """Change any of the profile fields. Fields left out are not touched."""
     changes = patch.model_dump(include=patch.model_fields_set)
@@ -80,8 +84,11 @@ def update_me(
 
     if changes.get("bio") == "":
         changes["bio"] = None
+    was_complete = user.profile_complete
     for field, value in changes.items():
         setattr(user, field, value)
+    if user.profile_complete and not was_complete:
+        analytics.record(session, "profile_completed", now, user_id=user.id)
     session.commit()
     session.refresh(user)
 

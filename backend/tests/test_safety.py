@@ -13,9 +13,8 @@ from starlette.websockets import WebSocketDisconnect
 
 from app.config import Settings
 from app.models import Block, Listing, Report, User
-from app.routers.admin import form_token
 from app.services.safety import scam_reasons
-from tests.conftest import Clock, RecordingMailer, bearer, sign_in
+from tests.conftest import Clock, RecordingMailer, admin_post, bearer, settings_with, sign_in
 from tests.test_chat import (
     WIDE,
     RecordingPush,
@@ -29,8 +28,6 @@ from tests.test_chat import (
 from tests.test_deck import deck, ids, make_searching_renter, put_listing
 from tests.test_me import COMPLETE_PROFILE
 from tests.test_swipes import interested, ok, swipe, user_of
-
-PASSWORD = "correct horse battery staple"
 
 
 @pytest.fixture
@@ -61,23 +58,6 @@ def listing(db: Session, clock: Clock, lister: dict) -> Listing:
 def match(client: TestClient, renter: dict, lister: dict, listing: Listing) -> dict:
     ok(swipe(client, renter, listing.id))
     return ok(swipe(client, lister, listing.id, renter_id=renter["user"]["id"]))["match"]
-
-
-def settings_with(app: FastAPI, **changes) -> Settings:
-    app.state.settings = app.state.settings.model_copy(update=changes)
-    return app.state.settings
-
-
-@pytest.fixture
-def admin(app: FastAPI) -> dict[str, str]:
-    """Turns the admin page on; returns the browser's sign-in header."""
-    settings_with(app, admin_password=PASSWORD)
-    return {"Authorization": "Basic " + base64.b64encode(f"admin:{PASSWORD}".encode()).decode()}
-
-
-def admin_post(client: TestClient, app: FastAPI, admin: dict, path: str, **fields):
-    data = {"token": form_token(app.state.settings), **fields}
-    return client.post(path, headers=admin, data=data, follow_redirects=False)
 
 
 def report(client: TestClient, who: dict, target: str, target_id, reason="scam", **extra):

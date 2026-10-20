@@ -5,12 +5,14 @@ server so they cost nothing to host and always match the version the API
 asks students to accept (SUBLETTE_TERMS_VERSION).
 """
 
+import uuid
 from html import escape
 
 from fastapi import APIRouter
 from fastapi.responses import HTMLResponse
 
-from app.deps import AppSettings
+from app.deps import AppSettings, DbSession, Storage
+from app.models import Listing
 
 router = APIRouter(tags=["pages"])
 
@@ -28,6 +30,79 @@ def page(title: str, version: str, body: str) -> HTMLResponse:
         "<meta name='viewport' content='width=device-width, initial-scale=1'>"
         f"<title>{escape(title)} · Sublette</title><style>{STYLE}</style></head><body>"
         f"<h1>{escape(title)}</h1><p class='note'>Version {escape(version)}</p>{body}"
+        "</body></html>"
+    )
+
+
+SPACE_NAMES = {
+    "entire_unit": "Entire place",
+    "private_room": "Private room",
+    "shared_room": "Shared room",
+}
+
+
+def _day(value) -> str:
+    return f"{value:%b} {value.day}, {value.year}"
+
+
+def share_text(listing: Listing) -> tuple[str, str]:
+    """The headline and one line of detail, from what every renter may see."""
+    space = SPACE_NAMES.get(listing.space_type or "", "A place")
+    rent = f"${round(listing.rent_cents / 100):,}/month" if listing.rent_cents else ""
+    title = " · ".join(part for part in (space, rent) if part)
+    details = [
+        f"{_day(listing.start_date)} to {_day(listing.end_date)}"
+        if listing.start_date and listing.end_date
+        else "",
+        "furnished" if listing.furnished else "",
+        "utilities included" if listing.utilities_included else "",
+        f"near {listing.owner.school.display_name}",
+    ]
+    return title, ", ".join(part for part in details if part)
+
+
+@router.get("/l/{listing_id}", response_class=HTMLResponse)
+def shared_listing(
+    listing_id: uuid.UUID, session: DbSession, settings: AppSettings, storage: Storage
+) -> HTMLResponse:
+    """The page a shared listing link opens, for posting in housing groups.
+    Only what any renter sees in the deck: no address, no exact point, no
+    lister name. Only live listings; anything else says it's gone."""
+    listing = session.get(Listing, listing_id)
+    if listing is None or listing.status != "active" or listing.owner.status != "active":
+        return HTMLResponse(
+            "<!doctype html><html lang='en'><head><meta charset='utf-8'>"
+            "<meta name='viewport' content='width=device-width, initial-scale=1'>"
+            f"<title>Sublette</title><style>{STYLE}</style></head><body>"
+            "<h1>This place isn't available any more</h1>"
+            "<p>Find another on Sublette, the sublet app for college students.</p>"
+            "</body></html>",
+            status_code=404,
+        )
+    title, details = share_text(listing)
+    photo = storage.public_url(listing.photos[0].key) if listing.photos else ""
+    url = f"{settings.public_base_url}/l/{listing.id}"
+    meta = [
+        ("og:title", title),
+        ("og:description", f"{details}. On Sublette, for college students."),
+        ("og:url", url),
+        ("og:type", "website"),
+        ("og:site_name", "Sublette"),
+    ]
+    if photo:
+        meta.append(("og:image", photo))
+    tags = "".join(f"<meta property='{name}' content='{escape(value)}'>" for name, value in meta)
+    image = (
+        f"<img src='{escape(photo)}' alt='' style='width:100%;border-radius:16px'>" if photo else ""
+    )
+    return HTMLResponse(
+        "<!doctype html><html lang='en'><head><meta charset='utf-8'>"
+        "<meta name='viewport' content='width=device-width, initial-scale=1'>"
+        f"<meta name='twitter:card' content='summary_large_image'>{tags}"
+        f"<title>{escape(title)} · Sublette</title><style>{STYLE}</style></head><body>"
+        f"{image}<h1>{escape(title)}</h1><p>{escape(details)}.</p>"
+        "<p>Get <strong>Sublette</strong> on the App Store and sign in with your school "
+        "email to see this place, like it, and chat with the lister once you match.</p>"
         "</body></html>"
     )
 

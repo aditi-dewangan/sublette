@@ -5,6 +5,7 @@ from sqlalchemy import DateTime, ForeignKey, Integer, String, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db import Base
+from app.models.analytics import new_referral_code
 from app.models.school import School
 
 YEARS = ("freshman", "sophomore", "junior", "senior", "graduate", "other")
@@ -38,6 +39,13 @@ class User(Base):
     # The version of the terms of service and privacy policy last accepted.
     terms_version: Mapped[str | None] = mapped_column(String(20))
     terms_accepted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    # This account's code to give friends, and whose code it signed up with.
+    referral_code: Mapped[str] = mapped_column(String(8), unique=True, default=new_referral_code)
+    referred_by_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL"), index=True
+    )
+    # When the referrer's reward for this account was paid (admin page).
+    referral_paid_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     # Sublets both sides confirmed as filled through a match. Shown on the profile.
     completed_sublets: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

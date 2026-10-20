@@ -41,6 +41,8 @@ def normalize(value, key: str = ""):
             return "2027-01-04T17:00:00Z"
         if key in ("access_token", "refresh_token"):
             return f"sample.{key}"
+        if key == "referral_code":
+            return "SUB2027"
         value = UUID.sub("11111111-2222-4333-8444-555555555555", value)
         value = HEX64.sub("f" * 64, value)
         return HEX32.sub("a" * 32, value)

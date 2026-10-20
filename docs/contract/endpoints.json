@@ -52,6 +52,11 @@
     { "method": "GET", "path": "/terms", "auth": false, "phase": 8, "page": true },
     { "method": "GET", "path": "/privacy", "auth": false, "phase": 8, "page": true },
 
+    { "method": "POST", "path": "/v1/events", "auth": true, "phase": 9 },
+    { "method": "POST", "path": "/v1/diagnostics", "auth": true, "phase": 9 },
+    { "method": "POST", "path": "/v1/me/referral", "auth": true, "phase": 9 },
+    { "method": "GET", "path": "/l/{listing_id}", "auth": false, "phase": 9, "page": true },
+
     { "method": "PUT", "path": "/files/{key}", "auth": false, "phase": 1, "own_storage_only": true },
     { "method": "GET", "path": "/files/{key}", "auth": false, "phase": 1, "own_storage_only": true }
   ]

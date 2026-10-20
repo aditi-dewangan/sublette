@@ -49,6 +49,16 @@ final class MatchesModel {
 
     private var userID: String?
 
+    /// Forgets the signed-out account's matches, so its badge and chats are gone.
+    func reset() {
+        userID = nil
+        matches = []
+        saved = []
+        activeChat = nil
+        state = .idle
+        outbox?.reset()
+    }
+
     /// Forgets another account's matches.
     func prepare(for userID: String) {
         guard userID != self.userID else {

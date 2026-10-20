@@ -5,7 +5,7 @@ import uuid
 from dataclasses import dataclass
 from datetime import date
 
-from sqlalchemy import select
+from sqlalchemy import or_, select
 from sqlalchemy.orm import Session
 
 from app.errors import ApiError
@@ -117,12 +117,18 @@ def map_pins(session: Session, renter: Renter, box: BBox, today: date) -> tuple[
 
     states = {key: value for key, value in _states(session, renter.user_id).items()}
     shown = [listing_id for listing_id, state in states.items() if state != "passed"]
+    matched = [listing_id for listing_id, state in states.items() if state == "matched"]
     if shown:
         for listing in session.scalars(
             select(Listing).where(
                 Listing.id.in_(shown),
                 Listing.status.in_(SHOWN_STATUSES),
                 Listing.owner_id.not_in(blocked_with(renter.user_id)),
+                # A suspended lister's places stay only for a renter who matched.
+                or_(
+                    Listing.owner_id.in_(select(User.id).where(User.status == "active")),
+                    Listing.id.in_(matched),
+                ),
             )
         ).unique():
             pin = _pin(renter, listing, states[listing.id])
@@ -142,6 +148,8 @@ def map_card(
     if listing is None or listing.owner_id == viewer.id or state == "passed":
         raise not_found()
     if is_blocked(session, viewer.id, listing.owner_id):
+        raise not_found()
+    if listing.owner.status != "active" and state != "matched":
         raise not_found()
     if state == "new":
         if listing.status != "active" or failures(renter, listing, listing.owner.school_id):

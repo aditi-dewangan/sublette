@@ -71,7 +71,7 @@ struct ChatView: View {
         } message: {
             Text(filledExplanation)
         }
-        .task {
+        .task(id: model.match.id) {
             container.analytics.used(.chat)
             await model.load()
         }

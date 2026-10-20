@@ -49,9 +49,18 @@ def is_blocked(domain: str, blocked: frozenset[str]) -> bool:
     return any(candidate in blocked for candidate in domain_and_parents(domain))
 
 
+def without_tag(email: str) -> str:
+    """`alice+sublets@uw.edu` is alice's own inbox: one person, one account.
+    Without this a suspended student could come back as `alice+2@uw.edu`."""
+    local, _, domain = email.partition("@")
+    base = local.split("+", 1)[0]
+    return f"{base}@{domain}" if base else email
+
+
 def require_school_email(raw: str, blocked: frozenset[str]) -> str:
-    """The address, normalized, if it may be used to sign in. Raises otherwise."""
-    email = normalize_email(raw)
+    """The address, normalized and without a `+tag`, if it may be used to
+    sign in. Raises otherwise."""
+    email = without_tag(normalize_email(raw))
     domain = domain_of(email)
     if not is_edu(domain):
         raise ApiError(

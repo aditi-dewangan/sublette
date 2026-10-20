@@ -24,7 +24,9 @@ from datetime import UTC, datetime, timedelta
 from sqlalchemy import Engine, delete, or_, select, text, update
 from sqlalchemy.orm import Session
 
+from app.clock import local_today
 from app.models import EmailCode, Listing, ListingPhoto, RateLimitHit, Report, Upload, User
+from app.seed_fake import SEED_PREFIX
 from app.services.push import PushDispatcher, PushNote
 from app.services.storage import PhotoStorage
 
@@ -36,6 +38,7 @@ ABANDONED_AFTER = timedelta(days=1)
 # The longest rate-limit window is a day.
 KEEP_RATE_LIMIT_HITS = timedelta(days=2)
 PHOTOS_PER_RUN = 200
+RETRY_UNREADABLE_AFTER = timedelta(days=1)
 UPLOADS_PER_RUN = 500
 
 
@@ -67,7 +70,7 @@ def run_once(engine: Engine, storage: PhotoStorage, push: PushDispatcher, now: d
 
 
 def expire_listings(session: Session, push: PushDispatcher, now: datetime) -> list[uuid.UUID]:
-    today = now.date()
+    today = local_today(now)
     rows = session.execute(
         update(Listing)
         .where(
@@ -95,10 +98,23 @@ def check_photos(
 ) -> tuple[int, list[uuid.UUID]]:
     """Fingerprint photos of published listings, then flag any listing that
     shares a photo with another person's listing."""
+    # Fake listings from `make seed-fake` share a few sample pictures on purpose.
+    real_owner = User.email.not_like(f"{SEED_PREFIX}%")
     photos = session.scalars(
         select(ListingPhoto)
         .join(Listing, Listing.id == ListingPhoto.listing_id)
-        .where(ListingPhoto.content_hash.is_(None), Listing.status != "draft")
+        .join(User, User.id == Listing.owner_id)
+        .where(
+            ListingPhoto.content_hash.is_(None),
+            Listing.status != "draft",
+            real_owner,
+            # A file that couldn't be read waits a day, so it can't hold up the rest.
+            or_(
+                ListingPhoto.hash_checked_at.is_(None),
+                ListingPhoto.hash_checked_at < now - RETRY_UNREADABLE_AFTER,
+            ),
+        )
+        .order_by(ListingPhoto.hash_checked_at.nulls_first(), ListingPhoto.id)
         .limit(PHOTOS_PER_RUN)
     ).all()
     hashes = set()
@@ -106,7 +122,8 @@ def check_photos(
     for photo in photos:
         data = storage.read(photo.key)
         if not data:
-            continue  # tried again next run
+            photo.hash_checked_at = now
+            continue
         photo.content_hash = hashlib.sha256(data).hexdigest()
         hashes.add(photo.content_hash)
         checked += 1
@@ -114,22 +131,28 @@ def check_photos(
     if not hashes:
         return checked, []
 
-    owners_by_hash: dict[str, dict[uuid.UUID, Listing]] = defaultdict(dict)
+    # hash -> owner -> that owner's listings with the photo
+    found: dict[str, dict[uuid.UUID, list[Listing]]] = defaultdict(lambda: defaultdict(list))
     for photo, listing in session.execute(
         select(ListingPhoto, Listing)
         .join(Listing, Listing.id == ListingPhoto.listing_id)
-        .where(ListingPhoto.content_hash.in_(hashes), Listing.status != "draft")
+        .join(User, User.id == Listing.owner_id)
+        .where(ListingPhoto.content_hash.in_(hashes), Listing.status != "draft", real_owner)
     ).unique():
-        owners_by_hash[photo.content_hash].setdefault(listing.owner_id, listing)
+        if listing not in found[photo.content_hash][listing.owner_id]:
+            found[photo.content_hash][listing.owner_id].append(listing)
 
     flagged = []
-    for owners in owners_by_hash.values():
+    for owners in found.values():
         if len(owners) < 2:
             continue  # one person reusing their own photos is fine
-        for listing in owners.values():
-            others = [other for other in owners.values() if other.id != listing.id]
-            if _flag_duplicate(session, listing, others, now):
-                flagged.append(listing.id)
+        for owner_id, listings in owners.items():
+            others = [
+                other for who, theirs in owners.items() if who != owner_id for other in theirs
+            ]
+            for listing in listings:
+                if _flag_duplicate(session, listing, others, now):
+                    flagged.append(listing.id)
     session.commit()
     return checked, flagged
 
@@ -144,17 +167,21 @@ def _flag_duplicate(session: Session, listing: Listing, others: list[Listing], n
     )
     if already is not None:
         return False
-    names = ", ".join(f"{other.id} ({other.owner.email})" for other in others)
+    # Ids only: another person's email must not outlive their account in this report.
+    shown = ", ".join(str(other.id) for other in others[:5])
+    more = f" and {len(others) - 5} more" if len(others) > 5 else ""
     session.add(
         Report(
             id=uuid.uuid4(),
             source="automatic",
             subject_id=listing.owner_id,
+            subject_email=listing.owner.email,
             target="listing",
+            target_id=listing.id,
             listing_id=listing.id,
             reason="duplicate_photo",
             details="A photo on this listing is also on another person's listing.",
-            excerpt=f"Same photo as listing {names}"[:2000],
+            excerpt=f"Same photo as listing {shown}{more}",
             status="open",
             created_at=now,
         )

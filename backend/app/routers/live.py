@@ -68,6 +68,11 @@ async def live_events(websocket: WebSocket, now: Now) -> None:
 
     connection = app.state.live.connect(user_id)
     try:
+        # A suspension between the check above and connect() found no socket
+        # to close; look once more now that this one is registered.
+        if await run_in_threadpool(_account_status, app.state.engine, user_id) != "active":
+            await websocket.close(code=CLOSE_SUSPENDED, reason="account_suspended")
+            return
         await websocket.send_json({"type": "ready"})
         await _relay(websocket, connection, expires - now.timestamp())
     finally:

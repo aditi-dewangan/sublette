@@ -73,7 +73,9 @@ def post_message(
 ) -> MessageOut:
     """Send a message. The same `message_id` again answers 200 with the
     first copy and sends nothing new."""
-    match = member_match(session, user, match_id)
+    # Locked so messages commit in the order of their `seq`: otherwise a
+    # reader could mark a later one read before an earlier one appears.
+    match = member_match(session, user, match_id, lock=True)
     message, created = send_message(session, settings, user, match, body.body, body.message_id, now)
     if created:
         announce_message(session, live, push, storage, match, message)

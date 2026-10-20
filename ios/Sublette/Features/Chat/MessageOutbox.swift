@@ -39,6 +39,13 @@ final class MessageOutbox {
         queued = cache?.load([QueuedMessage].self, key: CacheKey.outbox(accountID)) ?? []
     }
 
+    /// Forgets the signed-out account's waiting messages (they stay in its
+    /// cache only until that is cleared too).
+    func reset() {
+        queued = []
+        accountID = nil
+    }
+
     func queued(for matchID: String) -> [QueuedMessage] {
         queued.filter { $0.matchID == matchID }
     }
@@ -62,7 +69,7 @@ final class MessageOutbox {
     /// Sends what is waiting, oldest first. Stops at the first message that
     /// can't get through, so the order is kept.
     func flush() async {
-        guard !flushing else {
+        guard !flushing, accountID != nil else {
             return
         }
         flushing = true

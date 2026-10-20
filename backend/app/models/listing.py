@@ -104,5 +104,7 @@ class ListingPhoto(Base):
     position: Mapped[int] = mapped_column(Integer)
     # SHA-256 of the photo, filled in by housekeeping; finds one photo on two listings.
     content_hash: Mapped[str | None] = mapped_column(String(64), index=True)
+    # When a check last couldn't read the file; it is tried again a day later.
+    hash_checked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
     listing: Mapped[Listing] = relationship(back_populates="photos")

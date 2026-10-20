@@ -41,6 +41,8 @@ final class ListerHomeModel {
             listings = page.items
             nextCursor = page.nextCursor
             state = .loaded
+        } catch let error as APIError where error == .cancelled {
+            state = listings.isEmpty ? .idle : .loaded
         } catch {
             state = .failed(Self.message(for: error))
         }
@@ -57,9 +59,19 @@ final class ListerHomeModel {
             listings += page.items.filter { !known.contains($0.id) }
             nextCursor = page.nextCursor
             state = .loaded
+        } catch let error as APIError where error == .cancelled {
+            state = .loaded
         } catch {
             state = .failed(Self.message(for: error))
         }
+    }
+
+    /// Forgets the signed-out account's listings.
+    func reset() {
+        listings = []
+        nextCursor = nil
+        state = .idle
+        actionMessage = nil
     }
 
     /// Puts a created or edited listing into the list.

@@ -137,9 +137,11 @@ final class AppContainer {
         }
         self.assistant = assistant
         let signOutSoFar = session.willSignOut
-        session.willSignOut = { [weak assistant] in
+        session.willSignOut = { [weak assistant, weak matchesModel, weak listerHome] in
             await signOutSoFar?()
             assistant?.reset()
+            matchesModel?.reset()
+            listerHome?.reset()
         }
         liveEvents?.onEvent = { [weak self] event in
             self?.handle(event)

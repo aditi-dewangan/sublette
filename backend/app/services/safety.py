@@ -153,17 +153,17 @@ def report(
     if subject.id == reporter.id:
         raise ApiError(422, "cant_report_yourself", "You can't report yourself.")
 
-    target_column = {"user": Report.subject_id, "listing": Report.listing_id}.get(
-        body.target, Report.message_id
-    )
-    existing = session.scalar(
-        select(Report).where(
-            Report.reporter_id == reporter.id,
-            Report.target == body.target,
-            target_column == body.id,
-            Report.status == "open",
+    def already_open() -> Report | None:
+        return session.scalar(
+            select(Report).where(
+                Report.reporter_id == reporter.id,
+                Report.target == body.target,
+                Report.target_id == body.id,
+                Report.status == "open",
+            )
         )
-    )
+
+    existing = already_open()
     if existing is not None:
         return existing, False
 
@@ -174,23 +174,36 @@ def report(
         window=DAY,
         now=now,
     )
-    filed = Report(
-        id=uuid.uuid4(),
-        source="user",
-        reporter_id=reporter.id,
-        subject_id=subject.id,
-        target=body.target,
-        listing_id=listing_id,
-        message_id=message_id,
-        reason=body.reason,
-        details=body.details or None,
-        excerpt=excerpt,
-        status="open",
-        created_at=now,
-    )
-    session.add(filed)
+    report_id = session.execute(
+        insert(Report)
+        .values(
+            id=uuid.uuid4(),
+            source="user",
+            reporter_id=reporter.id,
+            subject_id=subject.id,
+            subject_email=subject.email,
+            target=body.target,
+            target_id=body.id,
+            listing_id=listing_id,
+            message_id=message_id,
+            reason=body.reason,
+            details=body.details or None,
+            excerpt=excerpt,
+            status="open",
+            created_at=now,
+        )
+        .on_conflict_do_nothing(
+            index_elements=["reporter_id", "target", "target_id"],
+            index_where=(Report.status == "open") & Report.reporter_id.is_not(None),
+        )
+        .returning(Report.id)
+    ).scalar()
+    if report_id is None:
+        # The same report, sent at the same moment, got there first.
+        session.rollback()
+        return already_open(), False
     session.commit()
-    return filed, True
+    return session.get(Report, report_id), True
 
 
 def scam_reasons(text: str) -> list[str]:
@@ -217,12 +230,15 @@ def flag_message(session: Session, match: Match, message: Message, now: datetime
     )
     if earlier >= FIRST_MESSAGES:
         return []
+    sender = session.get(User, message.sender_id)
     flags = [
         Report(
             id=uuid.uuid4(),
             source="automatic",
             subject_id=message.sender_id,
+            subject_email=sender.email,
             target="message",
+            target_id=message.id,
             listing_id=match.listing_id,
             message_id=message.id,
             reason=reason,

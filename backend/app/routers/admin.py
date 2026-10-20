@@ -19,15 +19,23 @@ from base64 import b64decode
 from datetime import timedelta
 from html import escape
 from typing import Annotated
-from urllib.parse import parse_qs
+from urllib.parse import parse_qs, urlsplit
 
 from fastapi import APIRouter, Depends, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
-from sqlalchemy import func, select, update
+from sqlalchemy import delete, func, or_, select, update
 
 from app.deps import AppSettings, ClientIp, DbSession, Live, Now, Storage
 from app.errors import ApiError
-from app.models import AssistantQuery, CrashReport, Listing, Message, Report, User
+from app.models import (
+    AssistantQuery,
+    CrashReport,
+    DeviceToken,
+    Listing,
+    Message,
+    Report,
+    User,
+)
 from app.services import analytics, rate_limit
 
 logger = logging.getLogger("sublette.admin")
@@ -117,7 +125,13 @@ def page(title: str, body: str) -> HTMLResponse:
         "<form class='inline' action='/admin/find'><input type='text' name='q' "
         "placeholder='Find a person by email'> <button>Find</button></form></nav>"
         f"<h1>{escape(title)}</h1>{body}</body></html>",
-        headers={"Cache-Control": "no-store"},
+        headers={
+            "Cache-Control": "no-store",
+            # No other site may show these pages in a frame and trick a click.
+            "X-Frame-Options": "DENY",
+            "Content-Security-Policy": "frame-ancestors 'none'",
+            "Referrer-Policy": "same-origin",
+        },
     )
 
 
@@ -163,10 +177,15 @@ def report_card(settings, item: Report) -> str:
         if item.source == "automatic"
         else "Reported by " + person_link(item.reporter)
     )
+    about = (
+        person_link(item.subject)
+        if item.subject
+        else (f"{escape(item.subject_email)} <span class='meta'>(account deleted)</span>")
+    )
     parts = [
         f"<div class='card'><span class='tag'>{escape(REASONS.get(item.reason, item.reason))}"
         f"</span> · {target}<div class='meta'>{when(item.created_at)} · {by}</div>",
-        f"<div>About: {person_link(item.subject)}</div>",
+        f"<div>About: {about}</div>",
     ]
     if item.details:
         parts.append(f"<div>Details: {escape(item.details)}</div>")
@@ -262,8 +281,11 @@ def person(user_id: uuid.UUID, _: Admin, session: DbSession, settings: AppSettin
         for item in listings
     ] or ["<p class='meta'>None.</p>"]
     body.append("<h2>Reports about them</h2>")
+    # Including reports about an earlier account with the same email.
     about = session.scalars(
-        select(Report).where(Report.subject_id == user.id).order_by(Report.created_at.desc())
+        select(Report)
+        .where(or_(Report.subject_id == user.id, Report.subject_email == user.email))
+        .order_by(Report.created_at.desc())
     ).unique()
     body += [report_card(settings, item) for item in about] or ["<p class='meta'>None.</p>"]
     made = session.scalar(select(func.count()).where(Report.reporter_id == user.id))
@@ -334,8 +356,11 @@ def checked(settings, fields: dict[str, str], reason: bool = False) -> str:
 
 
 def _back(request: Request) -> RedirectResponse:
-    referer = request.headers.get("referer", "")
-    target = referer if "/admin" in referer else "/admin"
+    """Back to the admin page the form was on, and never to another site."""
+    path = urlsplit(request.headers.get("referer", ""))
+    target = path.path if path.path.startswith("/admin") else "/admin"
+    if path.query:
+        target += "?" + path.query
     return RedirectResponse(target, status_code=303)
 
 
@@ -388,6 +413,9 @@ def suspend(
     user.suspended_reason = reason
     user.suspended_at = now
     _close(session, Report.subject_id == user.id, "actioned", f"Suspended: {reason}", now)
+    # The phone can't withdraw its push token any more (its requests are
+    # refused), so the server forgets it.
+    session.execute(delete(DeviceToken).where(DeviceToken.user_id == user.id))
     session.commit()
     live.suspend(user.id)
     logger.info("Suspended %s", user.id)
@@ -541,7 +569,8 @@ def referrals(_: Admin, session: DbSession, settings: AppSettings, now: Now):
             f"<a href='/admin/listings/{first.id}'>a place</a> on {when(first.published_at)}; "
             f"referred by {person_link(referrer)}"
         )
-        passed = first.published_at <= now - REFERRAL_WAIT and first.status != "removed"
+        # Live (or filled through Sublette) a week after it went up.
+        passed = first.published_at <= now - REFERRAL_WAIT and first.status in ("active", "filled")
         if person.referral_paid_at:
             waiting.append(f"<div class='card'>{line} · paid {when(person.referral_paid_at)}</div>")
         elif passed:

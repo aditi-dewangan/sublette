@@ -96,6 +96,8 @@ def _result(
     session: Session, swipe: Swipe, viewer: User, storage: PhotoStorage, created: bool
 ) -> SwipeResult:
     match = _find_match(session, swipe.listing_id, swipe.renter_id)
+    if match is not None and is_blocked(session, match.renter_id, match.lister_id):
+        match = None  # a resent swipe must not hand back a blocked person's match
     return SwipeResult(
         swipe=swipe_out(swipe),
         match=match_out(match, viewer, storage) if match else None,
@@ -267,6 +269,8 @@ def save_listing(session: Session, user: User, listing_id: uuid.UUID) -> None:
     listing = session.get(Listing, listing_id)
     if listing is None or listing.status != "active" or listing.owner_id == user.id:
         raise not_found()
+    if listing.owner.status != "active" or is_blocked(session, user.id, listing.owner_id):
+        raise not_found()
     session.execute(
         insert(SavedListing).values(user_id=user.id, listing_id=listing_id).on_conflict_do_nothing()
     )
@@ -290,6 +294,7 @@ def saved_listings(session: Session, user: User) -> list[Listing]:
             SavedListing.user_id == user.id,
             Listing.status == "active",
             Listing.owner_id.not_in(blocked_with(user.id)),
+            Listing.owner_id.in_(select(User.id).where(User.status == "active")),
         )
         .order_by(SavedListing.created_at.desc())
     ).unique()

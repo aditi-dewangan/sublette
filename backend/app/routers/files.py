@@ -54,5 +54,8 @@ def read(key: str, request: Request) -> Response:
     return Response(
         content=data,
         media_type=content_type,
-        headers={"Cache-Control": "public, max-age=31536000, immutable"},
+        headers={
+            "Cache-Control": "public, max-age=31536000, immutable",
+            "X-Content-Type-Options": "nosniff",
+        },
     )

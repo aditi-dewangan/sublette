@@ -17,6 +17,8 @@ from app.schemas.renter_profile import MAX_RADIUS_M, MIN_RADIUS_M, Preference
 
 METERS_PER_MILE = 1_609.344
 WALKING_DISTANCE_M = 1_600
+# A named range that began longer ago than this means next year's.
+RANGE_BEGUN_AT_MOST_DAYS = 31
 
 MONTHS = {
     name: number
@@ -106,42 +108,49 @@ def _number(word: str) -> int:
     return NUMBER_WORDS[word.lower()] if word.lower() in NUMBER_WORDS else int(word)
 
 
-def _next(today: date, month: int, day: int) -> date:
-    """The first `month`/`day` that hasn't passed yet."""
-    year = today.year
-    day = min(day, calendar.monthrange(year, month)[1])
-    if (month, day) < (today.month, today.day):
-        year += 1
-    return date(year, month, min(day, calendar.monthrange(year, month)[1]))
-
-
-def _after(start: date, month: int, day: int | None) -> date:
-    year = start.year if month >= start.month else start.year + 1
+def _day(year: int, month: int, day: int | None) -> date:
+    """`day` of `month`, or its last day when None or too large."""
     last = calendar.monthrange(year, month)[1]
     return date(year, month, min(day or last, last))
+
+
+def _window(
+    today: date,
+    start: tuple[int, int | None],
+    end: tuple[int, int | None],
+    begun_at_most: int | None = None,
+) -> tuple[date, date]:
+    """The next time from `start` to `end` that isn't over: one already under
+    way starts today ("this fall", asked in October), otherwise next year's.
+    `begun_at_most` limits how long ago a named start date may be: "Nov 15 to
+    Feb 1" asked in January means next November."""
+    for year in (today.year - 1, today.year, today.year + 1):
+        first = _day(year, start[0], start[1] or 1)
+        last = _day(year if end[0] >= start[0] else year + 1, end[0], end[1])
+        too_long_ago = begun_at_most is not None and (today - first).days > begun_at_most
+        if last >= today and not too_long_ago:
+            return max(first, today), last
+    raise AssertionError("unreachable: next year's window always lies ahead")
 
 
 def dates(text: str, today: date) -> tuple[date | None, date | None]:
     found = RANGE.search(text)
     if found:
         first, first_day, second, second_day = found.groups()
-        start = _next(today, MONTHS[first[:3].lower()], int(first_day or 1))
-        return start, _after(
-            start, MONTHS[second[:3].lower()], int(second_day) if second_day else None
+        return _window(
+            today,
+            (MONTHS[first[:3].lower()], int(first_day) if first_day else None),
+            (MONTHS[second[:3].lower()], int(second_day) if second_day else None),
+            begun_at_most=RANGE_BEGUN_AT_MOST_DAYS,
         )
     lowered = text.lower()
-    for season, ((start_month, start_day), (end_month, end_day)) in SEASONS.items():
+    for season, (start, end) in SEASONS.items():
         if re.search(rf"\b{season}\b", lowered):
-            start = _next(today, start_month, start_day)
-            end = _after(start, end_month, end_day)
-            if end < today:
-                start, end = start.replace(year=start.year + 1), end.replace(year=end.year + 1)
-            return start, end
+            return _window(today, start, end)
     single = SINGLE_MONTH.search(text)
     if single:
         month = MONTHS[single.group(1)[:3].lower()]
-        start = _next(today, month, 1)
-        return start, _after(start, month, None)
+        return _window(today, (month, None), (month, None))
     return None, None
 
 

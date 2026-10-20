@@ -104,7 +104,13 @@ def understand_with_model(model: LanguageModel, message: str, today: date) -> Pr
         raw = []
     kept = []
     for item in raw:
-        if isinstance(item, dict) and not preference_problems([item]):
+        # A field that isn't even a string (["furnished"]) is garbage too.
+        if (
+            isinstance(item, dict)
+            and isinstance(item.get("field"), str)
+            and isinstance(item.get("importance"), str)
+            and not preference_problems([item])
+        ):
             kept.append(item)
     data["preferences"] = kept
     try:
@@ -177,7 +183,6 @@ def model_view(renter: Renter, listing: Listing) -> dict:
         "housemates_are": listing.household_gender,
         "pets_allowed": listing.pets_allowed,
         "smoking_allowed": listing.smoking_allowed,
-        "miles_from_their_pin": round(distance_from_pin(renter, listing) / METERS_PER_MILE, 1),
         "public_latitude": round(listing.public_latitude, 4),
         "public_longitude": round(listing.public_longitude, 4),
     }

@@ -4,7 +4,7 @@ import uuid
 
 from fastapi import APIRouter, Query
 
-from app.deps import CurrentUser, DbSession, Now, Storage
+from app.deps import CurrentUser, DbSession, Storage, Today
 from app.schemas.maps import MapCard, MapPage
 from app.services.deck import renter_for
 from app.services.maps import map_card, map_pins, parse_bbox
@@ -16,7 +16,7 @@ router = APIRouter(tags=["map"])
 def map_listings(
     user: CurrentUser,
     session: DbSession,
-    now: Now,
+    today: Today,
     bbox: str = Query(description="min_lng,min_lat,max_lng,max_lat of the visible map"),
 ) -> MapPage:
     """Pins inside the visible map, matched first, then best fit. At most 500.
@@ -25,7 +25,7 @@ def map_listings(
     real address; every other pin is the public point.
     """
     renter = renter_for(session, user)
-    pins, truncated = map_pins(session, renter, parse_bbox(bbox), now.date())
+    pins, truncated = map_pins(session, renter, parse_bbox(bbox), today)
     return MapPage(items=pins, truncated=truncated)
 
 

@@ -160,6 +160,12 @@ struct Listing: Codable, Equatable, Identifiable {
     var landlordConsent: Bool?
     var photos: [ListingPhoto]
     let lister: Lister
+    /// How the housemates staying live (issue #20), all optional.
+    var sleepSchedule: SleepSchedule? = nil
+    var tidiness: Tidiness? = nil
+    var guests: HowOften? = nil
+    var homeDaytime: HowOften? = nil
+    var homeVibe: HomeVibe? = nil
     /// Owner only: the last day it stays live unless renewed, such as "2027-02-03".
     var expiresOn: String?
     /// Owner only: why Sublette removed it.
@@ -198,12 +204,15 @@ struct ListingForm: Encodable, Equatable {
     var minStayDays = 0
     var landlordConsent: Bool?
     var photoKeys: [String] = []
+    /// How the housemates staying live. Sent empty when nobody stays.
+    var homeLife = HomeLife()
 
     private enum CodingKeys: String, CodingKey {
         case address, latitude, longitude, rentCents, depositCents, utilitiesIncluded
         case startDate, endDate, spaceType, bedrooms, bathroom, furnished, laundry, parking
         case housematesStaying, housematesNote, petsAllowed, smokingAllowed, householdGender
         case genderPreference, sameSchoolOnly, minStayDays, landlordConsent, photoKeys
+        case sleepSchedule, tidiness, guests, homeDaytime, homeVibe
     }
 
     func encode(to encoder: Encoder) throws {
@@ -234,6 +243,7 @@ struct ListingForm: Encodable, Equatable {
         try container.encode(minStayDays, forKey: .minStayDays)
         try container.encode(landlordConsent, forKey: .landlordConsent)
         try container.encode(photoKeys, forKey: .photoKeys)
+        try homeLife.encode(into: &container) { CodingKeys(stringValue: $0.stringValue)! }
     }
 }
 
@@ -264,7 +274,8 @@ extension ListingForm {
             sameSchoolOnly: listing.sameSchoolOnly,
             minStayDays: listing.minStayDays,
             landlordConsent: listing.landlordConsent,
-            photoKeys: listing.photos.map(\.key)
+            photoKeys: listing.photos.map(\.key),
+            homeLife: HomeLife(listing: listing)
         )
     }
 }

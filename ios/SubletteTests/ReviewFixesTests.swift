@@ -115,3 +115,42 @@ final class AlertsTests: XCTestCase {
         XCTAssertEqual(user.alertFrequency, .daily)
     }
 }
+
+/// Housemate lifestyle (issue #20) on the phone.
+@MainActor
+final class HomeLifeTests: XCTestCase {
+    func testSkippedAnswersAreSentAsNullAndAnsweredOnesInTheServersWords() throws {
+        var update = ProfileUpdate(firstName: "A", year: .junior, program: "P", bio: nil, gender: nil, smokes: false, hasPets: false)
+        update.homeLife = HomeLife(sleepSchedule: .early, tidiness: .veryTidy)
+        let body = try XCTUnwrap(
+            JSONSerialization.jsonObject(with: APIClient.makeEncoder().encode(update)) as? [String: Any]
+        )
+
+        XCTAssertEqual(body["sleep_schedule"] as? String, "early")
+        XCTAssertEqual(body["tidiness"] as? String, "very_tidy")
+        XCTAssertTrue(body["guests"] is NSNull)
+    }
+
+    func testAListingWithNobodyStayingSendsNoHousematesLifestyle() {
+        let model = ListingEditorModel(
+            listing: nil, schoolName: "UW", api: StubListingsAPI(), uploader: StubUploader(), locator: StubLocator()
+        )
+        model.homeLife = HomeLife(guests: .rarely)
+        model.housematesStaying = 0
+
+        XCTAssertEqual(model.form.homeLife, HomeLife())
+    }
+
+    func testTheServersAnswersDecode() throws {
+        let user = try APIClient.makeDecoder().decode(User.self, from: Fixture.sample("user_complete"))
+        let listing = try APIClient.makeDecoder().decode(Listing.self, from: Fixture.sample("listing_owner"))
+
+        XCTAssertEqual(HomeLife(user: user).answered, 0)
+        XCTAssertEqual(HomeLife(listing: listing).answered, 0)
+        // Every answer the server allows is known to the app.
+        XCTAssertEqual(Tidiness.allCases.map(\.rawValue), ["very_tidy", "tidy", "relaxed"])
+        XCTAssertEqual(SleepSchedule.allCases.map(\.rawValue), ["early", "late", "varies"])
+        XCTAssertEqual(HowOften.allCases.map(\.rawValue), ["rarely", "sometimes", "often"])
+        XCTAssertEqual(HomeVibe.allCases.map(\.rawValue), ["quiet", "social", "either"])
+    }
+}

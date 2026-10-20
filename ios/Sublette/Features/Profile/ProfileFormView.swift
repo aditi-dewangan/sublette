@@ -79,6 +79,20 @@ struct ProfileFormView: View {
                 .background(Brand.card, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
             }
 
+            DisclosureGroup {
+                HomeLifeQuestions(answers: $model.homeLife, about: .me)
+                    .padding(.top, 8)
+            } label: {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Your home life")
+                        .font(.headline)
+                    Text("Optional. Helps you find housemates who live like you.")
+                        .font(.footnote)
+                }
+                .foregroundStyle(Brand.ink)
+            }
+            .tint(Brand.ink)
+
             if let message = model.errorMessage {
                 ErrorText(message)
             }

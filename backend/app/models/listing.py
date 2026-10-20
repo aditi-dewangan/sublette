@@ -68,6 +68,13 @@ class Listing(Base):
     # when anyone stays; cleared when nobody does.
     household_gender: Mapped[str | None] = mapped_column(String(10))
 
+    # Lifestyle (optional, services/lifestyle.py): how the housemates staying live.
+    sleep_schedule: Mapped[str | None] = mapped_column(String(12))
+    tidiness: Mapped[str | None] = mapped_column(String(12))
+    guests: Mapped[str | None] = mapped_column(String(12))
+    home_daytime: Mapped[str | None] = mapped_column(String(12))
+    home_vibe: Mapped[str | None] = mapped_column(String(12))
+
     gender_preference: Mapped[str] = mapped_column(String(10), default="any", server_default="any")
     same_school_only: Mapped[bool] = mapped_column(default=False, server_default="false")
     min_stay_days: Mapped[int] = mapped_column(Integer, default=0, server_default="0")

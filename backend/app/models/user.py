@@ -33,6 +33,12 @@ class User(Base):
     has_pets: Mapped[bool | None]
 
     status: Mapped[str] = mapped_column(String(20), default="active", server_default="active")
+    # Lifestyle (optional, services/lifestyle.py): how this student lives.
+    sleep_schedule: Mapped[str | None] = mapped_column(String(12))
+    tidiness: Mapped[str | None] = mapped_column(String(12))
+    guests: Mapped[str | None] = mapped_column(String(12))
+    home_daytime: Mapped[str | None] = mapped_column(String(12))
+    home_vibe: Mapped[str | None] = mapped_column(String(12))
     # Why the account was suspended, shown to its owner with how to appeal.
     suspended_reason: Mapped[str | None] = mapped_column(String(300))
     suspended_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))

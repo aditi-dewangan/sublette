@@ -20,6 +20,7 @@ from dataclasses import dataclass
 from datetime import date, timedelta
 from typing import TYPE_CHECKING, Literal
 
+from app.services import lifestyle
 from app.services.geo import distance_m
 
 if TYPE_CHECKING:
@@ -57,6 +58,8 @@ class Renter:
     pin_latitude: float
     pin_longitude: float
     radius_m: int
+    # Answers to the lifestyle questions (services/lifestyle.py), if any.
+    lifestyle: tuple[tuple[str, str], ...] = ()
 
     @classmethod
     def from_models(cls, user: User, profile: RenterProfile) -> Renter:
@@ -77,6 +80,7 @@ class Renter:
             pin_latitude=profile.pin_latitude,
             pin_longitude=profile.pin_longitude,
             radius_m=profile.radius_m,
+            lifestyle=tuple(lifestyle.answers(user).items()),
         )
 
     def with_importance(self, importance: str) -> list[tuple[str, object]]:
@@ -248,9 +252,11 @@ def score_parts(renter: Renter, listing: Listing) -> dict[str, float]:
 
 
 def score(renter: Renter, listing: Listing) -> int:
-    """How well a listing fits, 0 to 100."""
+    """How well a listing fits, 0 to 100. A shared home whose housemates live
+    like the renter earns up to 8 more (services/lifestyle.py)."""
     total = sum(score_parts(renter, listing).values())
-    return max(0, min(100, round(total)))
+    points, _ = lifestyle.fit(dict(renter.lifestyle), listing)
+    return max(0, min(100, round(total) + points))
 
 
 # --- Reasons -----------------------------------------------------------------
@@ -314,6 +320,9 @@ def reasons(renter: Renter, listing: Listing) -> list[str]:
     met = [field for field, value in renter.with_importance("nice") if meets(field, value, listing)]
     if met:
         found.append(_nice_sentence(met))
+    _, shared = lifestyle.fit(dict(renter.lifestyle), listing)
+    if shared:
+        found.append(f"You'd fit in: {lifestyle.phrase(shared[:2])}")
     return found
 
 
@@ -341,6 +350,9 @@ def lister_fits(renter: Renter, listing: Listing, renter_school_name: str) -> li
         found.append("Doesn't smoke")
     if listing.gender_preference != "any":
         found.append(f"Fits your preference for {listing.gender_preference}")
+    _, shared = lifestyle.fit(dict(renter.lifestyle), listing)
+    if shared:
+        found.append(f"Lives like your housemates: {lifestyle.phrase(shared[:2])}")
     return found
 
 
@@ -375,6 +387,4 @@ def summary(renter: Renter, listing: Listing) -> str:
     parts = reasons(renter, listing)
     dates, rent, distance = parts[0], parts[1], parts[2]
     first = f"{dates}, {_lower_first(rent)} and {_lower_first(distance)}."
-    if len(parts) > 3:
-        return f"{first} {parts[3]}."
-    return first
+    return " ".join([first, *(f"{part}." for part in parts[3:])])

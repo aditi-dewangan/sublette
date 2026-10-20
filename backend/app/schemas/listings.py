@@ -4,7 +4,7 @@ from typing import Annotated, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, StringConstraints
 
-from app.schemas.common import UtcDateTime
+from app.schemas.common import HomeVibe, HowOften, SleepSchedule, Tidiness, UtcDateTime
 
 SpaceType = Literal["entire_unit", "private_room", "shared_room"]
 Bathroom = Literal["private", "shared"]
@@ -51,6 +51,12 @@ class ListingFields(BaseModel):
     gender_preference: GenderPreference | None = None
     same_school_only: bool | None = None
     min_stay_days: int | None = Field(default=None, ge=0, le=730)
+    # How the housemates staying live, all optional (services/lifestyle.py).
+    sleep_schedule: SleepSchedule | None = None
+    tidiness: Tidiness | None = None
+    guests: HowOften | None = None
+    home_daytime: HowOften | None = None
+    home_vibe: HomeVibe | None = None
     landlord_consent: bool | None = None
     # Keys returned by POST /v1/uploads/presign (purpose listing_photo), in display order.
     photo_keys: list[str] | None = Field(default=None, max_length=MAX_PHOTOS)
@@ -108,6 +114,12 @@ class ListingOut(BaseModel):
     gender_preference: GenderPreference
     same_school_only: bool
     min_stay_days: int
+    # How the housemates staying live, all optional (services/lifestyle.py).
+    sleep_schedule: SleepSchedule | None
+    tidiness: Tidiness | None
+    guests: HowOften | None
+    home_daytime: HowOften | None
+    home_vibe: HomeVibe | None
     landlord_consent: bool | None
     photos: list[PhotoOut]
     lister: ListerOut

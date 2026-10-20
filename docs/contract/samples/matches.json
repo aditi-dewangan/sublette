@@ -32,6 +32,11 @@
         "gender_preference": "any",
         "same_school_only": false,
         "min_stay_days": 0,
+        "sleep_schedule": null,
+        "tidiness": null,
+        "guests": null,
+        "home_daytime": null,
+        "home_vibe": null,
         "landlord_consent": true,
         "photos": [],
         "lister": {

@@ -72,6 +72,8 @@ final class ListingEditorModel {
     var smokingAllowed: Bool?
     /// Only sent while someone is staying (see `form`).
     var householdGender: HouseholdGender?
+    /// How the housemates staying live (optional).
+    var homeLife = HomeLife()
     var sameSchoolOnly = false
     var minStayWeeks = 0
     var genderPreference: GenderPreference = .anyone
@@ -139,6 +141,7 @@ final class ListingEditorModel {
         petsAllowed = listing.petsAllowed
         smokingAllowed = listing.smokingAllowed
         householdGender = listing.householdGender
+        homeLife = HomeLife(listing: listing)
         sameSchoolOnly = listing.sameSchoolOnly
         minStayWeeks = listing.minStayDays / 7
         genderPreference = listing.genderPreference
@@ -187,7 +190,8 @@ final class ListingEditorModel {
             sameSchoolOnly: sameSchoolOnly,
             minStayDays: minStayWeeks * 7,
             landlordConsent: landlordConsent,
-            photoKeys: photos.map(\.key)
+            photoKeys: photos.map(\.key),
+            homeLife: housematesStaying > 0 && spaceType != .entireUnit ? homeLife : HomeLife()
         )
     }
 

@@ -652,16 +652,21 @@ final class StubReleaseAPI: ReleaseAPI, @unchecked Sendable {
     var crashResults: [Result<Void, Error>] = []
     var eventResult: Result<Void, Error> = .success(())
     var referralResult: Result<User, Error> = .success(Fixture.completeUser)
-    private(set) var events: [EventRequest] = []
-    private(set) var crashes: [CrashRequest] = []
+    private let lock = NSLock()
+    private var storedEvents: [EventRequest] = []
+    private var storedCrashes: [CrashRequest] = []
+
+    /// Sends arrive from background tasks, so these are guarded.
+    var events: [EventRequest] { lock.withLock { storedEvents } }
+    var crashes: [CrashRequest] { lock.withLock { storedCrashes } }
 
     func send(_ event: EventRequest) async throws {
-        events.append(event)
+        lock.withLock { storedEvents.append(event) }
         try eventResult.get()
     }
 
     func send(_ crash: CrashRequest) async throws {
-        crashes.append(crash)
+        lock.withLock { storedCrashes.append(crash) }
         if !crashResults.isEmpty {
             try crashResults.removeFirst().get()
         }

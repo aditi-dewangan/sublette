@@ -19,8 +19,9 @@ students who need someone to take over their lease. Any `.edu` email can join.
 | 5 | Swipe decks and matches | Done |
 | 6 | Map and pins | Done |
 | 7 | Chat, checklist and notifications | Done |
-| 8 | Trust, safety and admin | Built on `phase-8`; see its pull request |
-| 9 and 10 | Polish and release, then the AI recommender | Not started |
+| 8 | Trust, safety and admin | Done |
+| 9 | Polish, offline, analytics and release prep | Built on `phase-9`; see its pull request. TestFlight and the App Store need the $99 Apple account |
+| 10 | AI recommender | Not started |
 
 ## Set up (once)
 
@@ -192,6 +193,10 @@ Each dependency has tests for the day it is down. So far:
 | Live connection (iPhone app, WebSocket `/v1/ws`) | Chat still works without it: sending is a normal request, and each chat reloads when opened. The app reconnects on its own (1, 2, 4… up to 30 seconds apart), refreshes the token when the server asks (close code 4401), and reloads anything missed when it is back. A message that fails to send stays on screen with "Not sent. Try again", and a retry is stored once. | `ios/SubletteTests/ChatTests.swift`, `backend/tests/test_chat.py` |
 | Notification permission (iPhone app) | Asked once, at the first match. Declining changes nothing else; chat works while the app is open. | `ios/SubletteTests/ChatTests.swift` (`NotificationsTests`) |
 | Housekeeping thread (server: expiry, photo checks, clean-up) | A failed run (database or photo storage down) is logged and tried again 10 minutes later; requests are unaffected. The deck hides expired listings by date on its own, so a late run changes nothing students see. A photo storage can't read is checked next time. Two server processes never run it at once. | `backend/tests/test_housekeeping.py` |
+| Offline cache (iPhone app, SwiftData) | The next 20 deck cards, matches, saved listings and each chat's last 50 messages are kept on the phone and shown offline. A cache that can't be opened or read is simply empty: the app then works online only. Cleared at sign-out. | `ios/SubletteTests/ReleaseTests.swift` |
+| Server, when sending a message (iPhone app) | A message written offline waits ("Sends when you're back online"), survives a relaunch, and goes out in order when the connection is back, stored once. One the server refuses is marked "Not sent". | `ios/SubletteTests/ReleaseTests.swift` (`MessageOutboxTests`) |
+| MetricKit crash reports (iPhone app, Apple's built-in) | Reports are kept on the phone until they reach the server; one the server refuses is dropped. Nothing else waits on them. | `ios/SubletteTests/ReleaseTests.swift` (`AnalyticsTests`), `backend/tests/test_release.py` |
+| Analytics (`POST /v1/events`) | Fire and forget: a failure is dropped and never shown. Funnel steps are recorded by the server itself, inside the request, so they can't be lost. | `backend/tests/test_release.py`, `ios/SubletteTests/ReleaseTests.swift` |
 | Server, when reporting or blocking (iPhone app) | The report sheet stays open with the reason, and nothing is lost; a block that fails changes nothing and says why. | `ios/SubletteTests/SafetyTests.swift` |
 
 When a phase adds a dependency (email sending, photo storage, push, the language
@@ -294,6 +299,24 @@ Render's dashboard (16 characters or more).
 
 To try it: sign in on a simulator, open a listing's "…" menu, tap "Report
 this listing", and refresh the admin page.
+
+## The numbers, referrals and sharing
+
+- **Numbers:** http://localhost:8000/admin/metrics (same admin password) shows
+  the funnel (sign-up, profile, first swipe, first match, filled), days from
+  publishing to first match and to filled, likes nobody answered, which
+  features are used, and crash-free sessions.
+- **Referrals:** every student has a code on their Profile tab. A new lister
+  adds a friend's code in Settings before their first listing goes live.
+  http://localhost:8000/admin/referrals lists the ones whose listing has been
+  live for 7 days, with "Mark reward paid".
+- **Sharing:** a live listing has "Share this listing": a picture card and a
+  link to its public page (`/l/<id>`), which shows the photo and price but
+  never the address or the lister's name.
+- **App Store:** the listing text, privacy label answers, screenshots and the
+  TestFlight steps are in `docs/app-store.md`.
+- **Icon:** `swift scripts/make-brand-images.swift` redraws the app icon and
+  launch mark if the logo changes.
 
 ## Push notifications on a real iPhone
 

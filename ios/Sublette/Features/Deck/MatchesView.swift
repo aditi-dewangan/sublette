@@ -206,24 +206,23 @@ struct MatchSheet: View {
     var body: some View {
         VStack(spacing: 20) {
             Spacer()
-            Text("It's a match!")
-                .font(.system(.largeTitle, design: .rounded).weight(.heavy))
-                .foregroundStyle(Palette.ink)
-                .accessibilityAddTraits(.isHeader)
-            HStack(spacing: -18) {
-                portrait(match.renter)
-                    .rotationEffect(.degrees(appeared ? -6 : 0))
-                portrait(match.lister)
-                    .rotationEffect(.degrees(appeared ? 6 : 0))
+            VStack(spacing: 22) {
+                Text("It's a match!")
+                    .font(.system(.largeTitle, design: .rounded).weight(.heavy))
+                    .accessibilityAddTraits(.isHeader)
+                HStack(spacing: -18) {
+                    portrait(match.renter)
+                        .rotationEffect(.degrees(appeared ? -6 : 0))
+                    portrait(match.lister)
+                        .rotationEffect(.degrees(appeared ? 6 : 0))
+                }
+                .scaleEffect(appeared || reduceMotion ? 1 : 0.6)
+                .accessibilityHidden(true)
+                Text(sentence)
+                    .font(.title3.weight(.semibold))
+                    .multilineTextAlignment(.center)
             }
-            .scaleEffect(appeared || reduceMotion ? 1 : 0.6)
-            .accessibilityElement(children: .ignore)
-            .accessibilityLabel("You and \(match.other.firstName ?? "your match")")
-            Text("You and \(match.other.firstName ?? "your match") both said yes to \(match.listing.title).")
-                .font(.title3.weight(.semibold))
-                .multilineTextAlignment(.center)
-                .foregroundStyle(Palette.ink)
-                .fixedSize(horizontal: false, vertical: true)
+            .foregroundStyle(Palette.ink)
             Spacer()
             Spacer()
             Button(action: onChat) {
@@ -257,6 +256,13 @@ struct MatchSheet: View {
                 appeared = true
             }
         }
+    }
+
+    private var sentence: String {
+        let name = match.other.firstName ?? "your match"
+        return match.role == .renter
+            ? "You and \(name) liked each other. Say hi and set up a tour."
+            : "You and \(name) liked each other. Say hi and set up a time to show the place."
     }
 
     private func portrait(_ person: Person) -> some View {

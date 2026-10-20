@@ -248,6 +248,10 @@ final class AnalyticsTests: XCTestCase {
         time += 61
         analytics.used(.map)
         analytics.used(.deck)
+        // The sends happen in the background; wait for the three that should.
+        for _ in 0..<200 where api.events.count < 3 {
+            try await Task.sleep(nanoseconds: 10_000_000)
+        }
         try await Task.sleep(nanoseconds: 50_000_000)
 
         XCTAssertEqual(api.events.filter { $0.feature == .map }.count, 2)

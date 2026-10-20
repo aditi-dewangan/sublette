@@ -49,7 +49,7 @@ struct PinPickerView: View {
             FormField("How far from the pin", hint: "Listings inside the circle can show up in your deck.") {
                 VStack(alignment: .leading, spacing: 4) {
                     Slider(value: radiusBinding, in: Double(SearchPin.minRadiusM)...Double(SearchPin.maxRadiusM), step: 250)
-                        .tint(Brand.magenta)
+                        .tint(Brand.accentText)
                         .accessibilityValue(model.radiusText)
                     Text(model.radiusText)
                         .font(.subheadline.weight(.semibold))
@@ -102,7 +102,7 @@ struct PinPickerView: View {
             .overlay {
                 Image(systemName: "mappin")
                     .font(.system(size: 34, weight: .bold))
-                    .foregroundStyle(Brand.magenta)
+                    .foregroundStyle(Brand.accentText)
                     .offset(y: -17)
                     .opacity(model.center == nil ? 0.45 : 1)
                     .allowsHitTesting(false)

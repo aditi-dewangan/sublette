@@ -148,4 +148,14 @@ extension Endpoint {
     /// Web pages the app opens in the browser.
     static let termsPage = Endpoint(method: .get, path: "/terms", requiresAuth: false)
     static let privacyPage = Endpoint(method: .get, path: "/privacy", requiresAuth: false)
+
+    // Release (phase 9).
+    static let event = Endpoint(method: .post, path: "/v1/events")
+    static let diagnostics = Endpoint(method: .post, path: "/v1/diagnostics")
+    static let useReferral = Endpoint(method: .post, path: "/v1/me/referral")
+
+    /// The public page a shared listing link opens.
+    static func listingShare(_ id: String) -> Endpoint {
+        Endpoint(method: .get, path: "/l/\(id)", requiresAuth: false)
+    }
 }

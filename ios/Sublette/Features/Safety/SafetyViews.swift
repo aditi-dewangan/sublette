@@ -58,6 +58,7 @@ struct BlockConfirmation: ViewModifier {
                 Button("Block", role: .destructive) {
                     Task {
                         if await container.safety.block(subject) {
+                            container.analytics.used(.block)
                             onBlocked()
                         }
                     }
@@ -118,7 +119,7 @@ struct ReportSheet: View {
                                     Text(option.title).foregroundStyle(Brand.ink)
                                     Spacer()
                                     if reason == option {
-                                        Image(systemName: "checkmark").foregroundStyle(Brand.magenta)
+                                        Image(systemName: "checkmark").foregroundStyle(Brand.accentText)
                                     }
                                 }
                             }
@@ -157,7 +158,7 @@ struct ReportSheet: View {
                 onBlocked()
             })
         }
-        .tint(Brand.magenta)
+        .tint(Brand.accentText)
     }
 
     private func send() {
@@ -167,6 +168,9 @@ struct ReportSheet: View {
         sending = true
         Task {
             sent = await container.safety.report(subject, reason: reason, details: details)
+            if sent {
+                container.analytics.used(.report)
+            }
             sending = false
         }
     }
@@ -188,6 +192,13 @@ struct SettingsView: View {
                 Section("Safety") {
                     NavigationLink("Blocked people") { BlockedPeopleView() }
                         .accessibilityIdentifier("blocked-people")
+                }
+                if session.user?.referred == false {
+                    Section {
+                        NavigationLink("Add a friend's referral code") { ReferralEntryView() }
+                    } footer: {
+                        Text("For new listers, before your first listing goes live.")
+                    }
                 }
                 Section("About") {
                     if let terms = container.pageURL(.termsPage) {
@@ -233,7 +244,7 @@ struct SettingsView: View {
                 Text("This removes your profile, listings, swipes and messages. It can't be undone.")
             }
         }
-        .tint(Brand.magenta)
+        .tint(Brand.accentText)
     }
 
     private func deleteAccount() {
@@ -247,6 +258,55 @@ struct SettingsView: View {
                 deleteProblem = "Your account was not deleted. \(SafetyModel.message(for: error))"
             }
             deleting = false
+        }
+    }
+}
+
+/// A new lister adds the code a friend gave them.
+@MainActor
+struct ReferralEntryView: View {
+    @Environment(AppContainer.self) private var container
+    @Environment(SessionModel.self) private var session
+    @Environment(\.dismiss) private var dismiss
+    @State private var code = ""
+    @State private var problem: String?
+    @State private var sending = false
+
+    var body: some View {
+        Form {
+            Section {
+                TextField("Code, such as K7P2QXM", text: $code)
+                    .textInputAutocapitalization(.characters)
+                    .autocorrectionDisabled()
+                    .font(.system(.body, design: .monospaced))
+            } footer: {
+                Text("Your friend finds their code on their Profile tab.")
+            }
+            if let problem {
+                Section { ErrorText(problem) }
+            }
+            Section {
+                Button(sending ? "Adding…" : "Add code") { add() }
+                    .disabled(code.trimmingCharacters(in: .whitespaces).count < 4 || sending)
+            }
+        }
+        .scrollContentBackground(.hidden)
+        .background(Brand.cream)
+        .navigationTitle("Referral code")
+    }
+
+    private func add() {
+        sending = true
+        problem = nil
+        Task {
+            do {
+                session.update(try await container.releaseAPI.useReferral(code: code))
+                container.analytics.used(.referral)
+                dismiss()
+            } catch {
+                problem = SafetyModel.message(for: error)
+            }
+            sending = false
         }
     }
 }
@@ -314,7 +374,7 @@ struct TermsView: View {
                     }
                 }
                 .font(.subheadline.weight(.semibold))
-                .tint(Brand.magenta)
+                .tint(Brand.accentText)
                 if let problem {
                     ErrorText(problem)
                 }
@@ -362,7 +422,7 @@ struct SuspendedView: View {
         VStack(spacing: 18) {
             Image(systemName: "exclamationmark.shield")
                 .font(.system(size: 48, weight: .semibold))
-                .foregroundStyle(Brand.magenta)
+                .foregroundStyle(Brand.accentText)
                 .accessibilityHidden(true)
             Text("Your account is suspended")
                 .font(.system(.title2, design: .rounded).weight(.bold))

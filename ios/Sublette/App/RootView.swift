@@ -19,7 +19,7 @@ struct RootView: View {
                 .id(appState.mode)
         }
         .background(Brand.cream)
-        .sheet(item: $outbox.latestMatch) { match in
+        .fullScreenCover(item: $outbox.latestMatch) { match in
             MatchSheet(
                 match: match,
                 onChat: {

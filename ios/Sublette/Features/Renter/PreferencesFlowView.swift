@@ -33,12 +33,12 @@ struct PreferencesFlowView: View {
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Close") { dismiss() }
-                        .tint(Brand.magenta)
+                        .tint(Brand.accentText)
                 }
                 if model.isEditing && model.step != .area {
                     ToolbarItem(placement: .confirmationAction) {
                         Button("Save") { save() }
-                            .tint(Brand.magenta)
+                            .tint(Brand.accentText)
                             .disabled(model.isSaving)
                     }
                 }
@@ -52,7 +52,7 @@ struct PreferencesFlowView: View {
                 value: Double(model.step.rawValue + 1),
                 total: Double(PreferencesEditorModel.Step.allCases.count)
             )
-            .tint(Brand.magenta)
+            .tint(Brand.accentText)
             Text("Step \(model.step.rawValue + 1) of \(PreferencesEditorModel.Step.allCases.count) · \(model.step.title)")
                 .font(.footnote.weight(.semibold))
                 .foregroundStyle(Brand.ink)
@@ -178,10 +178,10 @@ private struct SpaceTypeStep: View {
                         Text(type.detail).font(.subheadline).multilineTextAlignment(.leading)
                     }
                 }
-                .foregroundStyle(Brand.ink)
+                .foregroundStyle(isOn ? Brand.textOnYellow : Brand.ink)
                 .padding(14)
                 .frame(maxWidth: .infinity, alignment: .leading)
-                .background(isOn ? Brand.yellow : Color.white, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+                .background(isOn ? Brand.yellow : Brand.card, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
             }
             .buttonStyle(.plain)
             .accessibilityAddTraits(isOn ? .isSelected : [])

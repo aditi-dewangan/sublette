@@ -101,7 +101,7 @@ struct ListingCardView: View {
             }
         }
         .padding(16)
-        .background(Color.white, in: RoundedRectangle(cornerRadius: 24, style: .continuous))
+        .background(Brand.card, in: RoundedRectangle(cornerRadius: 24, style: .continuous))
     }
 
     private func detail(_ systemImage: String, _ text: String) -> some View {
@@ -177,12 +177,17 @@ struct StatusChip: View {
         case .active: return Brand.yellow
         case .paused: return Brand.orange
         case .filled: return Brand.magenta
-        case .draft, .expired, .removed: return Color.white
+        case .draft, .expired, .removed: return Brand.card
         }
     }
 
     private var foreground: Color {
-        status == .filled ? Brand.textOnMagenta : Brand.ink
+        switch status {
+        case .filled: return Brand.textOnMagenta
+        case .active: return Brand.textOnYellow
+        case .paused: return Brand.textOnOrange
+        case .draft, .expired, .removed: return Brand.ink
+        }
     }
 }
 

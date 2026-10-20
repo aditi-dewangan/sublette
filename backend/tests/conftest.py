@@ -4,6 +4,7 @@ Tests run against a real PostgreSQL database named sublette_test. Start it with
 `make db` from the repository root, or point SUBLETTE_TEST_DATABASE_URL at one.
 """
 
+import base64
 import os
 from collections.abc import Iterator
 from datetime import UTC, datetime, timedelta
@@ -21,6 +22,7 @@ from sqlalchemy.orm import Session
 from app.config import Settings
 from app.deps import get_now
 from app.main import create_app
+from app.routers.admin import form_token
 from app.services.email_sender import EmailUnavailable
 from app.services.schools import seed_schools
 
@@ -37,9 +39,9 @@ TEST_DATABASE_URL = os.environ.get(
 UNREACHABLE_DATABASE_URL = "postgresql+psycopg://sublette:sublette@127.0.0.1:1/sublette_test"
 
 DATA_TABLES = (
-    "reports, blocks, uploads, messages, device_tokens, matches, swipes, saved_listings, "
-    "renter_profiles, listing_photos, listings, stored_files, users, email_codes, "
-    "rate_limit_hits, school_domains, schools"
+    "events, crash_reports, reports, blocks, uploads, messages, device_tokens, matches, "
+    "swipes, saved_listings, renter_profiles, listing_photos, listings, stored_files, users, "
+    "email_codes, rate_limit_hits, school_domains, schools"
 )
 
 
@@ -207,3 +209,25 @@ def app_without_database() -> FastAPI:
 def client_without_database(app_without_database: FastAPI) -> Iterator[TestClient]:
     with TestClient(app_without_database) as test_client:
         yield test_client
+
+
+ADMIN_PASSWORD = "correct horse battery staple"
+
+
+def settings_with(app: FastAPI, **changes) -> Settings:
+    app.state.settings = app.state.settings.model_copy(update=changes)
+    return app.state.settings
+
+
+@pytest.fixture
+def admin(app: FastAPI) -> dict[str, str]:
+    """Turns the admin page on; returns the browser's sign-in header."""
+    settings_with(app, admin_password=ADMIN_PASSWORD)
+    return {
+        "Authorization": "Basic " + base64.b64encode(f"admin:{ADMIN_PASSWORD}".encode()).decode()
+    }
+
+
+def admin_post(client: TestClient, app: FastAPI, admin: dict, path: str, **fields):
+    data = {"token": form_token(app.state.settings), **fields}
+    return client.post(path, headers=admin, data=data, follow_redirects=False)

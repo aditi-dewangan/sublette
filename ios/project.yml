@@ -59,7 +59,10 @@ targets:
         CFBundleVersion: $(CURRENT_PROJECT_VERSION)
         UIApplicationSceneManifest:
           UIApplicationSupportsMultipleScenes: false
-        UILaunchScreen: {}
+        # The pin mark on cream (ink in dark mode), the same as the first screen.
+        UILaunchScreen:
+          UIColorName: LaunchBackground
+          UIImageName: LaunchMark
         UISupportedInterfaceOrientations:
           - UIInterfaceOrientationPortrait
         SubletteEnvironment: $(SUBLETTE_ENVIRONMENT)

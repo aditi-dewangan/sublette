@@ -34,7 +34,7 @@ struct ProfileFormView: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(.horizontal, 4)
                 .padding(.vertical, 4)
-                .background(Color.white, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                .background(Brand.card, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
             }
 
             FormField("Program or major", error: model.fieldErrors["program"]) {
@@ -76,7 +76,7 @@ struct ProfileFormView: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(.horizontal, 4)
                 .padding(.vertical, 4)
-                .background(Color.white, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                .background(Brand.card, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
             }
 
             if let message = model.errorMessage {
@@ -209,7 +209,7 @@ struct ProfileEditView: View {
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Cancel") { dismiss() }
-                        .tint(Brand.magenta)
+                        .tint(Brand.accentText)
                 }
             }
         }

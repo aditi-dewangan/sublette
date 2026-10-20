@@ -14,7 +14,7 @@ struct ChatMessage: Codable, Equatable, Identifiable {
 }
 
 /// Oldest first. Ask again with `before` set to the first id for older ones.
-struct MessagePage: Decodable, Equatable {
+struct MessagePage: Codable, Equatable {
     let items: [ChatMessage]
     let hasMore: Bool
 }

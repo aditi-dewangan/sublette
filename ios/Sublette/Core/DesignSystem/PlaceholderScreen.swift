@@ -24,7 +24,7 @@ struct PlaceholderScreen<Extra: View>: View {
             VStack(spacing: 16) {
                 Image(systemName: systemImage)
                     .font(.system(size: 44, weight: .semibold))
-                    .foregroundStyle(Brand.magenta)
+                    .foregroundStyle(Brand.accentText)
                     .padding(.top, 40)
                     .accessibilityHidden(true)
                 Text(title)

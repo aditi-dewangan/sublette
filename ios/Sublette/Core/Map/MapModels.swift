@@ -1,7 +1,7 @@
 import Foundation
 
 /// strong (75+), partial (50 to 74) or other. Pins are colored by it.
-enum ScoreBand: String, Decodable, Equatable {
+enum ScoreBand: String, Codable, Equatable {
     case strong
     case partial
     case other

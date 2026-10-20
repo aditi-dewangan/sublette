@@ -70,6 +70,9 @@ struct User: Codable, Equatable, Identifiable {
     /// account accepted them. Optional for the same reason.
     var termsVersion: String?
     var termsAccepted: Bool?
+    /// This account's code to give friends, and whether it used someone's.
+    var referralCode: String?
+    var referred: Bool?
 
     /// True when the server says the current terms still need accepting.
     var needsToAcceptTerms: Bool { termsAccepted == false }

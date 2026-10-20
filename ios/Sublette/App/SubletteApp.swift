@@ -17,8 +17,6 @@ struct SubletteApp: App {
                 .environment(container.appState)
                 .environment(container.session)
                 .environment(container.serverStatus)
-                // The palette is designed for a light background. Dark mode arrives in phase 9.
-                .preferredColorScheme(.light)
                 .task {
                     appDelegate.notifications = container.notifications
                     appDelegate.openChatID = { [weak container] in container?.matchesModel.activeChat?.match.id }

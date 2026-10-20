@@ -15,6 +15,9 @@ struct ProfileView: View {
                 VStack(spacing: 20) {
                     header(user)
                     details(user)
+                    if let code = user.referralCode {
+                        ReferralCard(code: code)
+                    }
                     actions
                     // Which server the app talks to, and whether it answers.
                     ServerStatusCard()
@@ -76,7 +79,7 @@ struct ProfileView: View {
         }
         .padding(18)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Color.white, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+        .background(Brand.card, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
     }
 
     private func row(_ label: String, _ value: String) -> some View {
@@ -104,7 +107,10 @@ struct ProfileView: View {
             .buttonStyle(SecondaryButtonStyle())
             .accessibilityIdentifier("sign-out-button")
 
-            Button("Settings") { showsSettings = true }
+            Button("Settings") {
+                showsSettings = true
+                container.analytics.used(.settings)
+            }
                 .buttonStyle(LinkButtonStyle())
                 .padding(.top, 8)
                 .accessibilityIdentifier("settings-button")
@@ -113,6 +119,42 @@ struct ProfileView: View {
                 .foregroundStyle(Brand.ink.opacity(0.7))
                 .multilineTextAlignment(.center)
         }
+    }
+}
+
+/// "Know someone subletting? Give them your code."
+@MainActor
+struct ReferralCard: View {
+    let code: String
+    @Environment(AppContainer.self) private var container
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text("Know someone with a place to sublet?")
+                .font(.headline)
+            Text("Give them your code to add when they list it.")
+                .font(.subheadline)
+            HStack {
+                Text(code)
+                    .font(.system(.title2, design: .monospaced).weight(.bold))
+                    .textSelection(.enabled)
+                    .accessibilityLabel("Your code: \(code.map(String.init).joined(separator: " "))")
+                Spacer()
+                ShareLink(item: Self.invitation(code: code)) {
+                    Label("Share", systemImage: "square.and.arrow.up")
+                }
+                .buttonStyle(LinkButtonStyle())
+                .simultaneousGesture(TapGesture().onEnded { container.analytics.used(.referral) })
+            }
+        }
+        .foregroundStyle(Brand.ink)
+        .padding(18)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Brand.card, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+    }
+
+    static func invitation(code: String) -> String {
+        "Subletting your place? List it on Sublette, the app for college students, and add my code \(code) when you do."
     }
 }
 

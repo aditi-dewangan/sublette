@@ -33,7 +33,7 @@ struct ListerHomeView: View {
                         } label: {
                             Label("Add a listing", systemImage: "plus")
                         }
-                        .tint(Brand.magenta)
+                        .tint(Brand.accentText)
                         .accessibilityIdentifier("add-listing-button")
                     }
                 }
@@ -61,7 +61,7 @@ struct ListerHomeView: View {
                     Section {
                         ErrorText(message)
                         Button("Try again") { Task { await model.load() } }
-                            .tint(Brand.magenta)
+                            .tint(Brand.accentText)
                     }
                 }
                 Section {
@@ -72,7 +72,7 @@ struct ListerHomeView: View {
                     }
                     if model.canLoadMore {
                         Button("Show more") { Task { await model.loadMore() } }
-                            .tint(Brand.magenta)
+                            .tint(Brand.accentText)
                     }
                 }
             }
@@ -178,6 +178,7 @@ struct ListingDetailView: View {
     @Environment(AppContainer.self) private var container
     @State private var editor: EditorRequest?
     @State private var isConfirmingFilled = false
+    @State private var sharing: Listing?
 
     var body: some View {
         let model = container.listerHome
@@ -227,6 +228,9 @@ struct ListingDetailView: View {
                 model.show(saved)
             }
         }
+        .sheet(item: $sharing) { listing in
+            ShareListingSheet(listing: listing)
+        }
     }
 
     @ViewBuilder
@@ -247,8 +251,15 @@ struct ListingDetailView: View {
                         .foregroundStyle(Brand.ink.opacity(0.75))
                         .frame(maxWidth: .infinity, alignment: .leading)
                 }
+                Button {
+                    sharing = listing
+                } label: {
+                    Label("Share this listing", systemImage: "square.and.arrow.up")
+                }
+                .buttonStyle(PrimaryButtonStyle())
+                .accessibilityIdentifier("share-listing")
                 Button("Edit") { editor = .edit(listing) }
-                    .buttonStyle(PrimaryButtonStyle())
+                    .buttonStyle(SecondaryButtonStyle())
                 Button("Pause") { Task { await model.setStatus(.paused, for: listing) } }
                     .buttonStyle(SecondaryButtonStyle())
                     .disabled(busy)
@@ -290,7 +301,7 @@ struct ListingDetailView: View {
                     if let contact = AppConfiguration.contactURL(subject: "My removed listing") {
                         Link("Think this is a mistake? Email us", destination: contact)
                             .font(.subheadline.weight(.semibold))
-                            .tint(Brand.magenta)
+                            .tint(Brand.accentText)
                     }
                 }
                 .foregroundStyle(Brand.ink)

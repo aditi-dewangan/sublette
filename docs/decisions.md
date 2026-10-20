@@ -190,6 +190,21 @@ Choices made while building, with the reason. Add to the bottom; do not rewrite 
 | The terms and privacy text is a plain-language draft, not legal advice. It sets a minimum age of 18. | Needed for App Store review; Aditi should have it read before launch. |
 | Settings (from the Profile tab): blocked people with "Unblock", terms, privacy policy, contact us, and delete account (moved here from the Profile tab). | The plan's Settings list. |
 
+### Phase 9: polish, offline and release prep (added 2026-10-20)
+
+| Decision | Reason |
+| --- | --- |
+| Dark mode: the raw palette (`Palette`) stays as the spec's tokens, and screens use `Brand`, where ink and cream swap, cards become a raised ink (#3A2431) and links become pink (#FF6FB0, 6.7:1 on ink; magenta is only 3.5:1). Yellow and orange keep ink text in both modes, and the mode header keeps light controls. | The spec's roles say ink is the dark mode background. The contrast of every pair is tested (`test_contracts.py`). |
+| The logo mark is a map pin with a round window, drawn in code (SwiftUI, and `scripts/make-brand-images.swift` for the icon and launch screen). The icon is the yellow to orange to magenta gradient with a cream pin. | "The pin shape as the logo mark", sharp at every size, and redrawn in seconds if Aditi wants changes. |
+| The match moment is a full-screen cover: the gradient runs yellow (top) to magenta (bottom) so ink text sits on yellow and orange and white text on magenta. A success haptic; the pop animation is skipped with Reduce Motion. | The plan's match moment, without white text on yellow or orange. |
+| Offline: a SwiftData store of JSON copies of the next 20 deck cards, matches, saved listings and each chat's last 50 messages, per account, cleared at sign-out. Messages written offline queue like swipes and are sent with the same `message_id`. | The plan names SwiftData. Storing the server's own JSON keeps one model of each thing; the queue reuses phase 7's idempotent sends. |
+| Analytics are first-party: an `events` table. The server records the funnel where each step happens (so it can't be lost or faked); the app adds only app opens and feature use. Kept without a name after account deletion. No third-party analytics SDK. | $0, nothing to disclose as tracking, and the numbers the plan asks for. |
+| Crash reporting uses Apple's MetricKit, sent to our server; crash-free sessions = 1 − crashes ÷ app opens. | $0 and no third-party SDK. MetricKit reports arrive at the next launch, which is enough for a beta. |
+| Referral codes are 7 characters without look-alike letters. A code can be added once, before the student's first listing goes live. A reward is due when the referred lister's first listing has been live for 7 days and wasn't removed; the admin marks it paid. | "The server records which code a new lister used, and an admin page lists listings that have passed the 7-day check." The amount and how it's paid are Aditi's call. |
+| The share card is 1080 × 1350, drawn on the phone; the link opens `/l/<id>`, a public page with link-preview tags and only what any renter sees (no address, no point, no lister name), for live listings only. | Posting in housing groups needs a picture and a link that previews; the server can't draw images without a new dependency. |
+| The privacy manifest declares no tracking, the data types in `docs/app-store.md`, and UserDefaults (reason CA92.1). The renter's pin counts as precise location. | Required for App Store submission. The pin is user-chosen, but it's latitude and longitude, so the conservative answer. |
+| TestFlight, the beta and App Store submission are written up in `docs/app-store.md` but not done. | They need the paid Apple Developer account, which is Aditi's decision. |
+
 ## Known gaps after phase 2
 
 - Photos uploaded in the editor and then abandoned (the editor closed without saving) stay in storage. Done in phase 8: deleted after a day.

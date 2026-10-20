@@ -29,6 +29,7 @@ from app.schemas.swipes import (
     SwipeOut,
     SwipeResult,
 )
+from app.services import analytics
 from app.services.chat import Activity, checklist_out, filled_out, message_out
 from app.services.deck import renter_for
 from app.services.listings import listing_out, not_found
@@ -166,8 +167,9 @@ def record_swipe(
             raise _already(swipe) if swipe else ApiError(409, "swipe_conflict", "Try again.")
         return _result(session, swipe, user, storage, created=False)
 
+    analytics.record(session, "first_swipe", now, user_id=user.id)
     if side == "lister" and body.action == "like":
-        session.execute(
+        made = session.execute(
             insert(Match)
             .values(
                 id=uuid.uuid4(),
@@ -176,7 +178,10 @@ def record_swipe(
                 lister_id=user.id,
             )
             .on_conflict_do_nothing()
-        )
+            .returning(Match.id)
+        ).scalar()
+        if made is not None:
+            analytics.record_match(session, renter_id, user.id, listing, now)
     session.commit()
     return _result(session, swipe, user, storage, created=True)
 

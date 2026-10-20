@@ -42,6 +42,9 @@ class UserOut(BaseModel):
     # account accepted them. Accept with POST /v1/me/terms.
     terms_version: str
     terms_accepted: bool
+    # This account's code to give friends, and whether it used someone's.
+    referral_code: str
+    referred: bool
     created_at: UtcDateTime
 
 

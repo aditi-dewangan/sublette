@@ -24,6 +24,7 @@ from app.config import Settings
 from app.errors import ApiError
 from app.models import Match, Message, User
 from app.schemas.chat import Checklist, ChecklistPatch, Filled, MessageOut, MessagePage
+from app.services import analytics
 from app.services.safety import blocked_with, flag_message, is_blocked, limit_messages
 
 CHECKLIST_STEPS = ("tour_done", "landlord_consent_confirmed", "dates_agreed", "sublease_signed")
@@ -242,6 +243,14 @@ def confirm_filled(session: Session, user: User, match: Match, now: datetime) ->
                 raise ApiError(409, "listing_closed", "This listing can't be marked filled.")
             listing.status = "filled"
             changed = True
+            analytics.record(
+                session,
+                "listing_filled",
+                now,
+                user_id=user.id,
+                listing_id=listing.id,
+                value=analytics.days_since_published(listing, now),
+            )
     elif match.renter_filled_at is None:
         match.renter_filled_at = now
         changed = True

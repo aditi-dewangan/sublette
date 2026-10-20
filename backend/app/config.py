@@ -60,6 +60,8 @@ class Settings(BaseSettings):
     messages_per_day: int = 1000
     listings_per_day: int = 10
     reports_per_day: int = 20
+    events_per_hour: int = 300
+    crash_reports_per_day: int = 20
 
     # --- Trust and safety ---
     # The password for the admin page at /admin (user name "admin"). Unset

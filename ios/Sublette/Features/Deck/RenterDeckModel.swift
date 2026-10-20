@@ -34,13 +34,23 @@ final class RenterDeckModel {
     private(set) var message: String?
     private(set) var isWorking = false
 
+    /// True while the cards are the ones kept on the phone, not fresh ones.
+    private(set) var showingSaved = false
+
     let outbox: SwipeOutbox
     private let api: DeckAPI
+    private let cache: OfflineStoring?
     private let makeSwipeID: () -> String
 
-    init(api: DeckAPI, outbox: SwipeOutbox, makeSwipeID: @escaping () -> String = { UUID().uuidString.lowercased() }) {
+    init(
+        api: DeckAPI,
+        outbox: SwipeOutbox,
+        cache: OfflineStoring? = nil,
+        makeSwipeID: @escaping () -> String = { UUID().uuidString.lowercased() }
+    ) {
         self.api = api
         self.outbox = outbox
+        self.cache = cache
         self.makeSwipeID = makeSwipeID
     }
 
@@ -75,6 +85,7 @@ final class RenterDeckModel {
 
     /// Starts again: sends any queued swipes, then loads a fresh deck.
     func reload() async {
+        showingSaved = false
         cards = []
         history = []
         diagnostics = nil
@@ -90,6 +101,7 @@ final class RenterDeckModel {
         await outbox.flush()
         do {
             let page = try await api.deck(limit: Self.pageSize)
+            showingSaved = false
             append(page.items)
             state = .loaded
             if cards.isEmpty {
@@ -100,6 +112,11 @@ final class RenterDeckModel {
         } catch let error as APIError where error == .cancelled {
             state = .idle
         } catch {
+            if cards.isEmpty, let userID, let saved = cache?.load([DeckItem].self, key: CacheKey.deck(userID)) {
+                // Offline: swipe the cards kept from last time; swipes queue as usual.
+                append(saved)
+                showingSaved = !cards.isEmpty
+            }
             state = .failed((error as? APIError)?.userMessage ?? APIError.unreachable.userMessage)
         }
     }
@@ -111,6 +128,15 @@ final class RenterDeckModel {
         hidden.formUnion(history.map(\.item.id))
         hidden.formUnion(outbox.pendingListingIDs)
         cards += items.filter { !hidden.contains($0.id) }
+        persist()
+    }
+
+    /// Keeps the next cards on the phone, for opening the deck offline.
+    private func persist() {
+        guard let userID else {
+            return
+        }
+        cache?.save(Array(cards.prefix(Self.pageSize)), key: CacheKey.deck(userID))
     }
 
     private func refillIfLow() async {
@@ -147,6 +173,7 @@ final class RenterDeckModel {
         }
         message = nil
         cards.removeFirst()
+        persist()
         let swipeID = makeSwipeID()
         history.append(Swiped(item: card, swipeID: swipeID))
         await outbox.send(SwipeRequest(listingId: card.id, renterId: nil, action: action, swipeId: swipeID))
@@ -190,11 +217,13 @@ final class RenterDeckModel {
         cards.removeAll { $0.id == item.id }
         cards.insert(item, at: 0)
         diagnostics = nil
+        persist()
     }
 
-    /// Drops a card swiped somewhere else (on the map).
+    /// Drops a card swiped somewhere else (on the map), or from someone blocked.
     func forget(listingID: String) {
         cards.removeAll { $0.id == listingID }
+        persist()
     }
 
     /// Puts the top card aside in Saved. It comes back to the deck if unsaved.
@@ -208,6 +237,7 @@ final class RenterDeckModel {
         do {
             try await api.save(listingID: card.id)
             cards.removeAll { $0.id == card.id }
+            persist()
             await refillIfLow()
         } catch {
             message = (error as? APIError)?.userMessage ?? APIError.unreachable.userMessage

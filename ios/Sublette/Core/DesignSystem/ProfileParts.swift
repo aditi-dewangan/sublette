@@ -11,7 +11,7 @@ struct VerifiedBadge: View {
             Image(systemName: "checkmark.seal.fill")
         }
         .font(.footnote.weight(.semibold))
-        .foregroundStyle(Brand.ink)
+        .foregroundStyle(Brand.textOnYellow)
         .padding(.horizontal, 10)
         .padding(.vertical, 6)
         .background(Brand.yellow, in: Capsule())
@@ -50,7 +50,7 @@ struct AvatarView: View {
 
     private var placeholder: some View {
         ZStack {
-            Color.white
+            Brand.card
             Image(systemName: "person.fill")
                 .font(.system(size: size * 0.42))
                 .foregroundStyle(Brand.ink.opacity(0.3))

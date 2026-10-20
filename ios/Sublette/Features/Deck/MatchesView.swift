@@ -87,6 +87,7 @@ struct MatchesView: View {
         .task(id: session.user?.id) {
             if let userID = session.user?.id {
                 model.prepare(for: userID)
+                container.analytics.used(.matches)
                 container.outbox.prepare(for: userID)
             }
             await model.load()
@@ -109,7 +110,7 @@ struct MatchesView: View {
                     }
                     ToolbarItem(placement: .confirmationAction) {
                         Button("Done") { openListing = nil }
-                            .tint(Brand.magenta)
+                            .tint(Brand.accentText)
                     }
                 }
             }
@@ -188,37 +189,86 @@ private struct SavedRow: View {
     }
 }
 
-/// The plain "It's a match" screen. The designed one comes in phase 9.
+/// The match moment: the brand gradient, both profiles, and a tap you can feel.
+///
+/// Yellow at the top, orange in the middle, magenta at the bottom, so every
+/// piece of text sits on a color it can be read on: ink on yellow and orange,
+/// white on magenta.
 @MainActor
 struct MatchSheet: View {
     let match: Match
     let onChat: () -> Void
     let onClose: () -> Void
 
+    @State private var appeared = false
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
     var body: some View {
-        VStack(spacing: 18) {
+        VStack(spacing: 20) {
             Spacer()
-            Text("It's a match!")
-                .font(.system(.largeTitle, design: .rounded).weight(.heavy))
-                .foregroundStyle(Brand.magenta)
-            HStack(spacing: -16) {
-                AvatarView(urlString: match.renter.photoUrl, size: 96)
-                AvatarView(urlString: match.lister.photoUrl, size: 96)
+            VStack(spacing: 22) {
+                Text("It's a match!")
+                    .font(.system(.largeTitle, design: .rounded).weight(.heavy))
+                    .accessibilityAddTraits(.isHeader)
+                HStack(spacing: -18) {
+                    portrait(match.renter)
+                        .rotationEffect(.degrees(appeared ? -6 : 0))
+                    portrait(match.lister)
+                        .rotationEffect(.degrees(appeared ? 6 : 0))
+                }
+                .scaleEffect(appeared || reduceMotion ? 1 : 0.6)
+                .accessibilityHidden(true)
+                Text(sentence)
+                    .font(.title3.weight(.semibold))
+                    .multilineTextAlignment(.center)
             }
-            Text("You and \(match.other.firstName ?? "your match") both said yes to \(match.listing.title).")
-                .font(.body)
-                .multilineTextAlignment(.center)
-                .foregroundStyle(Brand.ink)
+            .foregroundStyle(Palette.ink)
             Spacer()
-            Button("Send a message", action: onChat)
-                .buttonStyle(PrimaryButtonStyle())
-                .accessibilityIdentifier("send-a-message-button")
-            Button("Keep swiping", action: onClose)
-                .buttonStyle(SecondaryButtonStyle())
-                .accessibilityIdentifier("keep-swiping-button")
+            Spacer()
+            Button(action: onChat) {
+                Text("Send a message")
+                    .font(.headline)
+                    .foregroundStyle(Palette.magenta)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 14)
+                    .background(Color.white, in: Capsule())
+            }
+            .accessibilityIdentifier("send-a-message-button")
+            Button(action: onClose) {
+                Text("Keep swiping")
+                    .font(.headline)
+                    .foregroundStyle(Color.white)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 13)
+                    .background(Capsule().stroke(Color.white.opacity(0.8), lineWidth: 1.5))
+            }
+            .accessibilityIdentifier("keep-swiping-button")
         }
         .padding(28)
-        .background(Brand.cream)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(
+            LinearGradient(colors: BrandGradient.colors, startPoint: .top, endPoint: .bottom)
+                .ignoresSafeArea()
+        )
+        .sensoryFeedback(.success, trigger: appeared)
+        .onAppear {
+            withAnimation(reduceMotion ? nil : .spring(response: 0.45, dampingFraction: 0.6)) {
+                appeared = true
+            }
+        }
+    }
+
+    private var sentence: String {
+        let name = match.other.firstName ?? "your match"
+        return match.role == .renter
+            ? "You and \(name) liked each other. Say hi and set up a tour."
+            : "You and \(name) liked each other. Say hi and set up a time to show the place."
+    }
+
+    private func portrait(_ person: Person) -> some View {
+        AvatarView(urlString: person.photoUrl, size: 116)
+            .overlay(Circle().stroke(Color.white, lineWidth: 4))
+            .shadow(color: Palette.ink.opacity(0.25), radius: 10, y: 6)
     }
 }
 

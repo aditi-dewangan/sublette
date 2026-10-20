@@ -24,6 +24,7 @@ from app.routers import (
     maps,
     me,
     pages,
+    release,
     renter_profile,
     safety,
     swipes,
@@ -89,6 +90,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     v1.include_router(devices.router)
     v1.include_router(live.router)
     v1.include_router(safety.router)
+    v1.include_router(release.router)
     app.include_router(v1)
 
     if isinstance(app.state.storage, ServerStorage):

@@ -39,9 +39,10 @@ struct AppRootView: View {
 struct LaunchView: View {
     var body: some View {
         VStack(spacing: 16) {
+            PinMark(width: 96)
             Text("Sublette")
                 .font(.system(.largeTitle, design: .rounded).weight(.bold))
-                .foregroundStyle(Brand.magenta)
+                .foregroundStyle(Brand.accentText)
             ProgressView()
                 .tint(Brand.ink)
         }
@@ -59,7 +60,7 @@ struct UnreachableView: View {
         VStack(spacing: 16) {
             Image(systemName: "wifi.slash")
                 .font(.system(size: 44, weight: .semibold))
-                .foregroundStyle(Brand.magenta)
+                .foregroundStyle(Brand.accentText)
                 .accessibilityHidden(true)
             Text("Can't reach Sublette")
                 .font(.system(.title2, design: .rounded).weight(.bold))

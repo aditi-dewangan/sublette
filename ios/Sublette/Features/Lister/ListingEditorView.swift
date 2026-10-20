@@ -28,7 +28,7 @@ struct ListingEditorView: View {
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Close") { dismiss() }
-                        .tint(Brand.magenta)
+                        .tint(Brand.accentText)
                 }
             }
         }
@@ -40,7 +40,7 @@ struct ListingEditorView: View {
                 value: Double(model.step.rawValue + 1),
                 total: Double(ListingEditorModel.Step.allCases.count)
             )
-            .tint(Brand.magenta)
+            .tint(Brand.accentText)
             Text("Step \(model.step.rawValue + 1) of \(ListingEditorModel.Step.allCases.count) · \(model.step.title)")
                 .font(.footnote.weight(.semibold))
                 .foregroundStyle(Brand.ink)
@@ -159,11 +159,11 @@ private struct OptionCard: View {
                         .multilineTextAlignment(.leading)
                 }
             }
-            .foregroundStyle(Brand.ink)
+            .foregroundStyle(isSelected ? Brand.textOnYellow : Brand.ink)
             .padding(14)
             .frame(maxWidth: .infinity, alignment: .leading)
             .background(
-                isSelected ? Brand.yellow : Color.white,
+                isSelected ? Brand.yellow : Brand.card,
                 in: RoundedRectangle(cornerRadius: 16, style: .continuous)
             )
             .overlay(
@@ -186,13 +186,14 @@ private struct PhotosStepView: View {
     var body: some View {
         List {
             Section {
+                let addTitle = model.photos.isEmpty ? "Add photos" : "Add more photos"
                 PhotosPicker(
                     selection: $picked,
                     maxSelectionCount: max(1, ListingEditorModel.maxPhotos - model.photos.count),
                     matching: .images
                 ) {
-                    Label(model.photos.isEmpty ? "Add photos" : "Add more photos", systemImage: "photo.on.rectangle.angled")
-                        .foregroundStyle(Brand.magenta)
+                    Label(addTitle, systemImage: "photo.on.rectangle.angled")
+                        .foregroundStyle(Brand.accentText)
                 }
                 .disabled(!model.canAddPhotos)
                 if model.uploadingPhotos > 0 {
@@ -344,7 +345,7 @@ private struct AddressStepView: View {
             )
         ) {
             Marker("Your place", coordinate: center)
-                .tint(Brand.magenta)
+                .tint(Brand.accentText)
         }
         .id("\(coordinate.latitude),\(coordinate.longitude)")
         .frame(height: 220)
@@ -376,17 +377,17 @@ private struct RentStepView: View {
             .brandField()
         }
         Toggle("Utilities included", isOn: $model.utilitiesIncluded)
-            .tint(Brand.magenta)
+            .tint(Brand.accentText)
             .foregroundStyle(Brand.ink)
         FormField("Move-in", error: model.fieldErrors["start_date"]) {
             DatePicker("Move-in", selection: $model.startDate, displayedComponents: .date)
                 .labelsHidden()
-                .tint(Brand.magenta)
+                .tint(Brand.accentText)
         }
         FormField("Move-out", error: model.fieldErrors["end_date"]) {
             DatePicker("Move-out", selection: $model.endDate, in: model.startDate..., displayedComponents: .date)
                 .labelsHidden()
-                .tint(Brand.magenta)
+                .tint(Brand.accentText)
         }
         Text("\(max(0, model.stayDays / 7)) weeks")
             .font(.footnote)
@@ -428,7 +429,7 @@ private struct SpaceStepView: View {
             Toggle("In-unit laundry", isOn: $model.laundry)
             Toggle("Parking", isOn: $model.parking)
         }
-        .tint(Brand.magenta)
+        .tint(Brand.accentText)
         .foregroundStyle(Brand.ink)
     }
 }
@@ -483,7 +484,7 @@ private struct WhoStepView: View {
 
     var body: some View {
         Toggle(model.schoolOnlyTitle, isOn: $model.sameSchoolOnly)
-            .tint(Brand.magenta)
+            .tint(Brand.accentText)
             .foregroundStyle(Brand.ink)
 
         FormField("Minimum stay", error: model.fieldErrors["min_stay_days"]) {

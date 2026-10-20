@@ -52,7 +52,8 @@ final class AppStateTests: XCTestCase {
 
     func testTextOnBothAccentsIsInkNeverWhite() {
         for mode in AppMode.allCases {
-            XCTAssertEqual(mode.textOnAccent, Brand.ink)
+            // The fixed ink, not Brand.ink, which turns cream in dark mode.
+            XCTAssertEqual(mode.textOnAccent, Palette.ink)
         }
     }
 }

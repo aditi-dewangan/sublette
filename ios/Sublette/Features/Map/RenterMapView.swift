@@ -45,6 +45,7 @@ struct RenterMapView: View {
             search.prepare(for: userID)
             container.outbox.prepare(for: userID)
             model.prepare(for: userID)
+            container.commute.prepare(for: userID)
             container.analytics.used(.map)
             if search.profile == nil {
                 await search.load()

@@ -4,6 +4,7 @@ import SwiftUI
 @MainActor
 struct RenterDeckView: View {
     @State private var showsAssistant = false
+    @State private var showsPlaces = false
     @Environment(AppContainer.self) private var container
     let onEditSearch: (PreferencesEditorModel.Step) -> Void
 
@@ -37,6 +38,9 @@ struct RenterDeckView: View {
         .sheet(isPresented: $showsAssistant) {
             AssistantView()
         }
+        .sheet(isPresented: $showsPlaces) {
+            PlacesView()
+        }
         .sheet(item: $details) { item in
             DeckDetailSheet(item: item)
         }
@@ -63,6 +67,7 @@ struct RenterDeckView: View {
                 Button("Dates and budget") { onEditSearch(.dates) }
                 Button("What matters") { onEditSearch(.preferences) }
                 Button("Where") { onEditSearch(.area) }
+                Button("Places you go") { showsPlaces = true }
             } label: {
                 Label("Your search", systemImage: "slider.horizontal.3")
                     .font(.subheadline.weight(.semibold))

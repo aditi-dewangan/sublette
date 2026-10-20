@@ -345,6 +345,17 @@ struct PreviewChatAPI: ChatAPI {
     func unregisterDevice(token: String) async throws {}
 }
 
+/// Every trip takes 18 minutes by transit and 25 on foot.
+struct PreviewCommuteEstimator: CommuteEstimating {
+    func minutes(from: Coordinate, to: Coordinate, by mode: CommuteMode) async throws -> Int {
+        switch mode {
+        case .transit: return 18
+        case .walking: return 25
+        case .driving: return 9
+        }
+    }
+}
+
 /// An assistant that always suggests the preview listing.
 struct PreviewAssistantAPI: AssistantAPI {
     func status() async throws -> AssistantStatus {
@@ -479,7 +490,8 @@ extension AppContainer {
             addressLocator: PreviewAddressLocator(),
             uploader: PreviewUploader(),
             tokenManager: TokenManager(store: InMemoryTokenStore(), refresher: PreviewRefresher()),
-            health: PreviewHealthCheck()
+            health: PreviewHealthCheck(),
+            commuteEstimator: PreviewCommuteEstimator()
         )
         if let user {
             container.session.update(user)

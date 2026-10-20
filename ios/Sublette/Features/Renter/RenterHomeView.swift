@@ -33,6 +33,7 @@ struct RenterHomeView: View {
             search.prepare(for: userID)
             container.outbox.prepare(for: userID)
             container.renterDeck.prepare(for: userID)
+            container.commute.prepare(for: userID)
             container.analytics.used(.deck)
             if search.profile == nil {
                 await search.load()

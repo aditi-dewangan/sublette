@@ -67,6 +67,12 @@ struct PreviewAccountAPI: AccountAPI {
         user
     }
 
+    func setAlertFrequency(_ frequency: AlertFrequency) async throws -> User {
+        var changed = user
+        changed.alertFrequency = frequency
+        return changed
+    }
+
     func deleteAccount() async throws {}
 
     func presignListingPhoto(contentType: String) async throws -> PresignedUpload {

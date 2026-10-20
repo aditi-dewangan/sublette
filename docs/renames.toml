@@ -58,3 +58,15 @@ old  = "dev_only"
 new  = "own_storage_only"
 kind = "field"
 date = "2026-10-12"
+
+[[rename]]
+old  = "last_alerted_at"
+new  = "last_digest_at"
+kind = "column"
+date = "2026-10-20"
+keep = [
+  { path = "backend/alembic/versions/20261019_0007_chat.py", why = "the migration that created the old column" },
+  { path = "backend/alembic/versions/20261020_0012_alerts.py", why = "the migration that moves it to users" },
+]
+# renter_profiles.last_alerted_at moved to users.last_digest_at: alerts about
+# saved listings and price drops don't need a renter search.

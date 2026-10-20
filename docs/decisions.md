@@ -234,6 +234,17 @@ correctness, the iPhone app) and an end-to-end run against a live server
 | Photo checks: a file that can't be read waits a day; seed listings are skipped; every copy of a shared photo is flagged; flags name listing ids, never another person's email. | 200 unreadable photos could stall the check forever; `make seed-fake` would have flooded the queue. |
 | The iPhone app connects (live events, push registration, queued messages) when someone signs in, not only when the app comes to the front; a notification that launched the app opens its chat; signing out clears matches, queued messages and listings from memory; a stopped live connection can't come back as a second one. | All four were real: chat was only live after leaving and re-opening the app. |
 
+### Alerts (issue #22, added 2026-10-20)
+
+| Decision | Reason |
+| --- | --- |
+| Three alerts about listings: a new place that fits ("Notify me", as before), a price drop on a place the renter liked or saved, and a liked or saved place (without a match) coming off Sublette in two days. Blocked and suspended people are never alerted. | The issue's list. "Still interested?" goes two days ahead so there's time to act. |
+| Each student picks how often in Settings: as they happen, one a day (the default), or off. "One a day" sends the first alert after a quiet day at once and bundles the rest into one digest when the day is up. | It keeps the old "at most one a day" behaviour as the default, without losing the alerts after the first. |
+| The same news is sent once: one "new place" and one "closing soon" alert per listing; a second price drop before the digest updates the first, keeping the original price. | No repeated pushes about the same place. |
+| Listers get "N renters liked your place this week" at most once a week, only when there are likes they haven't answered; "off" turns it off too. | The issue's weekly summary, aimed at bringing listers back to swipe. |
+| The digest clock moved from the renter profile to the account (`last_digest_at`). | Alerts about saved listings don't need a renter search. Logged in `docs/renames.toml`. |
+| Tapping a price-drop or closing-soon alert opens that listing's card on the renter's map; a digest opens the deck; the weekly summary opens the lister's Renters tab. | The map card is the one screen that shows any single listing with like and pass. |
+
 ## Known gaps after phase 2
 
 - Photos uploaded in the editor and then abandoned (the editor closed without saving) stay in storage. Done in phase 8: deleted after a day.

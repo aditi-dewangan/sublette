@@ -9,6 +9,10 @@ enum NotificationTarget: Equatable {
     case deck
     /// "Your listing expired": the lister's listings, to renew it.
     case listings
+    /// A price drop or a liked place closing soon: its card on the map.
+    case listing(id: String)
+    /// "N renters liked your place this week": the lister's Renters tab.
+    case renters
 
     /// Reads the fields the server puts in every push: kind, match_id, role.
     init?(userInfo: [AnyHashable: Any]) {
@@ -23,6 +27,15 @@ enum NotificationTarget: Equatable {
             self = .deck
         case "listing_expired":
             self = .listings
+        case "price_drop", "expiring":
+            guard let listingID = userInfo["listing_id"] as? String else {
+                return nil
+            }
+            self = .listing(id: listingID)
+        case "digest":
+            self = .deck
+        case "likes":
+            self = .renters
         default:
             return nil
         }

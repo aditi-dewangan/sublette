@@ -7,6 +7,8 @@
 * Photos uploaded and never attached to a profile or listing (an editor
   closed without saving) are deleted after a day.
 * Old rate-limit counts and expired sign-in codes are deleted.
+* Alerts (services/alerts.py): places liked or saved that come off Sublette
+  in two days, daily digests whose day is up, and listers' weekly summaries.
 
 Every run is safe to repeat, and only one server process runs it at a time
 (a PostgreSQL advisory lock). The deck already hides an expired listing on
@@ -27,6 +29,7 @@ from sqlalchemy.orm import Session
 from app.clock import local_today
 from app.models import EmailCode, Listing, ListingPhoto, RateLimitHit, Report, Upload, User
 from app.seed_fake import SEED_PREFIX
+from app.services import alerts
 from app.services.push import PushDispatcher, PushNote
 from app.services.storage import PhotoStorage
 
@@ -49,6 +52,9 @@ class Summary:
     photos_checked: int = 0
     flagged: list[uuid.UUID] = field(default_factory=list)
     uploads_deleted: int = 0
+    alerts: int = 0
+    digests: int = 0
+    lister_summaries: int = 0
 
 
 def run_once(engine: Engine, storage: PhotoStorage, push: PushDispatcher, now: datetime) -> Summary:
@@ -62,6 +68,9 @@ def run_once(engine: Engine, storage: PhotoStorage, push: PushDispatcher, now: d
                 summary.expired = expire_listings(session, push, now)
                 summary.photos_checked, summary.flagged = check_photos(session, storage, now)
                 summary.uploads_deleted = delete_abandoned_uploads(session, storage, now)
+                summary.alerts = alerts.alert_expiring(session, push, local_today(now), now)
+                summary.digests = alerts.send_due_digests(session, push, now)
+                summary.lister_summaries = alerts.send_lister_summaries(session, push, now)
                 prune(session, now)
                 return summary
         finally:

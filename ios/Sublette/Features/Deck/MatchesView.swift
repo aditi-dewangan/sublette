@@ -20,6 +20,7 @@ struct MatchesView: View {
                 .navigationDestination(item: $openChatID) { matchID in
                     if let match = model.matches.first(where: { $0.id == matchID }) {
                         ChatView(model: model.openChat(match))
+                            .id(match.id)
                     }
                 }
         }
@@ -27,8 +28,11 @@ struct MatchesView: View {
             guard let matchID = appState.chatToOpen else {
                 return
             }
+            // Clearing chatToOpen restarts this task, which would cancel the
+            // fetch below; so fetch first, then clear.
+            let found = await model.match(id: matchID) != nil
             appState.chatOpened()
-            if await model.match(id: matchID) != nil {
+            if found {
                 openChatID = matchID
             }
         }

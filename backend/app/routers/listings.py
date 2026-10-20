@@ -7,6 +7,7 @@ from datetime import datetime
 from fastapi import APIRouter, Query
 from sqlalchemy import and_, or_, select
 
+from app.clock import local_today
 from app.deps import AppSettings, CurrentUser, DbSession, Now, Push, Storage
 from app.errors import ApiError
 from app.models import Listing
@@ -118,6 +119,8 @@ def read_listing(
         raise not_found()
     if listing.owner_id != user.id and is_blocked(session, user.id, listing.owner_id):
         raise not_found()
+    if listing.owner_id != user.id and listing.owner.status != "active" and not matched:
+        raise not_found()
     return listing_out(listing, user, storage, matched=matched)
 
 
@@ -136,9 +139,9 @@ def update_listing(
         raise ApiError(409, *CLOSED[listing.status])
     removed = apply_fields(session, listing, user, fields, storage)
     if listing.status in ("active", "paused"):
-        require_publishable(listing, now.date())
+        require_publishable(listing, local_today(now))
         # An edit shows the listing is current, so it counts as a renewal.
-        listing.expires_on = expiry_date(listing, now.date())
+        listing.expires_on = expiry_date(listing, local_today(now))
     session.commit()
     session.refresh(listing)
     _delete_photos(storage, removed)
@@ -172,8 +175,8 @@ def change_status(
         raise ApiError(409, "invalid_status_change", message)
     first_publish = False
     if target == "active":
-        require_publishable(listing, now.date())
-        listing.expires_on = expiry_date(listing, now.date())
+        require_publishable(listing, local_today(now))
+        listing.expires_on = expiry_date(listing, local_today(now))
         if listing.published_at is None:
             listing.published_at = now
             first_publish = True

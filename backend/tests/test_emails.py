@@ -19,7 +19,7 @@ NOTHING_BLOCKED: frozenset[str] = frozenset()
     [
         ("aditi@uw.edu", "aditi@uw.edu"),
         ("  Aditi@UW.edu ", "aditi@uw.edu"),
-        ("first.last+sublette@cs.washington.edu", "first.last+sublette@cs.washington.edu"),
+        ("first.last+sublette@cs.washington.edu", "first.last@cs.washington.edu"),
         ("o'brien@northeastern.edu", "o'brien@northeastern.edu"),
         ("student@u.northwestern.edu", "student@u.northwestern.edu"),
     ],

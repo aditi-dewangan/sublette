@@ -34,7 +34,8 @@ struct RootView: View {
             )
             .task { await container.notifications.askAtFirstMatch() }
         }
-        .onChange(of: container.notifications.target) { _, target in
+        // initial: a tap that launched the app arrives before this view exists.
+        .onChange(of: container.notifications.target, initial: true) { _, target in
             guard let target else {
                 return
             }

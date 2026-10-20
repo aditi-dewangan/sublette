@@ -11,7 +11,8 @@ from html import escape
 from fastapi import APIRouter
 from fastapi.responses import HTMLResponse
 
-from app.deps import AppSettings, DbSession, Storage
+from app.clock import local_today
+from app.deps import AppSettings, DbSession, Now, Storage
 from app.models import Listing
 
 router = APIRouter(tags=["pages"])
@@ -63,13 +64,21 @@ def share_text(listing: Listing) -> tuple[str, str]:
 
 @router.get("/l/{listing_id}", response_class=HTMLResponse)
 def shared_listing(
-    listing_id: uuid.UUID, session: DbSession, settings: AppSettings, storage: Storage
+    listing_id: uuid.UUID, session: DbSession, settings: AppSettings, storage: Storage, now: Now
 ) -> HTMLResponse:
     """The page a shared listing link opens, for posting in housing groups.
     Only what any renter sees in the deck: no address, no exact point, no
     lister name. Only live listings; anything else says it's gone."""
     listing = session.get(Listing, listing_id)
-    if listing is None or listing.status != "active" or listing.owner.status != "active":
+    today = local_today(now)
+    gone = (
+        listing is None
+        or listing.status != "active"
+        or listing.owner.status != "active"
+        or (listing.end_date is not None and listing.end_date < today)
+        or (listing.expires_on is not None and listing.expires_on < today)
+    )
+    if gone:
         return HTMLResponse(
             "<!doctype html><html lang='en'><head><meta charset='utf-8'>"
             "<meta name='viewport' content='width=device-width, initial-scale=1'>"
@@ -171,6 +180,9 @@ gender, and whether you smoke or have pets.</li>
 <li>As a renter: your dates, budget, preferences and the map pin you choose.</li>
 <li>As a lister: your listings, their address and photos.</li>
 <li>Your likes, passes, matches and chat messages, and reports you make.</li>
+<li>What you ask the assistant, so we can check its answers.</li>
+<li>Which features you use and crash reports from your phone, to make the
+app better. Never sold, never used for ads.</li>
 <li>A push notification token for your phone, if you allow notifications.</li>
 </ul>
 
@@ -194,8 +206,10 @@ your sign-in codes. Apple delivers push notifications.</p>
 
 <h2>Deleting your data</h2>
 <p>Delete your account in Settings and your profile, listings, swipes,
-matches and messages are removed. Reports you made are kept without your
-name so reviews can finish.</p>
+matches, messages and questions to the assistant are removed. Reports you
+made are kept without your name so reviews can finish. Reports about an
+account, and the email address they were about, are kept for safety
+reviews, so deleting an account can't hide a scam.</p>
 
 <h2>Contact</h2>
 <p><a href="mailto:{email}">{email}</a></p>

@@ -25,6 +25,9 @@ final class LiveEvents {
     @ObservationIgnored private let session: URLSession
     @ObservationIgnored private var loop: Task<Void, Never>?
     @ObservationIgnored private var socket: URLSessionWebSocketTask?
+    /// Which run of the loop is current. A loop that was stopped can finish
+    /// late; it must not clear the state of the run that replaced it.
+    @ObservationIgnored private var generation = 0
 
     private enum Ending {
         case tokenRejected
@@ -45,13 +48,16 @@ final class LiveEvents {
         guard loop == nil, url != nil else {
             return
         }
+        generation += 1
+        let run = generation
         loop = Task { [weak self] in
-            await self?.run()
+            await self?.run(run)
         }
     }
 
     /// Disconnects, as when the app goes to the background or signs out.
     func stop() {
+        generation += 1
         loop?.cancel()
         loop = nil
         socket?.cancel(with: .goingAway, reason: nil)
@@ -64,35 +70,48 @@ final class LiveEvents {
         min(maxWait, pow(2, Double(max(0, failures - 1))))
     }
 
-    private func run() async {
+    private func isCurrent(_ run: Int) -> Bool {
+        run == generation && !Task.isCancelled
+    }
+
+    /// Ends this run, clearing the loop only if no newer run replaced it.
+    private func finish(_ run: Int) {
+        if run == generation {
+            loop = nil
+        }
+    }
+
+    private func run(_ run: Int) async {
         var failures = 0
-        while !Task.isCancelled {
+        while isCurrent(run) {
             guard let token = await tokens.accessToken() else {
                 break // signed out
             }
-            switch await connectOnce(token: token) {
+            switch await connectOnce(token: token, run: run) {
             case .suspended:
-                loop = nil
-                onSuspended?()
+                finish(run)
+                if run == generation {
+                    onSuspended?()
+                }
                 return
             case .tokenRejected:
                 failures += 1
                 if await tokens.refreshedAccessToken(afterRejecting: token) == nil, failures > 3 {
-                    loop = nil
+                    finish(run)
                     return
                 }
             case .dropped(let afterReady):
                 failures = afterReady ? 1 : failures + 1
             }
-            guard !Task.isCancelled else {
+            guard isCurrent(run) else {
                 break
             }
             try? await Task.sleep(nanoseconds: UInt64(Self.wait(afterFailures: failures) * 1_000_000_000))
         }
-        loop = nil
+        finish(run)
     }
 
-    private func connectOnce(token: String) async -> Ending {
+    private func connectOnce(token: String, run: Int) async -> Ending {
         guard let url else {
             return .suspended
         }
@@ -102,13 +121,18 @@ final class LiveEvents {
         self.socket = socket
         socket.resume()
         defer {
-            isConnected = false
+            if run == generation {
+                isConnected = false
+                self.socket = nil
+            } else {
+                socket.cancel(with: .goingAway, reason: nil)
+            }
         }
 
         let decoder = APIClient.makeDecoder()
         var ready = false
         do {
-            while !Task.isCancelled {
+            while isCurrent(run) {
                 let data: Data
                 switch try await socket.receive() {
                 case .string(let text): data = Data(text.utf8)
@@ -118,6 +142,9 @@ final class LiveEvents {
                 // An event this version can't read is skipped, not fatal.
                 guard let event = try? decoder.decode(LiveEvent.self, from: data) else {
                     continue
+                }
+                guard run == generation else {
+                    break // stopped while waiting; a newer run delivers events now
                 }
                 if event == .ready {
                     ready = true

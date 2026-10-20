@@ -4,6 +4,7 @@ from datetime import timedelta
 
 from fastapi import APIRouter, Request
 
+from app.clock import local_today
 from app.deps import AppSettings, CurrentUser, DbSession, Now, Storage
 from app.errors import ApiError
 from app.schemas.assistant import AssistantAnswer, AssistantQueryIn, AssistantStatus
@@ -45,7 +46,7 @@ def query(
         now=now,
     )
     model = request.app.state.language_model
-    outcome = answer(session, user, renter, body.message, model, storage, now.date())
+    outcome = answer(session, user, renter, body.message, model, storage, local_today(now))
     log(session, user, body.message, outcome, model.name if model else "rules", now)
     session.commit()
     return outcome.answer

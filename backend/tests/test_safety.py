@@ -607,9 +607,11 @@ def test_the_terms_and_privacy_policy_are_public_pages(client: TestClient, path:
 # --- Deleting an account ---------------------------------------------------------------
 
 
-def test_deleting_an_account_keeps_reports_it_made_and_drops_reports_about_it(
+def test_deleting_an_account_keeps_the_reports_without_the_account(
     client: TestClient, mailer: RecordingMailer, renter: dict, lister: dict, db: Session
 ) -> None:
+    """Reports the account made lose their reporter; reports about it keep
+    the email, so deleting an account can't erase a safety review."""
     report(client, renter, "user", lister["user"]["id"])
     other = sign_in(client, mailer, "other@uw.edu")
     report(client, other, "user", renter["user"]["id"])
@@ -617,9 +619,29 @@ def test_deleting_an_account_keeps_reports_it_made_and_drops_reports_about_it(
 
     assert client.delete("/v1/me", headers=bearer(renter)).status_code == 204
 
-    rows = db.scalars(select(Report)).all()
-    assert [(row.reporter_id, row.subject_id) for row in rows] == [
-        (None, uuid.UUID(lister["user"]["id"]))
-    ]
+    db.expire_all()
+    rows = {row.subject_email: row for row in db.scalars(select(Report))}
+    assert rows["lister@uw.edu"].reporter_id is None
+    assert rows["renter@uw.edu"].subject_id is None
     assert db.scalars(select(Block)).all() == []
     assert db.get(User, uuid.UUID(renter["user"]["id"])) is None
+
+
+def test_reports_about_a_deleted_account_follow_its_email_to_a_new_one(
+    client: TestClient,
+    app: FastAPI,
+    admin: dict,
+    mailer: RecordingMailer,
+    renter: dict,
+    lister: dict,
+    clock: Clock,
+) -> None:
+    report(client, renter, "user", lister["user"]["id"], details="Asked for a wire transfer")
+    client.delete("/v1/me", headers=bearer(lister))
+    clock.advance(seconds=31)  # the wait between codes
+
+    again = sign_in(client, mailer, "lister@uw.edu")
+    page = client.get(f"/admin/users/{again['user']['id']}", headers=admin).text
+
+    assert "Asked for a wire transfer" in page
+    assert "(account deleted)" in client.get("/admin", headers=admin).text

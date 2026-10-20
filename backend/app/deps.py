@@ -1,12 +1,13 @@
 """Things routes ask for: a database session, the clock, the signed-in user."""
 
 from collections.abc import Iterator
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime
 from typing import Annotated
 
 from fastapi import Depends, Request
 from sqlalchemy.orm import Session
 
+from app.clock import local_today
 from app.config import Settings
 from app.db import get_session
 from app.errors import ApiError
@@ -55,6 +56,14 @@ def _db(request: Request) -> Iterator[Session]:
 
 DbSession = Annotated[Session, Depends(_db)]
 Now = Annotated[datetime, Depends(get_now)]
+
+
+def get_today(now: Now) -> date:
+    """The calendar day for listing dates (see app/clock.py)."""
+    return local_today(now)
+
+
+Today = Annotated[date, Depends(get_today)]
 AppSettings = Annotated[Settings, Depends(get_app_settings)]
 Mailer = Annotated[EmailSender, Depends(get_email_sender)]
 Storage = Annotated[PhotoStorage, Depends(get_storage)]

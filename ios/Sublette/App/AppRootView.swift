@@ -31,6 +31,12 @@ struct AppRootView: View {
             }
         }
         .background(Brand.cream)
+        // The app becoming active isn't enough: at launch the session is still
+        // restoring then, and signing in doesn't change the scene. Connect
+        // (live events, push registration, queued messages) once someone is in.
+        .task(id: session.user?.id) {
+            await container.appBecameActive()
+        }
     }
 }
 

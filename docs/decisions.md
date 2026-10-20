@@ -176,7 +176,7 @@ Choices made while building, with the reason. Add to the bottom; do not rewrite 
 | Decision | Reason |
 | --- | --- |
 | One `reports` table holds both students' reports and the server's own scam flags (`source` "user" or "automatic"). Each names the person responsible (`subject_id`) and keeps a copy of what was reported (`excerpt`). The same open report from the same student is filed once. | One review queue. The copy means an edited listing or a deleted message can still be reviewed. |
-| Reports a student made are kept, without their name, when they delete their account; reports about a deleted account go with it. | The plan: deleting an account removes the user's data. A report about someone else isn't the reporter's data, and the review should be able to finish. |
+| Reports a student made are kept, without their name, when they delete their account. Reports about an account are kept too, with its email (changed in the final review; at first they were deleted with it). | A scammer could otherwise delete the account to wipe the evidence and sign up again clean. The admin page shows old reports on a new account with the same email. The privacy policy says so. |
 | A block hides the pair from each other whichever of them made it: decks, the map and its cards, saved listings, the listing itself (404), interested renters, matches, chats (404 `chat_unavailable`), swipes and "Notify me" alerts. Both apps drop the pair's chat at once (`match_removed` event). Unblocking brings the chat back with its history. The blocked person isn't told. | The plan's rule, applied in every query that shows people or listings (`blocked_with` in `services/safety.py`). Keeping the chat means a report can still be reviewed. |
 | Blocking from a listing card sends the listing id, not the lister's id. | Listing cards don't carry the lister's id, and don't need to. |
 | Scam flags: a payment app, wire transfer, gift card or deposit request, or a link to another site, in one of a chat's first three messages; and one photo (same bytes, SHA-256) on two different people's listings. Flags go to the review queue only; the message is still delivered. | The plan's two flags. Holding messages back would make false alarms (a renter asking "Do you take Venmo?") break chats. Reusing your own photos is fine. Exact matching misses an edited copy of a photo; that needs image analysis, which can come later. |
@@ -215,6 +215,24 @@ Choices made while building, with the reason. Add to the bottom; do not rewrite 
 | Results leave out listings the renter passed on; liked and saved ones may appear. Up to 20 are retrieved and up to 10 shown. Nothing is saved to the profile unless the renter taps "Save these preferences to my search". | A renter asking again shouldn't see what they already turned down. |
 | The evaluation set (30 requests, `app/data/assistant_eval.json`) was written together with the rules, which get all 30; it guards against regressions. Real quality is judged from the query log at `/admin/assistant`, and any model can be scored with `make eval-assistant`. | Honest about what 30/30 means. |
 | The on/off switch is `SUBLETTE_ASSISTANT_ENABLED`; the app asks `GET /v1/assistant` each time the deck opens and hides the Ask button when it's off. 20 questions an hour per renter. | "Turning the setting off hides the screen without an app update." |
+
+### Final review of phases 7 to 10 (added 2026-10-20)
+
+Three independent read-throughs (server security and privacy, server
+correctness, the iPhone app) and an end-to-end run against a live server
+(42 checks). What changed:
+
+| Decision | Reason |
+| --- | --- |
+| A `+tag` in an email is dropped: `alice+2@uw.edu` signs in to `alice@uw.edu`'s account, and the code goes to that inbox. | One person, one account; a suspended student couldn't otherwise come back as `alice+2`, or refer themselves. |
+| "Today", for listing dates, is the date in the westernmost US time zone (`app/clock.py`). | The server's UTC date turns over at 4 or 5 pm in the West, which hid listings and refused publishing hours early. |
+| The Assistant's dates: a season or month already under way starts today ("this fall" in October); a named range that began more than a month ago means next year's. | "Fall" asked in October jumped to next year. |
+| The Assistant's model no longer gets each listing's distance from the pin. | With 20 public points and 20 distances, the pin could be worked out. |
+| Sending a message locks its match row. | Two messages committing out of order could leave one counted as read before it appeared. |
+| Suspending forgets the account's push tokens; admin pages refuse to be framed and only redirect within `/admin`; photo files are served with `nosniff`. | A suspended phone can't withdraw its own token; clickjacking and open redirects. |
+| A suspended lister's listings are hidden from everyone but a matched renter (listing page, saved list, map pins and cards); a blocked person's listing can't be saved; a resent swipe after a block returns no match. | Gaps in the block and suspension rules. |
+| Photo checks: a file that can't be read waits a day; seed listings are skipped; every copy of a shared photo is flagged; flags name listing ids, never another person's email. | 200 unreadable photos could stall the check forever; `make seed-fake` would have flooded the queue. |
+| The iPhone app connects (live events, push registration, queued messages) when someone signs in, not only when the app comes to the front; a notification that launched the app opens its chat; signing out clears matches, queued messages and listings from memory; a stopped live connection can't come back as a second one. | All four were real: chat was only live after leaving and re-opening the app. |
 
 ## Known gaps after phase 2
 

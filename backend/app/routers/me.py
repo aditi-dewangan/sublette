@@ -6,7 +6,7 @@ from sqlalchemy import delete, select
 from app.config import Settings
 from app.deps import AppSettings, CurrentUser, DbSession, Now, Storage
 from app.errors import ApiError
-from app.models import EmailCode, Listing, ListingPhoto, Upload, User
+from app.models import AssistantQuery, EmailCode, Listing, ListingPhoto, Upload, User
 from app.schemas.errors import FieldError
 from app.schemas.user import SchoolOut, UserOut, UserPatch
 from app.services import analytics
@@ -107,9 +107,12 @@ def delete_me(user: CurrentUser, session: DbSession, storage: Storage) -> Respon
     # Photos uploaded but never attached to anything.
     photos += session.scalars(select(Upload.key).where(Upload.user_id == user.id)).all()
     session.execute(delete(EmailCode).where(EmailCode.email == user.email))
-    # Listings, photo rows, swipes, matches, messages, blocks and reports about
-    # the user go with them (ON DELETE CASCADE). Reports they made stay, with
-    # no reporter.
+    # Their questions to the assistant are their own words.
+    session.execute(delete(AssistantQuery).where(AssistantQuery.user_id == user.id))
+    # Listings, photo rows, swipes, matches, messages and blocks go with them
+    # (ON DELETE CASCADE). Reports stay, without the account: ones they made
+    # lose the reporter; ones about them keep the email, so deleting an
+    # account can't erase a safety review.
     session.delete(user)
     session.commit()
     for key in set(photos):

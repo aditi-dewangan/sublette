@@ -668,6 +668,9 @@ def test_notify_me_sends_one_push_for_a_new_place_that_fits(
             f"/v1/listings/{draft.id}/status", headers=bearer(lister), json={"status": "active"}
         )
         assert response.status_code == 200, response.text
+        # Alerts run in the background; two at the same moment may share one
+        # push. Let each finish, so the order is the one being tested.
+        app.state.push.drain()
 
     publish(rent_cents=500_000)  # over budget: no push
     publish()
